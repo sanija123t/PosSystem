@@ -1,97 +1,72 @@
-# Point of Sale (POS) System - C# .NET Desktop Application
+# 🛒 Advanced Point of Sale (POS) System
 
-## Table of Contents
+## 📌 Introduction
 
-- [Introduction](#introduction)
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Screenshots](#screenshots)
-- [License](#license)
+Welcome to the **Advanced POS System**, a high-performance desktop application engineered with **C# .NET**. This project has been significantly modified and optimized to provide a seamless experience for managing sales, inventory, and user authentication. It is designed to be lightweight, portable, and ready for modern retail environments.
 
-## Introduction
+## 🚀 Key Features
 
-Welcome to the Point of Sale (POS) System, a feature-rich desktop application developed in C# .NET. This application is designed to streamline and simplify the process of managing sales, inventory, and customer data for businesses of all sizes.
+### 💻 Sales & POS Interface
 
-## Features
+* **Real-time Transactions:** Process sales quickly with an intuitive cart system.
+* **Dynamic Search:** Find products instantly by barcode or product code.
+* **Automated Calculation:** Precise calculation of totals and change.
+* **Cashier Handover:** Dedicated interface for cashier roles with restricted permissions.
 
-### Sales Management
-- Create and process sales transactions quickly and efficiently.
-- Support for adding and removing items from the cart.
-- Calculate totals, including taxes and discounts.
-- Print or email receipts to customers.
-- View and export sales history.
+### 📦 Inventory & Stock Control
 
-### Inventory Management
-- Add, edit, or delete products in your inventory.
-- Organize products by categories.
-- Track product quantities and receive low stock alerts.
-- Generate inventory reports.
+* **Product Management:** Full CRUD (Create, Read, Update, Delete) for products, brands, and categories.
+* **Smart Stock-In:** Efficiently update inventory levels through the dedicated Stock-In module.
+* **Low Stock Alerts:** Monitor reorder levels to prevent inventory shortages.
+* **Inventory Tracking:** Detailed logs of stock adjustments and historical data.
 
-### Customer Management
-- Maintain a database of customer information.
-- Easily search for customers and view their purchase history.
-- Offer loyalty rewards and discounts to regular customers.
-- Manage customer accounts and billing information.
+### 👥 User Security & Roles
 
-### Employee Management
-- Create user accounts with different roles (cashier, manager, admin).
-- Assign permissions to control access to various features.
-- Track employee attendance and performance.
+* **Role-Based Access Control (RBAC):** Distinct permissions for **Administrators** and **Cashiers**.
+* **Secure Authentication:** Encrypted-ready login system to protect business data.
+* **Profile Management:** Store detailed employee information, including full names and active status.
 
-### Reporting and Analytics
-- Generate sales reports by date, product, or category.
-- Visualize sales data with charts and graphs.
-- Export reports in various formats (PDF, Excel, CSV).
+### 📊 Reporting & Analytics
 
-### Security
-- Implement user authentication and role-based access control.
-- Protect sensitive data with encryption.
-- Regularly backup and restore data to prevent data loss.
+* **Sales History:** View and analyze past transactions with date filtering.
+* **Top Selling Items:** Identify which products are driving revenue.
+* **Data Export:** Export critical business reports for external analysis.
 
-## Prerequisites
+## 🛠 Prerequisites
 
-Before you begin, ensure you have met the following requirements:
+To run this application, ensure your environment meets these requirements:
 
-- Windows operating system.
-- .NET Framework or .NET Core installed.
-- SQL Server or another supported database for data storage.
+* **OS:** Windows 10 or 11.
+* **Framework:** .NET Framework 4.7.2 or higher.
+* **IDE:** Visual Studio 2022 (Recommended).
+* **Database:** System.Data.SQLite (Included in project references).
 
-## Installation
+## ⚙️ Installation
 
-1. Clone this repository to your local machine.
-
+1. **Clone the Repository:**
 ```bash
-git clone https://github.com//DeelakaLakpura/POINT-OF-SALES-SYSTEM/
+
+
 ```
 
-2. Open the project in your preferred C# .NET IDE.
 
-3. Build and run the application.
+2. **Open the Project:**
+Launch `PosSystem.sln` in Visual Studio.
+3. **Restore Packages:**
+Visual Studio will automatically restore the SQLite NuGet packages.
+4. **Database Setup:**
+The system uses an **Auto-Initialization** engine. On the first run, the system will automatically create the `PosDB.db` file and all required tables in the `bin/Debug/DATABASE/` directory.
 
-## Usage
+## 📖 Usage
 
-1. Launch the POS application.
+1. **First Launch:** Use the default Administrator credentials to log in.
+2. **Configure System:** Navigate to the "Maintenance" section to add your Brands and Categories.
+3. **Add Products:** Enter your inventory items in the Product module.
+4. **Stock-In:** Add quantities to your products to make them available for sale.
+5. **Start Selling:** Open the POS terminal to begin processing customer transactions.
 
-2. Log in using your credentials (admin or manager role).
+## 🔒 License & Ownership
 
-3. Start using the various features, such as sales, inventory, customer management, and reporting.
+**Copyright © 2026 - All Rights Reserved.**
 
-## Screenshots
-
-![Screenshot 1](SS/ss01.PNG)
-![Screenshot 1](SS/ss02.PNG)
-![Screenshot 1](SS/SS03.PNG)
-![Screenshot 1](SS/SS04.PNG)
-![Screenshot 1](SS/SS05.PNG)
-![Screenshot 1](SS/SS06.PNG)
-![Screenshot 1](SS/SS07.PNG)
-![Screenshot 1](SS/SS08.PNG)
-![Screenshot 1](SS/SS09.PNG)
-![Screenshot 1](SS/SS10.PNG)
-
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is the private property of the repository owner. It has been extensively modified and customized for specific business logic. Unauthorized copying, modification, or distribution of this software is strictly prohibited.
