@@ -68,7 +68,8 @@ namespace PosSystem
                 double total = 0;
                 double discount = 0;
                 cn.Open();
-                cm = new SQLiteCommand("SELECT c.id, c.pcode, p.pdesc, c.price, c.qty, c.disc, (c.price * c.qty) - c.disc as total FROM tblCart1 AS c INNER JOIN TblProduct1 AS p ON c.pcode = p.pcode WHERE transno LIKE '" + lblTransno.Text + "' AND status LIKE 'Pending'", cn);
+                cm = new SQLiteCommand("SELECT c.id, c.pcode, p.pdesc, c.price, c.qty, c.disc, (c.price * c.qty) - c.disc as total FROM tblCart1 AS c INNER JOIN TblProduct1 AS p ON c.pcode = p.pcode WHERE transno LIKE @transno AND status LIKE 'Pending'", cn);
+                cm.Parameters.AddWithValue("@transno", lblTransno.Text);
                 dr = cm.ExecuteReader();
                 while (dr.Read())
                 {
@@ -100,7 +101,6 @@ namespace PosSystem
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            // In your designer code, your clock is 'label2' and your date is 'label6'
             label2.Text = DateTime.Now.ToLongTimeString();
             label6.Text = DateTime.Now.ToLongDateString();
         }
@@ -152,7 +152,70 @@ namespace PosSystem
 
         public void NotifyCriticalItems()
         {
-            // Logic for Tulpep Notification
+            try
+            {
+                cn.Open();
+                cm = new SQLiteCommand("SELECT * FROM vwCriticalItems", cn);
+                dr = cm.ExecuteReader();
+                while (dr.Read())
+                {
+                    PopupNotifier popup = new PopupNotifier();
+                    popup.TitleText = "Critical Item Warning";
+                    popup.ContentText = dr["pdesc"].ToString() + " is currently low on stock (" + dr["qty"].ToString() + ")";
+                    popup.Popup();
+                }
+                dr.Close();
+                cn.Close();
+            }
+            catch { cn.Close(); }
+        }
+
+        private void txtSearch_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                if (txtSearch.Text == string.Empty) { return; }
+
+                try
+                {
+                    cn.Open();
+                    cm = new SQLiteCommand("SELECT * FROM TblProduct1 WHERE barcode LIKE @barcode", cn);
+                    cm.Parameters.AddWithValue("@barcode", txtSearch.Text);
+                    dr = cm.ExecuteReader();
+                    dr.Read();
+                    if (dr.HasRows)
+                    {
+                        string pcode = dr["pcode"].ToString();
+                        double price = double.Parse(dr["price"].ToString());
+                        int qty = int.Parse(dr["reorder"].ToString()); // Getting default qty/reorder
+                        dr.Close();
+                        cn.Close();
+
+                        frmQty frm = new frmQty(this);
+                        // FIXED: Added missing 4th parameter 'qty' to match frmQty.ProductDetails signature
+                        frm.ProductDetails(pcode, price, lblTransno.Text, qty);
+                        frm.ShowDialog();
+                    }
+                    else
+                    {
+                        dr.Close();
+                        cn.Close();
+                    }
+                    txtSearch.Clear();
+                }
+                catch (Exception ex)
+                {
+                    cn.Close();
+                    MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+        }
+
+        private void btnNew_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.Rows.Count > 0) { return; }
+            GetTransNo();
+            txtSearch.Focus();
         }
 
         // Empty stubs to prevent designer errors

@@ -12,7 +12,6 @@ namespace PosSystem
         private static readonly string dbPath =
             Path.Combine(Application.StartupPath, "DATABASE", "PosDB.db");
 
-        // Fixed: Removed 'Version=3;' which caused the 'Keyword not supported' error
         private static readonly string con =
             $"Data Source={dbPath};Journal Mode=WAL;";
 
@@ -52,6 +51,30 @@ namespace PosSystem
                 using (SQLiteConnection cn = new SQLiteConnection(MyConnection()))
                 {
                     cn.Open();
+
+                    // Migration logic: Ensure 'name' column exists if table was already created without it
+                    using (SQLiteCommand cmMigrate = new SQLiteCommand("PRAGMA table_info(tblUser)", cn))
+                    {
+                        bool hasName = false;
+                        using (var reader = cmMigrate.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                if (reader["name"].ToString().Equals("name", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    hasName = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!hasName)
+                        {
+                            using (SQLiteCommand cmAddCol = new SQLiteCommand("ALTER TABLE tblUser ADD COLUMN name TEXT", cn))
+                            {
+                                try { cmAddCol.ExecuteNonQuery(); } catch { /* Table might not exist yet */ }
+                            }
+                        }
+                    }
 
                     string script = @"
                     CREATE TABLE IF NOT EXISTS BrandTbl (

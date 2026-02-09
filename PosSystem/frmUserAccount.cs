@@ -30,22 +30,6 @@ namespace PosSystem
             this.Dispose();
         }
 
-        private void frmUserAccount_Resize(object sender, EventArgs e)
-        {
-        }
-
-        private void tabPage2_Click(object sender, EventArgs e)
-        {
-        }
-
-        private void label3_Click(object sender, EventArgs e)
-        {
-        }
-
-        private void textBox2_TextChanged(object sender, EventArgs e)
-        {
-        }
-
         private void button1_Click(object sender, EventArgs e)
         {
             try
@@ -56,20 +40,20 @@ namespace PosSystem
                     return;
                 }
                 cn.Open();
-                cm = new SQLiteCommand("insert into tbluser (username,password,role,name) Values (@username,@password,@role,@name)", cn);
+                cm = new SQLiteCommand("INSERT INTO tblUser (username, password, role, name) VALUES (@username, @password, @role, @name)", cn);
                 cm.Parameters.AddWithValue("@username", txtUser.Text);
                 cm.Parameters.AddWithValue("@password", DBConnection.GetHash(txtPassword.Text));
                 cm.Parameters.AddWithValue("@role", cbRole.Text);
                 cm.Parameters.AddWithValue("@name", txtName.Text);
                 cm.ExecuteNonQuery();
                 cn.Close();
-                MessageBox.Show("New Account has saved!");
+                MessageBox.Show("New Account has saved!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Clear();
             }
             catch (Exception ex)
             {
                 cn.Close();
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -80,23 +64,12 @@ namespace PosSystem
             txtRePassword.Clear();
             txtUser.Clear();
             cbRole.Text = "";
+            txtUser.Focus();
         }
 
         private void btnSave_Click(object sender, EventArgs e)
         {
             Clear();
-        }
-
-        private void frmUserAccount_Load(object sender, EventArgs e)
-        {
-        }
-
-        private void panel2_Paint(object sender, PaintEventArgs e)
-        {
-        }
-
-        private void tabPage2_Click_1(object sender, EventArgs e)
-        {
         }
 
         private void btnSav_Click(object sender, EventArgs e)
@@ -105,17 +78,17 @@ namespace PosSystem
             {
                 if (DBConnection.GetHash(txtOld.Text) != f._pass)
                 {
-                    MessageBox.Show("old password did not mached!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Old password did not match!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
                 if (txtNew.Text != txtRePass.Text)
                 {
-                    MessageBox.Show("Confirm new password did not mached!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Confirm new password did not match!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 cn.Open();
-                cm = new SQLiteCommand("update tblUser set password = @password where username like @username", cn);
+                cm = new SQLiteCommand("UPDATE tblUser SET password = @password WHERE username = @username", cn);
                 cm.Parameters.AddWithValue("@password", DBConnection.GetHash(txtNew.Text));
                 cm.Parameters.AddWithValue("@username", txtU.Text);
 
@@ -139,7 +112,7 @@ namespace PosSystem
             try
             {
                 cn.Open();
-                cm = new SQLiteCommand("select * from tblUser where username =@username", cn);
+                cm = new SQLiteCommand("SELECT isactive FROM tblUser WHERE username = @username", cn);
                 cm.Parameters.AddWithValue("@username", txtuser2.Text);
                 dr = cm.ExecuteReader();
                 dr.Read();
@@ -165,30 +138,22 @@ namespace PosSystem
         {
             try
             {
-                bool found = false;
                 cn.Open();
-                cm = new SQLiteCommand("select * from tblUser where username =@username", cn);
+                cm = new SQLiteCommand("UPDATE tblUser SET isactive = @isactive WHERE username = @username", cn);
+                cm.Parameters.AddWithValue("@isactive", checkBox1.Checked ? 1 : 0);
                 cm.Parameters.AddWithValue("@username", txtuser2.Text);
-                dr = cm.ExecuteReader();
-                if (dr.HasRows) { found = true; } else { found = false; }
-                dr.Close();
+                int i = cm.ExecuteNonQuery();
                 cn.Close();
 
-                if (found == true)
+                if (i > 0)
                 {
-                    cn.Open();
-                    cm = new SQLiteCommand("update tblUser set isactive =@isactive where username =@username", cn);
-                    cm.Parameters.AddWithValue("@isactive", checkBox1.Checked ? 1 : 0);
-                    cm.Parameters.AddWithValue("@username", txtuser2.Text);
-                    cm.ExecuteNonQuery();
-                    cn.Close();
                     MessageBox.Show("Account status has been successfully updated", "Account", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     txtuser2.Clear();
                     checkBox1.Checked = false;
                 }
                 else
                 {
-                    MessageBox.Show("Account not exists!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Account does not exist!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
             catch (Exception ex)
@@ -198,8 +163,12 @@ namespace PosSystem
             }
         }
 
-        private void txtOld_TextChanged(object sender, EventArgs e)
-        {
-        }
+        private void frmUserAccount_Load(object sender, EventArgs e) { }
+        private void frmUserAccount_Resize(object sender, EventArgs e) { }
+        private void panel2_Paint(object sender, PaintEventArgs e) { }
+        private void tabPage2_Click_1(object sender, EventArgs e) { }
+        private void txtOld_TextChanged(object sender, EventArgs e) { }
+        private void label3_Click(object sender, EventArgs e) { }
+        private void textBox2_TextChanged(object sender, EventArgs e) { }
     }
 }

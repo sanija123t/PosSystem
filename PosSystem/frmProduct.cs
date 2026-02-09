@@ -16,13 +16,11 @@ namespace PosSystem
         SqlConnection cn = new SqlConnection();
         SqlCommand cm = new SqlCommand();
         SqlDataReader dr;
-        // REMOVED: DBConnection dbcon = new DBConnection(); (Static classes cannot be instantiated)
         frmProduct_List flist;
 
         public frmProduct(frmProduct_List frm)
         {
             InitializeComponent();
-            // FIXED: Accessing static method via Class Name
             cn = new SqlConnection(DBConnection.MyConnection());
             flist = frm;
         }
@@ -62,7 +60,8 @@ namespace PosSystem
 
         private void frmProduct_Load(object sender, EventArgs e)
         {
-            // Optional: You might want to call LocalBrand() and LocalCategory() here
+            LocalBrand();
+            LocalCategory();
         }
 
         private void btnSave_Click(object sender, EventArgs e)
@@ -73,27 +72,22 @@ namespace PosSystem
                 {
                     string bid = ""; string cid = "";
 
-                    // Get Brand ID (Fixed with Parameters)
                     cn.Open();
                     cm = new SqlCommand("SELECT id FROM BrandTbl WHERE brand = @brand", cn);
                     cm.Parameters.AddWithValue("@brand", comboBox1.Text);
                     dr = cm.ExecuteReader();
-                    dr.Read();
-                    if (dr.HasRows) { bid = dr[0].ToString(); }
+                    if (dr.Read()) { bid = dr[0].ToString(); }
                     dr.Close();
                     cn.Close();
 
-                    // Get Category ID (Fixed with Parameters)
                     cn.Open();
                     cm = new SqlCommand("SELECT id FROM TblCatecory WHERE category = @category", cn);
                     cm.Parameters.AddWithValue("@category", comboBox2.Text);
                     dr = cm.ExecuteReader();
-                    dr.Read();
-                    if (dr.HasRows) { cid = dr[0].ToString(); }
+                    if (dr.Read()) { cid = dr[0].ToString(); }
                     dr.Close();
                     cn.Close();
 
-                    // Insert Product
                     cn.Open();
                     cm = new SqlCommand("INSERT INTO TblProduct1 (pcode,barcode,pdesc,bid,cid,price,reorder) VALUES(@pcode,@barcode,@pdesc,@bid,@cid,@price,@reorder)", cn);
                     cm.Parameters.AddWithValue("@pcode", TxtPcode.Text);
@@ -124,7 +118,7 @@ namespace PosSystem
             txtBarcode.Clear();
             txtPdesc.Clear();
             TxtPcode.Clear();
-            txtReOrder.Clear(); // Added to clear reorder field
+            txtReOrder.Clear();
             comboBox1.Text = "";
             comboBox2.Text = "";
             TxtPcode.Focus();
@@ -202,7 +196,6 @@ namespace PosSystem
 
         private void txtPrice_KeyPress(object sender, KeyPressEventArgs e)
         {
-            // Allow numbers, backspace, and one decimal point
             if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar) && (e.KeyChar != '.'))
             {
                 e.Handled = true;

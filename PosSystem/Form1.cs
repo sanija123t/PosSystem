@@ -12,6 +12,8 @@ namespace PosSystem
         // Assigned during login
         public string _pass;
         public string _user;
+        public string _role; // Added to store user role
+        public string _name; // Added to store user name
 
         public Form1()
         {
@@ -20,9 +22,39 @@ namespace PosSystem
             MyDashbord();
         }
 
+        // Logic to handle permissions and greeting based on login data
+        public void SetUserSession(string user, string role, string name)
+        {
+            _user = user;
+            _role = role;
+            _name = name;
+
+            lblUser.Text = _name; // Greeting user by name
+            lblRole.Text = _role; // Displaying role
+
+            // Restrict access immediately based on role
+            if (_role != "Administrator")
+            {
+                btnBrand.Enabled = false;
+                button4.Enabled = false; // Category
+                btnProduct.Enabled = false;
+                btnVendor.Enabled = false;
+                button8.Enabled = false; // User Accounts
+                button7.Enabled = false; // Store Settings
+            }
+            else
+            {
+                btnBrand.Enabled = true;
+                button4.Enabled = true;
+                btnProduct.Enabled = true;
+                btnVendor.Enabled = true;
+                button8.Enabled = true;
+                button7.Enabled = true;
+            }
+        }
+
         private void OpenChildForm(Form childForm)
         {
-            // Dispose of existing controls to prevent memory leaks/StackOverflow
             if (panel3.Controls.Count > 0)
             {
                 panel3.Controls[0].Dispose();
@@ -39,7 +71,6 @@ namespace PosSystem
             childForm.Show();
         }
 
-        // ================= CRITICAL ITEM NOTIFICATION =================
         public void NotifyCriticalItems()
         {
             string criticalList = "";
@@ -80,12 +111,10 @@ namespace PosSystem
             }
         }
 
-        // ================= DASHBOARD =================
         public void MyDashbord()
         {
             try
             {
-                // Clean up previous controls first
                 if (panel3.Controls.Count > 0)
                 {
                     panel3.Controls[0].Dispose();
@@ -100,7 +129,6 @@ namespace PosSystem
 
                 panel3.Controls.Add(f);
 
-                // Load data safely
                 f.lblDailySales.Text = DBConnection.DailySales().ToString("#,##0.00");
                 f.lblProduct.Text = DBConnection.ProductLine().ToString("#,##0");
                 f.lblStock.Text = DBConnection.StockOnHand().ToString("#,##0");
@@ -115,7 +143,6 @@ namespace PosSystem
             }
         }
 
-        // ================= BUTTON EVENTS =================
         private void btnBrand_Click(object sender, EventArgs e)
             => OpenChildForm(new frmBrandList());
 
@@ -146,7 +173,7 @@ namespace PosSystem
         private void button8_Click(object sender, EventArgs e)
         {
             frmUserAccount frm = new frmUserAccount(this);
-            frm.txtU.Text = lblUser.Text;
+            frm.txtU.Text = _user; // Use the stored user variable
             OpenChildForm(frm);
         }
 
@@ -180,7 +207,7 @@ namespace PosSystem
         {
             frmAdjustment f = new frmAdjustment(this);
             f.LoadRecords();
-            f.txtUser.Text = lblUser.Text;
+            f.txtUser.Text = _user; // Use the stored user variable
             f.referenceNo();
             f.ShowDialog();
         }
@@ -195,8 +222,6 @@ namespace PosSystem
                 login.Show();
             }
         }
-
-        // ================= PUBLIC METHODS FOR SUB-FORMS =================
 
         public void LoadCart()
         {
@@ -224,7 +249,6 @@ namespace PosSystem
                             while (dr.Read())
                             {
                                 i++;
-                                // Using Convert.ToDouble is safer than Parse for database values
                                 double rowTotal = Convert.ToDouble(dr["total"]);
                                 double rowDisc = Convert.ToDouble(dr["disc"]);
 
@@ -267,7 +291,6 @@ namespace PosSystem
                         if (result != null && result != DBNull.Value)
                         {
                             transno = result.ToString();
-                            // Fix: Ensure we don't crash if string is too short
                             if (transno.Length >= 12)
                             {
                                 count = int.Parse(transno.Substring(8, 4));
@@ -275,7 +298,6 @@ namespace PosSystem
                             }
                             else
                             {
-                                // Fallback if format is weird
                                 lblTransno.Text = sdate + "1001";
                             }
                         }
@@ -292,9 +314,7 @@ namespace PosSystem
             }
         }
 
-        // ================= MISC =================
         private void guna2ControlBox1_Click(object sender, EventArgs e) => Application.Exit();
-
         private void Form1_Load(object sender, EventArgs e) { }
         private void panel2_Paint(object sender, PaintEventArgs e) { }
         private void panel3_Paint(object sender, PaintEventArgs e) { }
