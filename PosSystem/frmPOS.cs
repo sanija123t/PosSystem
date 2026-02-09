@@ -26,12 +26,8 @@ namespace PosSystem
             this.KeyPreview = true;
         }
 
-        // --- FIXED ACCESSORS (Matching your Designer Names) ---
         public Label GetlblTransno { get { return lblTransno; } }
-
-        // Match the capital 'L' in LblUser from your Designer
         public Label GetlblUser { get { return LblUser; } }
-
         public MetroTextBox GettxtSearch { get { return txtSearch; } }
 
         private void frmPOS_Load(object sender, EventArgs e)
@@ -145,9 +141,42 @@ namespace PosSystem
 
         private void btnSattle_Click(object sender, EventArgs e)
         {
+            if (dataGridView1.Rows.Count <= 0) return;
             frmSettel frm = new frmSettel(this);
             frm.txtSale.Text = lblDisplayTotal.Text;
             frm.ShowDialog();
+        }
+
+        public void SettlePayment()
+        {
+            try
+            {
+                cn.Open();
+                using (var transaction = cn.BeginTransaction())
+                {
+                    // Update Product Quantities based on Cart items
+                    for (int i = 0; i < dataGridView1.Rows.Count; i++)
+                    {
+                        using (SQLiteCommand cmUpdate = new SQLiteCommand("UPDATE TblProduct1 SET qty = qty - @qty WHERE pcode = @pcode", cn))
+                        {
+                            cmUpdate.Parameters.AddWithValue("@qty", int.Parse(dataGridView1.Rows[i].Cells[5].Value.ToString()));
+                            cmUpdate.Parameters.AddWithValue("@pcode", dataGridView1.Rows[i].Cells[2].Value.ToString());
+                            cmUpdate.ExecuteNonQuery();
+                        }
+                    }
+
+                    // Update Cart Status to Sold
+                    using (SQLiteCommand cmCart = new SQLiteCommand("UPDATE tblCart1 SET status = 'Sold' WHERE transno = @transno", cn))
+                    {
+                        cmCart.Parameters.AddWithValue("@transno", lblTransno.Text);
+                        cmCart.ExecuteNonQuery();
+                    }
+                    transaction.Commit();
+                }
+                cn.Close();
+                NotifyCriticalItems();
+            }
+            catch (Exception ex) { cn.Close(); MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         public void NotifyCriticalItems()
@@ -175,7 +204,6 @@ namespace PosSystem
             if (e.KeyCode == Keys.Enter)
             {
                 if (txtSearch.Text == string.Empty) { return; }
-
                 try
                 {
                     cn.Open();
@@ -187,13 +215,12 @@ namespace PosSystem
                     {
                         string pcode = dr["pcode"].ToString();
                         double price = double.Parse(dr["price"].ToString());
-                        int qty = int.Parse(dr["reorder"].ToString()); // Getting default qty/reorder
+                        int currentQty = int.Parse(dr["qty"].ToString());
                         dr.Close();
                         cn.Close();
 
                         frmQty frm = new frmQty(this);
-                        // FIXED: Added missing 4th parameter 'qty' to match frmQty.ProductDetails signature
-                        frm.ProductDetails(pcode, price, lblTransno.Text, qty);
+                        frm.ProductDetails(pcode, price, lblTransno.Text, currentQty);
                         frm.ShowDialog();
                     }
                     else
@@ -203,11 +230,7 @@ namespace PosSystem
                     }
                     txtSearch.Clear();
                 }
-                catch (Exception ex)
-                {
-                    cn.Close();
-                    MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
+                catch (Exception ex) { cn.Close(); MessageBox.Show(ex.Message, stitle); }
             }
         }
 
@@ -218,7 +241,6 @@ namespace PosSystem
             txtSearch.Focus();
         }
 
-        // Empty stubs to prevent designer errors
         private void label14_Click(object sender, EventArgs e) { }
         private void LblUser_Click(object sender, EventArgs e) { }
         private void lblName_Click(object sender, EventArgs e) { }

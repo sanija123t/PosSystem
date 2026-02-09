@@ -51,7 +51,7 @@ namespace PosSystem
                         FROM TblProduct1 AS p
                         INNER JOIN BrandTbl AS b ON b.id = p.bid
                         INNER JOIN TblCategory AS c ON c.id = p.cid
-                        WHERE p.pdesc LIKE @search";
+                        WHERE p.pdesc LIKE @search OR p.pcode LIKE @search OR p.barcode LIKE @search";
 
                     using (cm = new SQLiteCommand(query, cn))
                     {
@@ -101,12 +101,20 @@ namespace PosSystem
                 txtPcode.Text = dataGridView1.Rows[e.RowIndex].Cells[1].Value.ToString();
                 txtdesc.Text = dataGridView1.Rows[e.RowIndex].Cells[3].Value.ToString() + " (" +
                                dataGridView1.Rows[e.RowIndex].Cells[2].Value.ToString() + ")";
-                _qty = int.Parse(dataGridView1.Rows[e.RowIndex].Cells[7].Value.ToString());
+
+                // Ensure we get the latest quantity from the grid
+                int.TryParse(dataGridView1.Rows[e.RowIndex].Cells[7].Value.ToString(), out _qty);
             }
         }
 
         private void btnSave_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrEmpty(txtPcode.Text))
+            {
+                MessageBox.Show("Please select a product first.", "Missing Product", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             if (!int.TryParse(txtQty.Text.Trim(), out int adjustQty) || adjustQty <= 0)
             {
                 MessageBox.Show("Please enter a valid quantity.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -119,7 +127,8 @@ namespace PosSystem
                 return;
             }
 
-            if (adjustQty > _qty && cbCommands.Text == "Remove from Inventory")
+            // Validation logic for removal
+            if (cbCommands.Text == "Remove from Inventory" && adjustQty > _qty)
             {
                 MessageBox.Show("Stock on hand quantity (" + _qty + ") is less than adjustment quantity.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -130,40 +139,44 @@ namespace PosSystem
                 using (cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     cn.Open();
-
-                    // 1. Update stock quantity
-                    string sqlUpdate = cbCommands.Text == "Remove from Inventory"
-                        ? "UPDATE TblProduct1 SET qty = qty - @qty WHERE pcode = @pcode"
-                        : "UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode = @pcode";
-
-                    using (cm = new SQLiteCommand(sqlUpdate, cn))
+                    using (var transaction = cn.BeginTransaction())
                     {
-                        cm.Parameters.AddWithValue("@qty", adjustQty);
-                        cm.Parameters.AddWithValue("@pcode", txtPcode.Text.Trim());
-                        cm.ExecuteNonQuery();
-                    }
+                        // 1. Update stock quantity
+                        string sqlUpdate = cbCommands.Text == "Remove from Inventory"
+                            ? "UPDATE TblProduct1 SET qty = qty - @qty WHERE pcode = @pcode"
+                            : "UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode = @pcode";
 
-                    // 2. Insert into adjustment log
-                    string sqlInsert = @"
-                        INSERT INTO tblAdjustment (referenceno, pcode, qty, action, remarks, sdate, [user])
-                        VALUES (@ref, @pcode, @qty, @action, @remarks, @sdate, @user)";
+                        using (cm = new SQLiteCommand(sqlUpdate, cn))
+                        {
+                            cm.Parameters.AddWithValue("@qty", adjustQty);
+                            cm.Parameters.AddWithValue("@pcode", txtPcode.Text.Trim());
+                            cm.ExecuteNonQuery();
+                        }
 
-                    using (cm = new SQLiteCommand(sqlInsert, cn))
-                    {
-                        cm.Parameters.AddWithValue("@ref", txtRef.Text.Trim());
-                        cm.Parameters.AddWithValue("@pcode", txtPcode.Text.Trim());
-                        cm.Parameters.AddWithValue("@qty", adjustQty);
-                        cm.Parameters.AddWithValue("@action", cbCommands.Text.Trim());
-                        cm.Parameters.AddWithValue("@remarks", txtRemarks.Text.Trim());
-                        cm.Parameters.AddWithValue("@sdate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                        cm.Parameters.AddWithValue("@user", txtUser.Text.Trim());
-                        cm.ExecuteNonQuery();
+                        // 2. Insert into adjustment log
+                        string sqlInsert = @"
+                            INSERT INTO tblAdjustment (referenceno, pcode, qty, action, remarks, sdate, [user])
+                            VALUES (@ref, @pcode, @qty, @action, @remarks, @sdate, @user)";
+
+                        using (cm = new SQLiteCommand(sqlInsert, cn))
+                        {
+                            cm.Parameters.AddWithValue("@ref", txtRef.Text.Trim());
+                            cm.Parameters.AddWithValue("@pcode", txtPcode.Text.Trim());
+                            cm.Parameters.AddWithValue("@qty", adjustQty);
+                            cm.Parameters.AddWithValue("@action", cbCommands.Text.Trim());
+                            cm.Parameters.AddWithValue("@remarks", txtRemarks.Text.Trim());
+                            cm.Parameters.AddWithValue("@sdate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                            cm.Parameters.AddWithValue("@user", txtUser.Text.Trim());
+                            cm.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
                     }
                 }
 
                 MessageBox.Show("Stock has been successfully adjusted.", "Process Completed", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                f.MyDashbord();
+                if (f != null) f.MyDashbord();
                 LoadRecords();
                 Clear();
             }
@@ -180,6 +193,7 @@ namespace PosSystem
             txtQty.Clear();
             txtRemarks.Clear();
             cbCommands.SelectedIndex = -1;
+            _qty = 0;
             referenceNo();
         }
     }

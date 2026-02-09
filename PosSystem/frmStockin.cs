@@ -27,6 +27,38 @@ namespace PosSystem
 
         private void frmStockin_Load(object sender, EventArgs e)
         {
+            GenerateReferenceNo();
+        }
+
+        // Automated Reference Number Generation
+        public void GenerateReferenceNo()
+        {
+            try
+            {
+                string sdate = DateTime.Now.ToString("yyyyMMdd");
+                int count;
+                cn.Open();
+                cm = new SQLiteCommand("SELECT refno FROM tblStockIn WHERE refno LIKE '" + sdate + "%' ORDER BY id DESC LIMIT 1", cn);
+                dr = cm.ExecuteReader();
+                dr.Read();
+                if (dr.HasRows)
+                {
+                    string lastRef = dr[0].ToString();
+                    count = int.Parse(lastRef.Substring(8, 4));
+                    txtRefNo.Text = sdate + (count + 1);
+                }
+                else
+                {
+                    txtRefNo.Text = sdate + "1001";
+                }
+                dr.Close();
+                cn.Close();
+            }
+            catch (Exception ex)
+            {
+                if (cn.State == ConnectionState.Open) cn.Close();
+                MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         public void LoadStockIn()
@@ -78,10 +110,16 @@ namespace PosSystem
             txtBy.Clear();
             txtRefNo.Clear();
             dt1.Value = DateTime.Now;
+            GenerateReferenceNo();
         }
 
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
+            if (string.IsNullOrEmpty(txtRefNo.Text))
+            {
+                MessageBox.Show("Please generate a reference number first.", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             frmSearchProductStokin frm = new frmSearchProductStokin(this);
             frm.LoadProduct();
             frm.ShowDialog();
@@ -211,8 +249,7 @@ namespace PosSystem
 
         private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Random rnd = new Random();
-            txtRefNo.Text = "REF" + rnd.Next(100000, 999999).ToString();
+            GenerateReferenceNo();
         }
 
         private void panel1_Paint(object sender, PaintEventArgs e) { }

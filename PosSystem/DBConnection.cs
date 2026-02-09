@@ -69,10 +69,14 @@ namespace PosSystem
                         }
                         if (!hasName)
                         {
-                            using (SQLiteCommand cmAddCol = new SQLiteCommand("ALTER TABLE tblUser ADD COLUMN name TEXT", cn))
+                            try
                             {
-                                try { cmAddCol.ExecuteNonQuery(); } catch { /* Table might not exist yet */ }
+                                using (SQLiteCommand cmAddCol = new SQLiteCommand("ALTER TABLE tblUser ADD COLUMN name TEXT", cn))
+                                {
+                                    cmAddCol.ExecuteNonQuery();
+                                }
                             }
+                            catch { /* Table might not exist yet; handled in create script below */ }
                         }
                     }
 

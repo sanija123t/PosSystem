@@ -70,6 +70,20 @@ namespace PosSystem
             {
                 if (MessageBox.Show("Are you sure you want to save this product?", "Save product", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
+                    // Check for duplicate Barcode or Pcode
+                    cn.Open();
+                    cm = new SqlCommand("SELECT COUNT(*) FROM TblProduct1 WHERE barcode = @barcode OR pcode = @pcode", cn);
+                    cm.Parameters.AddWithValue("@barcode", txtBarcode.Text);
+                    cm.Parameters.AddWithValue("@pcode", TxtPcode.Text);
+                    int count = Convert.ToInt32(cm.ExecuteScalar());
+                    cn.Close();
+
+                    if (count > 0)
+                    {
+                        MessageBox.Show("Barcode or Product Code already exists!", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
                     string bid = ""; string cid = "";
 
                     cn.Open();
@@ -146,6 +160,20 @@ namespace PosSystem
             {
                 if (MessageBox.Show("Are you sure you want to update this product?", "Update product", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
+                    // Check for duplicate Barcode (excluding the current pcode)
+                    cn.Open();
+                    cm = new SqlCommand("SELECT COUNT(*) FROM TblProduct1 WHERE barcode = @barcode AND pcode != @pcode", cn);
+                    cm.Parameters.AddWithValue("@barcode", txtBarcode.Text);
+                    cm.Parameters.AddWithValue("@pcode", TxtPcode.Text);
+                    int count = Convert.ToInt32(cm.ExecuteScalar());
+                    cn.Close();
+
+                    if (count > 0)
+                    {
+                        MessageBox.Show("Barcode already assigned to another product!", "Duplicate Barcode", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
                     string bid = ""; string cid = "";
 
                     cn.Open();

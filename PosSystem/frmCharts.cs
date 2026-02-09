@@ -9,12 +9,10 @@ namespace PosSystem
     public partial class frmCharts : Form
     {
         SQLiteConnection cn;
-        // REMOVED: DBConnection db = new DBConnection(); // You cannot instantiate a static class
 
         public frmCharts()
         {
             InitializeComponent();
-            // FIXED: Access the static method directly using the Class Name
             cn = new SQLiteConnection(DBConnection.MyConnection());
         }
 
@@ -27,29 +25,48 @@ namespace PosSystem
         {
             try
             {
-                SQLiteDataAdapter da;
-                cn.Open();
-                da = new SQLiteDataAdapter(sql, cn);
-                DataSet ds = new DataSet();
-                da.Fill(ds, "SOLD");
+                chart1.Series.Clear();
+                chart1.Titles.Clear();
+                chart1.Titles.Add("Top Selling Items (Revenue)");
 
-                chart1.DataSource = ds.Tables["SOLD"];
-                Series series = chart1.Series[0];
-                series.ChartType = SeriesChartType.Pie;
+                Series series = new Series("Sold Items");
+                chart1.Series.Add(series);
 
-                series.Name = "Sold Items";
-                chart1.Series[0].XValueMember = "pdesc";
-                chart1.Series[0].YValueMembers = "total";
-                chart1.Series[0].LabelFormat = "#,##0.00";
-                chart1.Series[0].IsValueShownAsLabel = true;
+                using (SQLiteDataAdapter da = new SQLiteDataAdapter(sql, cn))
+                {
+                    DataTable dt = new DataTable();
+                    da.Fill(dt);
 
-                chart1.DataBind();
-                cn.Close();
+                    if (dt.Rows.Count > 0)
+                    {
+                        chart1.DataSource = dt;
+
+                        series.ChartType = SeriesChartType.Pie;
+                        series.XValueMember = "pdesc";
+                        series.YValueMembers = "total";
+
+                        chart1.Series[0].IsValueShownAsLabel = true;
+                        chart1.Series[0].LabelFormat = "#,##0.00";
+                        chart1.Series[0]["PieLabelStyle"] = "Outside";
+                        chart1.Series[0].BorderColor = System.Drawing.Color.White;
+                        chart1.Series[0].BorderWidth = 1;
+
+                        chart1.DataBind();
+                    }
+                    else
+                    {
+                        chart1.Titles.Clear();
+                        chart1.Titles.Add("No Data Available for Selected Range");
+                    }
+                }
             }
             catch (Exception ex)
             {
-                if (cn.State == ConnectionState.Open) cn.Close();
                 MessageBox.Show(ex.Message, "Chart Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (cn.State == ConnectionState.Open) cn.Close();
             }
         }
 
