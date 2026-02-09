@@ -594,6 +594,7 @@
     <None Include="DataSet1.xss">
       <DependentUpon>DataSet1.xsd</DependentUpon>
     </None>
+    <None Include="license.md" />
     <None Include="packages.config" />
     <None Include="PosSystem_TemporaryKey.pfx" />
     <None Include="Properties\app.manifest" />
@@ -611,6 +612,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="README.md" />
     <None Include="Resources\Gemini_Generated_Image_8623t88623t88623.png" />
     <None Include="Resources\pos full img.ico" />
     <None Include="Resources\Gemini_Generated_Image_r6rm19r6rm19r6rm-removebg-preview.png" />
