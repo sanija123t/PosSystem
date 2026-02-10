@@ -16,7 +16,6 @@ namespace PosSystem
         // Create the barcode reader once for efficiency
         BarcodeReader reader = new BarcodeReader();
 
-        // Add this in your frmscanBarcode constructor or Load event
         public frmscanBarcode(frmProduct frm)
         {
             InitializeComponent();
@@ -24,11 +23,11 @@ namespace PosSystem
 
             // Optimize for Retail Barcodes
             reader.Options.PossibleFormats = new List<BarcodeFormat> {
-        BarcodeFormat.EAN_13,
-        BarcodeFormat.EAN_8,
-        BarcodeFormat.UPC_A,
-        BarcodeFormat.CODE_128
-    };
+                BarcodeFormat.EAN_13,
+                BarcodeFormat.EAN_8,
+                BarcodeFormat.UPC_A,
+                BarcodeFormat.CODE_128
+            };
             reader.Options.TryHarder = true; // High accuracy
             reader.AutoRotate = true;       // Scan even if the product is sideways
         }
@@ -66,44 +65,64 @@ namespace PosSystem
 
         private void VideoCaptureDevice_NewFrame(object sender, AForge.Video.NewFrameEventArgs eventArgs)
         {
-            using (Bitmap bitmap = (Bitmap)eventArgs.Frame.Clone())
+            Bitmap bitmap = null;
+            try
             {
+                bitmap = (Bitmap)eventArgs.Frame.Clone();
                 var result = reader.Decode(bitmap);
 
-                this.Invoke(new MethodInvoker(delegate ()
+                if (pictureBox.InvokeRequired)
                 {
-                    // Update camera preview safely
+                    pictureBox.Invoke(new MethodInvoker(delegate ()
+                    {
+                        // Update camera preview safely
+                        if (pictureBox.Image != null) pictureBox.Image.Dispose();
+                        pictureBox.Image = (Bitmap)bitmap.Clone();
+
+                        // If barcode detected, update parent form
+                        if (result != null)
+                        {
+                            if (f != null && f.txtBarcode != null)
+                            {
+                                f.txtBarcode.Invoke(new MethodInvoker(() =>
+                                {
+                                    f.txtBarcode.Text = result.Text;
+                                }));
+                            }
+
+                            // Optional: beep on successful scan
+                            System.Media.SystemSounds.Beep.Play();
+
+                            // Stop camera and close form automatically
+                            StopCamera();
+                            this.Close();
+                        }
+                    }));
+                }
+                else
+                {
                     if (pictureBox.Image != null) pictureBox.Image.Dispose();
                     pictureBox.Image = (Bitmap)bitmap.Clone();
-
-                    // If barcode detected, update parent form
-                    if (result != null)
-                    {
-                        if (f?.txtBarcode != null)
-                        {
-                            f.txtBarcode.Text = result.Text;
-                        }
-
-                        // Optional: beep on successful scan
-                        System.Media.SystemSounds.Beep.Play();
-
-                        // Stop camera and close form automatically
-                        StopCamera();
-                        this.Close();
-                    }
-                }));
+                }
+            }
+            catch { /* ignore frame errors */ }
+            finally
+            {
+                if (bitmap != null) bitmap.Dispose();
             }
         }
 
         private void StopCamera()
         {
-            if (videoCaptureDevice != null && videoCaptureDevice.IsRunning)
+            if (videoCaptureDevice != null)
             {
-                videoCaptureDevice.SignalToStop();
-                videoCaptureDevice.WaitForStop(); // Ensure proper shutdown
+                if (videoCaptureDevice.IsRunning)
+                {
+                    videoCaptureDevice.SignalToStop();
+                    videoCaptureDevice.WaitForStop(); // Ensure proper shutdown
+                }
                 videoCaptureDevice.NewFrame -= VideoCaptureDevice_NewFrame;
                 videoCaptureDevice = null;
-
                 btnStart.Enabled = true; // Re-enable start button if form reused
             }
         }
