@@ -1,36 +1,30 @@
 ﻿using System;
-using System.Data;
 using System.Data.SQLite;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace PosSystem
 {
     public partial class frmQty : Form
     {
-        SQLiteConnection cn;
-        SQLiteCommand cm;
-        SQLiteDataReader dr;
-
         private string pcode;
         private double price;
         private int qty;
         private string transno;
 
-        // References for parent forms
-        Form1 f;
-        frmPOS fPOS;
+        // References to parent forms
+        private Form1 f;
+        private frmPOS fPOS;
 
         public frmQty(Form1 frm)
         {
             InitializeComponent();
-            cn = new SQLiteConnection(DBConnection.MyConnection());
             f = frm;
         }
 
         public frmQty(frmPOS frm)
         {
             InitializeComponent();
-            cn = new SQLiteConnection(DBConnection.MyConnection());
             fPOS = frm;
         }
 
@@ -50,103 +44,114 @@ namespace PosSystem
         private void txtQty_KeyPress(object sender, KeyPressEventArgs e)
         {
             // Enter key pressed
-            if ((e.KeyChar == 13) && (!string.IsNullOrEmpty(txtQty.Text)))
+            if (e.KeyChar != (char)13) return;
+
+            if (string.IsNullOrWhiteSpace(txtQty.Text))
             {
-                try
+                MessageBox.Show("Please enter a quantity.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtQty.Focus();
+                return;
+            }
+
+            if (!int.TryParse(txtQty.Text, out int inputQty))
+            {
+                MessageBox.Show("Invalid quantity entered.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtQty.Focus();
+                return;
+            }
+
+            try
+            {
+                string currentTransNo = fPOS != null ? fPOS.lblTransno.Text : transno;
+                string currentUser = fPOS != null ? fPOS.LblUser.Text : f?.lblUser.Text ?? "Unknown Cashier";
+
+                // Check if product already exists in cart
+                bool found = false;
+                int cartQty = 0;
+                string cartId = "";
+
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    string id = "";
-                    bool found = false;
-                    int cart_qty = 0;
-                    int inputQty = int.Parse(txtQty.Text);
-
-                    // --- Parent Data Resolution ---
-                    string currentTransNo = (fPOS != null) ? fPOS.lblTransno.Text : transno;
-
-                    // Handle the User/Cashier Name
-                    string currentUser = "Unknown Cashier";
-                    if (fPOS != null)
-                    {
-                        currentUser = fPOS.LblUser.Text;
-                    }
-                    else if (f != null)
-                    {
-                        currentUser = f.lblUser.Text;
-                    }
-
                     cn.Open();
-                    cm = new SQLiteCommand("SELECT id, qty FROM tblCart1 WHERE transno = @transno AND pcode = @pcode", cn);
-                    cm.Parameters.AddWithValue("@transno", currentTransNo);
-                    cm.Parameters.AddWithValue("@pcode", pcode);
-                    dr = cm.ExecuteReader();
 
-                    if (dr.Read())
+                    using (var cmd = new SQLiteCommand(
+                        "SELECT id, qty FROM tblCart1 WHERE transno = @transno AND pcode = @pcode", cn))
                     {
-                        found = true;
-                        id = dr["id"].ToString();
-                        cart_qty = int.Parse(dr["qty"].ToString());
+                        cmd.Parameters.AddWithValue("@transno", currentTransNo);
+                        cmd.Parameters.AddWithValue("@pcode", pcode);
+
+                        using (var dr = cmd.ExecuteReader())
+                        {
+                            if (dr.Read())
+                            {
+                                found = true;
+                                cartId = dr["id"].ToString();
+                                cartQty = Convert.ToInt32(dr["qty"]);
+                            }
+                        }
                     }
-                    dr.Close();
-                    cn.Close();
 
                     if (found)
                     {
-                        if (qty < (inputQty + cart_qty))
+                        if (qty < (inputQty + cartQty))
                         {
-                            MessageBox.Show("Unable to proceed. Remaining qty on hand is " + qty, "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            MessageBox.Show($"Unable to proceed. Remaining qty on hand is {qty}.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
 
-                        cn.Open();
-                        cm = new SQLiteCommand("UPDATE tblCart1 SET qty = (qty + @inputQty) WHERE id = @id", cn);
-                        cm.Parameters.AddWithValue("@inputQty", inputQty);
-                        cm.Parameters.AddWithValue("@id", id);
-                        cm.ExecuteNonQuery();
-                        cn.Close();
+                        using (var cmd = new SQLiteCommand("UPDATE tblCart1 SET qty = qty + @inputQty WHERE id = @id", cn))
+                        {
+                            cmd.Parameters.AddWithValue("@inputQty", inputQty);
+                            cmd.Parameters.AddWithValue("@id", cartId);
+                            cmd.ExecuteNonQuery();
+                        }
                     }
                     else
                     {
                         if (qty < inputQty)
                         {
-                            MessageBox.Show("Unable to proceed. Remaining qty on hand is " + qty, "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            MessageBox.Show($"Unable to proceed. Remaining qty on hand is {qty}.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             return;
                         }
 
-                        cn.Open();
-                        cm = new SQLiteCommand("INSERT INTO tblCart1 (transno, pcode, price, qty, sdate, cashier) VALUES (@transno, @pcode, @price, @qty, @sdate, @cashier)", cn);
-                        cm.Parameters.AddWithValue("@transno", currentTransNo);
-                        cm.Parameters.AddWithValue("@pcode", pcode);
-                        cm.Parameters.AddWithValue("@price", price);
-                        cm.Parameters.AddWithValue("@qty", inputQty);
-                        cm.Parameters.AddWithValue("@sdate", DateTime.Now.ToString("yyyy-MM-dd"));
-                        cm.Parameters.AddWithValue("@cashier", currentUser);
-                        cm.ExecuteNonQuery();
-                        cn.Close();
+                        using (var cmd = new SQLiteCommand(
+                            "INSERT INTO tblCart1 (transno, pcode, price, qty, sdate, cashier) VALUES (@transno, @pcode, @price, @qty, @sdate, @cashier)", cn))
+                        {
+                            cmd.Parameters.AddWithValue("@transno", currentTransNo);
+                            cmd.Parameters.AddWithValue("@pcode", pcode);
+                            cmd.Parameters.AddWithValue("@price", price);
+                            cmd.Parameters.AddWithValue("@qty", inputQty);
+                            cmd.Parameters.AddWithValue("@sdate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                            cmd.Parameters.AddWithValue("@cashier", currentUser);
+                            cmd.ExecuteNonQuery();
+                        }
                     }
-
-                    // --- UI Refresh Logic ---
-                    if (fPOS != null)
-                    {
-                        fPOS.LoadCart();
-                        fPOS.txtSearch.Clear();
-                        fPOS.txtSearch.Focus();
-                    }
-
-                    this.Dispose();
                 }
-                catch (Exception ex)
+
+                // Refresh parent POS UI
+                if (fPOS != null)
                 {
-                    if (cn.State == ConnectionState.Open) cn.Close();
-                    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    fPOS.LoadCart();
+                    fPOS.txtSearch.Clear();
+                    fPOS.txtSearch.Focus();
                 }
+
+                this.Dispose();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void txtQty_TextChanged(object sender, EventArgs e)
         {
-            if (System.Text.RegularExpressions.Regex.IsMatch(txtQty.Text, "[^0-9]"))
+            // Remove non-numeric characters instead of clearing the entire box
+            if (Regex.IsMatch(txtQty.Text, "[^0-9]"))
             {
-                MessageBox.Show("Please enter only numbers.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                txtQty.Text = "";
+                int cursorPos = txtQty.SelectionStart - 1;
+                txtQty.Text = Regex.Replace(txtQty.Text, "[^0-9]", "");
+                txtQty.SelectionStart = Math.Max(cursorPos, 0);
             }
         }
     }

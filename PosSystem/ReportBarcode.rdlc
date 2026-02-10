@@ -40,7 +40,7 @@
                                 <TextRun>
                                   <Value>=Fields!text.Value</Value>
                                   <Style>
-                                    <FontFamily>Bahnschrift</FontFamily>
+                                    <FontFamily>Arial</FontFamily>
                                   </Style>
                                 </TextRun>
                               </TextRuns>
@@ -142,7 +142,7 @@
                                 <TextRun>
                                   <Value>=Fields!text.Value</Value>
                                   <Style>
-                                    <FontFamily>Bahnschrift</FontFamily>
+                                    <FontFamily>Arial</FontFamily>
                                   </Style>
                                 </TextRun>
                               </TextRuns>
@@ -227,7 +227,7 @@
                 <TextRun>
                   <Value>Barcode</Value>
                   <Style>
-                    <FontFamily>bahnschrift</FontFamily>
+                    <FontFamily>Arial</FontFamily>
                     <FontSize>12pt</FontSize>
                     <FontWeight>Normal</FontWeight>
                   </Style>

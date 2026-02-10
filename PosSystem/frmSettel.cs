@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Data;
-using System.Windows.Forms;
 using System.Data.SQLite;
+using System.Windows.Forms;
 
 namespace PosSystem
 {
     public partial class frmSettel : Form
     {
-        // Connection string retrieved from static class
         private string connectionString = DBConnection.MyConnection();
         private Form1 f;
         private frmPOS fPOS;
+
+        private decimal tempValue = 0;           // For arithmetic operations
+        private string currentOperator = "";     // +, -, *, /
+        private bool operatorClicked = false;    // Track if operator was clicked
 
         public frmSettel(Form1 fp)
         {
@@ -28,23 +31,96 @@ namespace PosSystem
 
         private void frmSettel_Load(object sender, EventArgs e)
         {
-            // Your code to run when the settlement window opens
+            txtCash.Focus();
         }
 
-        private void txtSale_TextChanged(object sender, EventArgs e)
-        {
-            // Your code to run when the sale amount changes
-        }
         private void pictureBox2_Click(object sender, EventArgs e) => this.Dispose();
+
+        #region Numeric & Math Button Handlers
+
+        private void btnNumber_Click(object sender, EventArgs e)
+        {
+            Button btn = sender as Button;
+            if (operatorClicked)
+            {
+                txtCash.Clear();
+                operatorClicked = false;
+            }
+            txtCash.Text += btn.Text;
+        }
+
+        private void btnC_Click(object sender, EventArgs e)
+        {
+            txtCash.Clear();
+            txtCash.Focus();
+            tempValue = 0;
+            currentOperator = "";
+            operatorClicked = false;
+        }
+
+        private void btnDecimal_Click(object sender, EventArgs e)
+        {
+            if (!txtCash.Text.Contains("."))
+                txtCash.Text += ".";
+        }
+
+        private void btnOperator_Click(object sender, EventArgs e)
+        {
+            Button btn = sender as Button;
+            if (decimal.TryParse(txtCash.Text, out decimal val))
+            {
+                if (!string.IsNullOrEmpty(currentOperator) && !operatorClicked)
+                {
+                    // Perform previous operation if user clicks multiple operators
+                    val = Calculate(tempValue, val, currentOperator);
+                    txtCash.Text = val.ToString("0.00"); // temporary display
+                }
+                tempValue = val;
+                currentOperator = btn.Text;
+                operatorClicked = true;
+            }
+            else
+            {
+                // If txtCash empty or invalid, just set operator
+                currentOperator = btn.Text;
+                operatorClicked = true;
+            }
+        }
+
+        private void btnEquals_Click(object sender, EventArgs e)
+        {
+            if (!decimal.TryParse(txtCash.Text, out decimal secondValue))
+                secondValue = tempValue; // if user hits = without second number
+
+            decimal result = Calculate(tempValue, secondValue, currentOperator);
+            txtCash.Text = result.ToString("0.00"); // clean, no commas
+            tempValue = 0;
+            currentOperator = "";
+            operatorClicked = false;
+        }
+
+        private decimal Calculate(decimal first, decimal second, string op)
+        {
+            switch (op)
+            {
+                case "+": return first + second;
+                case "-": return first - second;
+                case "*": return first * second;
+                case "/": return second != 0 ? first / second : 0;
+                default: return second;
+            }
+        }
+
+        #endregion
 
         private void txtCash_TextChanged(object sender, EventArgs e)
         {
             try
             {
-                double sale = double.Parse(txtSale.Text);
-                double cash = string.IsNullOrEmpty(txtCash.Text) ? 0 : double.Parse(txtCash.Text);
-                double change = cash - sale;
-                txtChange.Text = change.ToString("#,##0.00");
+                decimal sale = decimal.TryParse(txtSale.Text, out decimal s) ? s : 0;
+                decimal cash = decimal.TryParse(txtCash.Text, out decimal c) ? c : 0;
+                decimal change = cash - sale;
+                txtChange.Text = (change < 0) ? "0.00" : change.ToString("0.00"); // formatted for display only
             }
             catch
             {
@@ -54,22 +130,23 @@ namespace PosSystem
 
         private void btnEnter_Click(object sender, EventArgs e)
         {
+            string currentTransNo = (fPOS != null) ? fPOS.lblTransno.Text : f.lblTransno.Text;
+            Form activeForm = (fPOS != null) ? (Form)fPOS : (Form)f;
+
+            DataGridView dgv = (fPOS != null) ? fPOS.dataGridView1 : f.dataGridView1;
+            if (dgv.Rows.Count == 0) return;
+
+            decimal saleAmount = decimal.TryParse(txtSale.Text, out decimal s) ? s : 0;
+            decimal cashAmount = decimal.TryParse(txtCash.Text, out decimal c) ? c : 0;
+
+            if (cashAmount < saleAmount)
+            {
+                MessageBox.Show("Insufficient amount. Please enter the correct amount!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             try
             {
-                double changeAmount = 0;
-                double.TryParse(txtChange.Text, out changeAmount);
-
-                if (string.IsNullOrEmpty(txtCash.Text) || changeAmount < 0)
-                {
-                    MessageBox.Show("Insufficient amount. Please enter the correct amount!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                // Identify which DataGridView to use from the parent forms
-                DataGridView dgv = (fPOS != null) ? fPOS.dataGridView1 : f.dataGridView1;
-
-                if (dgv.Rows.Count == 0) return;
-
                 using (SQLiteConnection cn = new SQLiteConnection(connectionString))
                 {
                     cn.Open();
@@ -77,50 +154,51 @@ namespace PosSystem
                     {
                         for (int i = 0; i < dgv.Rows.Count; i++)
                         {
-                            // Ensure cells aren't null before calling ToString()
-                            string pcode = dgv.Rows[i].Cells[2].Value?.ToString();
-                            int qty = int.Parse(dgv.Rows[i].Cells[5].Value?.ToString() ?? "0");
-                            int cartId = int.Parse(dgv.Rows[i].Cells[1].Value?.ToString() ?? "0");
+                            if (dgv.Rows[i].IsNewRow) continue;
 
-                            // 1. Update Product Stock
-                            using (SQLiteCommand cmd = new SQLiteCommand("UPDATE TblProduct1 SET qty = qty - @qty WHERE pcode = @pcode", cn))
+                            string pcode = dgv.Rows[i].Cells[2].Value?.ToString();
+                            int soldQty = int.TryParse(dgv.Rows[i].Cells[5].Value?.ToString(), out int q) ? q : 0;
+                            int cartId = int.TryParse(dgv.Rows[i].Cells[1].Value?.ToString(), out int id) ? id : 0;
+
+                            using (var cmdCheck = new SQLiteCommand("SELECT qty FROM TblProduct1 WHERE pcode=@pcode", cn))
                             {
-                                cmd.Parameters.AddWithValue("@qty", qty);
-                                cmd.Parameters.AddWithValue("@pcode", pcode);
-                                cmd.ExecuteNonQuery();
+                                cmdCheck.Parameters.AddWithValue("@pcode", pcode);
+                                int stockQty = Convert.ToInt32(cmdCheck.ExecuteScalar() ?? 0);
+                                if (soldQty > stockQty)
+                                {
+                                    MessageBox.Show($"Not enough stock for product {pcode}. Remaining: {stockQty}", "Stock Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                    transaction.Rollback();
+                                    return;
+                                }
                             }
 
-                            // 2. Update Cart Status
-                            using (SQLiteCommand cmd = new SQLiteCommand("UPDATE tblCart1 SET status = 'Sold' WHERE id = @id", cn))
+                            using (var cmdUpdateStock = new SQLiteCommand("UPDATE TblProduct1 SET qty = qty - @qty WHERE pcode=@pcode", cn))
                             {
-                                cmd.Parameters.AddWithValue("@id", cartId);
-                                cmd.ExecuteNonQuery();
+                                cmdUpdateStock.Parameters.AddWithValue("@qty", soldQty);
+                                cmdUpdateStock.Parameters.AddWithValue("@pcode", pcode);
+                                cmdUpdateStock.ExecuteNonQuery();
+                            }
+
+                            using (var cmdUpdateCart = new SQLiteCommand("UPDATE tblCart1 SET status='Sold' WHERE id=@id", cn))
+                            {
+                                cmdUpdateCart.Parameters.AddWithValue("@id", cartId);
+                                cmdUpdateCart.ExecuteNonQuery();
                             }
                         }
                         transaction.Commit();
                     }
                 }
 
-                // 3. Handle Receipt Generation (CS1503 Fix)
-                // Passing the active form as a generic Form object
-                Form activeForm = (fPOS != null) ? (Form)fPOS : (Form)f;
+                // Receipt
                 frmResipt frm = new frmResipt(activeForm);
                 frm.LoadReport(txtCash.Text, txtChange.Text);
                 frm.ShowDialog();
 
                 MessageBox.Show("Payment successfully saved!", "Payment", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                // 4. Reset Parent Form
-                if (fPOS != null)
-                {
-                    fPOS.GetTransNo();
-                    fPOS.LoadCart();
-                }
-                else
-                {
-                    f.GetTransNo();
-                    f.LoadCart();
-                }
+                // Refresh Parent
+                if (fPOS != null) { fPOS.GetTransNo(); fPOS.LoadCart(); }
+                else { f.GetTransNo(); f.LoadCart(); }
 
                 this.Dispose();
             }
@@ -130,25 +208,50 @@ namespace PosSystem
             }
         }
 
-        #region Numeric Keypad Logic
-        private void btn7_Click(object sender, EventArgs e) => txtCash.Text += "7";
-        private void btn8_Click(object sender, EventArgs e) => txtCash.Text += "8";
-        private void btn9_Click(object sender, EventArgs e) => txtCash.Text += "9";
-        private void btn4_Click(object sender, EventArgs e) => txtCash.Text += "4";
-        private void btn5_Click(object sender, EventArgs e) => txtCash.Text += "5";
-        private void btn6_Click(object sender, EventArgs e) => txtCash.Text += "6";
-        private void btn1_Click(object sender, EventArgs e) => txtCash.Text += "1";
-        private void btn2_Click(object sender, EventArgs e) => txtCash.Text += "2";
-        private void btn3_Click(object sender, EventArgs e) => txtCash.Text += "3";
-        private void btn0_Click(object sender, EventArgs e) => txtCash.Text += "0";
-        private void btn00_Click(object sender, EventArgs e) => txtCash.Text += "00";
-        private void btnC_Click(object sender, EventArgs e) { txtCash.Clear(); txtCash.Focus(); }
-        #endregion
-
+        #region Keyboard Support
         private void frmSettel_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Escape) this.Dispose();
-            else if (e.KeyCode == Keys.Enter) btnEnter_Click(sender, e);
+            else if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; btnEnter_Click(sender, e); }
+            else if ((e.KeyCode >= Keys.D0 && e.KeyCode <= Keys.D9) || (e.KeyCode >= Keys.NumPad0 && e.KeyCode <= Keys.NumPad9))
+            {
+                if (operatorClicked) { txtCash.Clear(); operatorClicked = false; }
+                string number = e.KeyCode.ToString().Replace("D", "").Replace("NumPad", "");
+                txtCash.Text += number;
+            }
+            else if (e.KeyCode == Keys.Back)
+            {
+                if (txtCash.Text.Length > 0) txtCash.Text = txtCash.Text.Substring(0, txtCash.Text.Length - 1);
+            }
+            else if (e.KeyCode == Keys.Decimal || e.KeyCode == Keys.OemPeriod)
+            {
+                if (!txtCash.Text.Contains(".")) txtCash.Text += ".";
+            }
+            else if (e.KeyCode == Keys.Add) btnOperator_Click(btnAdd, EventArgs.Empty);
+            else if (e.KeyCode == Keys.Subtract) btnOperator_Click(btnSubtract, EventArgs.Empty);
+            else if (e.KeyCode == Keys.Multiply) btnOperator_Click(btnMultiply, EventArgs.Empty);
+            else if (e.KeyCode == Keys.Divide) btnOperator_Click(btnDivide, EventArgs.Empty);
         }
+
+        private void txtSale_TextChanged(object sender, EventArgs e)
+        {
+            // Optionally recalc change immediately
+            txtCash_TextChanged(sender, e);
+        }
+
+
+        #endregion
+
+        private void btn1_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
+        private void btn2_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
+        private void btn3_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
+        private void btn4_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
+        private void btn5_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
+        private void btn6_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
+        private void btn7_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
+        private void btn8_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
+        private void btn9_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
+        private void btn0_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
+        private void btn00_Click(object sender, EventArgs e) => btnNumber_Click(sender, e);
     }
 }
