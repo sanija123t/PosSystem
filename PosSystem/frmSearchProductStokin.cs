@@ -1,23 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Data.SQLite;
 using System.Windows.Forms;
-using System.Data.SqlClient;
 
 namespace PosSystem
 {
     public partial class frmSearchProductStokin : Form
     {
-        SqlConnection cn = new SqlConnection();
-        SqlCommand cm = new SqlCommand();
-        SqlDataReader dr;
-
-        // Error fixed: Removed the 'new DBConnection()' line
         string stitle = "PosSystem";
         frmStockin slist;
 
@@ -25,8 +14,6 @@ namespace PosSystem
         {
             InitializeComponent();
             slist = flist;
-            // Error fixed: Called the static method using the Class Name
-            cn = new SqlConnection(DBConnection.MyConnection());
         }
 
         private void pictureBox1_Click(object sender, EventArgs e)
@@ -36,36 +23,71 @@ namespace PosSystem
 
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
-            string ColName = dataGridView1.Columns[e.ColumnIndex].Name;
-            if (ColName == "colSelect")
+            if (e.RowIndex < 0) return;
+            string colName = dataGridView1.Columns[e.ColumnIndex].Name;
+            if (colName != "colSelect") return;
+
+            if (string.IsNullOrEmpty(slist.txtRefNo.Text))
             {
-                // Validation
-                if (slist.txtRefNo.Text == string.Empty) { MessageBox.Show("Please enter reference no", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning); slist.txtRefNo.Focus(); return; }
-                if (slist.txtBy.Text == string.Empty) { MessageBox.Show("Please enter Stock in by", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning); slist.txtBy.Focus(); return; }
+                MessageBox.Show("Please enter reference no", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                slist.txtRefNo.Focus();
+                return;
+            }
 
-                if (MessageBox.Show("Add this item?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (string.IsNullOrEmpty(slist.txtBy.Text))
+            {
+                MessageBox.Show("Please enter Stock in by", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                slist.txtBy.Focus();
+                return;
+            }
+
+            string pcode = dataGridView1.Rows[e.RowIndex].Cells[1].Value.ToString();
+
+            try
+            {
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    try
-                    {
-                        cn.Open();
-                        cm = new SqlCommand("insert into tblStockin (refno,pcode,sdate,stockinby,vendorid) values (@refno,@pcode,@sdate,@stockinby,@vendorid)", cn);
-                        cm.Parameters.AddWithValue("@refno", slist.txtRefNo.Text);
-                        cm.Parameters.AddWithValue("@pcode", dataGridView1.Rows[e.RowIndex].Cells[1].Value.ToString());
-                        cm.Parameters.AddWithValue("@stockinby", slist.txtBy.Text);
-                        cm.Parameters.AddWithValue("@sdate", slist.dt1.Value);
-                        cm.Parameters.AddWithValue("@vendorid", slist.lblVendorID.Text);
-                        cm.ExecuteNonQuery();
-                        cn.Close();
+                    cn.Open();
 
-                        MessageBox.Show("Successfully Add!", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        slist.LoadStockIn();
-                    }
-                    catch (Exception ex)
+                    // Prevent duplicate entry for same RefNo & PCode
+                    using (var checkCmd = new SQLiteCommand(
+                        "SELECT COUNT(*) FROM tblStockIn WHERE refno = @refno AND pcode = @pcode AND status = 'Pending'", cn))
                     {
-                        cn.Close();
-                        MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        checkCmd.Parameters.AddWithValue("@refno", slist.txtRefNo.Text);
+                        checkCmd.Parameters.AddWithValue("@pcode", pcode);
+
+                        long count = (long)checkCmd.ExecuteScalar();
+                        if (count > 0)
+                        {
+                            MessageBox.Show("This product is already added to the current reference number.", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+                    }
+
+                    using (var cmd = new SQLiteCommand(
+                        "INSERT INTO tblStockIn (refno, pcode, sdate, stockinby, vendorid) VALUES (@refno, @pcode, @sdate, @stockinby, @vendorid)", cn))
+                    {
+                        cmd.Parameters.AddWithValue("@refno", slist.txtRefNo.Text);
+                        cmd.Parameters.AddWithValue("@pcode", pcode);
+                        cmd.Parameters.AddWithValue("@sdate", slist.dt1.Value.ToString("yyyy-MM-dd HH:mm:ss"));
+                        cmd.Parameters.AddWithValue("@stockinby", slist.txtBy.Text);
+                        cmd.Parameters.AddWithValue("@vendorid", slist.lblVendorID.Text);
+                        cmd.ExecuteNonQuery();
                     }
                 }
+
+                MessageBox.Show("Successfully Added!", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Reload grid in main form
+                slist.LoadStockIn();
+
+                // UX improvement: keep search text, just focus for next entry
+                txtSearch.Focus();
+                dataGridView1.ClearSelection();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -73,36 +95,44 @@ namespace PosSystem
         {
             try
             {
-                int i = 0;
                 dataGridView1.Rows.Clear();
-                cn.Open();
-                // Using Parameters for search is safer than string concatenation
-                cm = new SqlCommand("select pcode, pdesc, qty from TblProduct1 where pdesc like @pdesc order by pdesc", cn);
-                cm.Parameters.AddWithValue("@pdesc", "%" + txtSearch.Text + "%");
 
-                dr = cm.ExecuteReader();
-                while (dr.Read())
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    i++;
-                    dataGridView1.Rows.Add(i, dr[0].ToString(), dr[1].ToString(), dr[2].ToString());
+                    cn.Open();
+                    using (var cmd = new SQLiteCommand(
+                        "SELECT pcode, pdesc, qty FROM TblProduct1 WHERE pdesc LIKE @pdesc ORDER BY pdesc", cn))
+                    {
+                        cmd.Parameters.AddWithValue("@pdesc", "%" + txtSearch.Text + "%");
+
+                        using (var dr = cmd.ExecuteReader())
+                        {
+                            int i = 0;
+                            while (dr.Read())
+                            {
+                                i++;
+                                dataGridView1.Rows.Add(
+                                    i,
+                                    dr["pcode"].ToString(),
+                                    dr["pdesc"].ToString(),
+                                    dr["qty"].ToString()
+                                );
+                            }
+                        }
+                    }
                 }
-                dr.Close();
-                cn.Close();
             }
             catch (Exception ex)
             {
-                cn.Close();
                 MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        private void panel1_Paint(object sender, PaintEventArgs e)
-        {
         }
 
         private void txtSearch_TextChanged(object sender, EventArgs e)
         {
             LoadProduct();
         }
+
+        private void panel1_Paint(object sender, PaintEventArgs e) { }
     }
 }

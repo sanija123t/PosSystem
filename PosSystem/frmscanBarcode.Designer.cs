@@ -35,6 +35,7 @@ namespace PosSystem
             this.pictureBox = new System.Windows.Forms.PictureBox();
             this.label1 = new System.Windows.Forms.Label();
             this.btnStart = new System.Windows.Forms.Button();
+            this.btnReStart = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox)).BeginInit();
             this.SuspendLayout();
@@ -96,7 +97,7 @@ namespace PosSystem
             this.btnStart.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnStart.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btnStart.ForeColor = System.Drawing.Color.White;
-            this.btnStart.Location = new System.Drawing.Point(109, 287);
+            this.btnStart.Location = new System.Drawing.Point(46, 287);
             this.btnStart.Name = "btnStart";
             this.btnStart.Size = new System.Drawing.Size(75, 30);
             this.btnStart.TabIndex = 15;
@@ -104,12 +105,27 @@ namespace PosSystem
             this.btnStart.UseVisualStyleBackColor = false;
             this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
             // 
+            // btnReStart
+            // 
+            this.btnReStart.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(38)))), ((int)(((byte)(38)))));
+            this.btnReStart.FlatAppearance.BorderSize = 0;
+            this.btnReStart.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnReStart.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnReStart.ForeColor = System.Drawing.Color.White;
+            this.btnReStart.Location = new System.Drawing.Point(178, 287);
+            this.btnReStart.Name = "btnReStart";
+            this.btnReStart.Size = new System.Drawing.Size(75, 30);
+            this.btnReStart.TabIndex = 16;
+            this.btnReStart.Text = "Restart";
+            this.btnReStart.UseVisualStyleBackColor = false;
+            // 
             // frmscanBarcode
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(321, 329);
+            this.Controls.Add(this.btnReStart);
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.pictureBox);
@@ -137,5 +153,6 @@ namespace PosSystem
         private System.Windows.Forms.PictureBox pictureBox;
         private System.Windows.Forms.Label label1;
         public System.Windows.Forms.Button btnStart;
+        public System.Windows.Forms.Button btnReStart;
     }
 }

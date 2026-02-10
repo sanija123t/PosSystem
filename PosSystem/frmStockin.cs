@@ -30,27 +30,26 @@ namespace PosSystem
             GenerateReferenceNo();
         }
 
-        // Automated Reference Number Generation
+        // Automated Reference Number Generation (Safe parsing)
         public void GenerateReferenceNo()
         {
             try
             {
                 string sdate = DateTime.Now.ToString("yyyyMMdd");
-                int count;
+                int count = 1000; // default starting number
                 cn.Open();
-                cm = new SQLiteCommand("SELECT refno FROM tblStockIn WHERE refno LIKE '" + sdate + "%' ORDER BY id DESC LIMIT 1", cn);
+                cm = new SQLiteCommand("SELECT refno FROM tblStockIn WHERE refno LIKE @sdate ORDER BY id DESC LIMIT 1", cn);
+                cm.Parameters.AddWithValue("@sdate", sdate + "%");
                 dr = cm.ExecuteReader();
-                dr.Read();
-                if (dr.HasRows)
+                if (dr.Read())
                 {
                     string lastRef = dr[0].ToString();
-                    count = int.Parse(lastRef.Substring(8, 4));
-                    txtRefNo.Text = sdate + (count + 1);
+                    if (lastRef.Length >= 12 && int.TryParse(lastRef.Substring(8), out int lastCount))
+                    {
+                        count = lastCount;
+                    }
                 }
-                else
-                {
-                    txtRefNo.Text = sdate + "1001";
-                }
+                txtRefNo.Text = sdate + (count + 1);
                 dr.Close();
                 cn.Close();
             }
@@ -125,39 +124,76 @@ namespace PosSystem
             frm.ShowDialog();
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
+        // Async Stock-in Save with Transaction & Safe UI
+        private async void btnSave_Click(object sender, EventArgs e)
         {
+            if (dataGridView2.Rows.Count == 0) return;
+
+            if (MessageBox.Show("Are you sure you want to save this record?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            btnSave.Enabled = false;
+            dataGridView2.Enabled = false; // prevent edits while saving
+
             try
             {
-                if (dataGridView2.Rows.Count > 0)
+                await Task.Run(() =>
                 {
-                    if (MessageBox.Show("Are you sure you want to save this record?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    cn.Open();
+                    using (var transaction = cn.BeginTransaction())
                     {
-                        for (int i = 0; i < dataGridView2.Rows.Count; i++)
+                        try
                         {
-                            cn.Open();
-                            cm = new SQLiteCommand("UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode = @pcode", cn);
-                            cm.Parameters.AddWithValue("@qty", int.Parse(dataGridView2.Rows[i].Cells[6].Value.ToString()));
-                            cm.Parameters.AddWithValue("@pcode", dataGridView2.Rows[i].Cells[3].Value.ToString());
-                            cm.ExecuteNonQuery();
-                            cn.Close();
+                            foreach (DataGridViewRow row in dataGridView2.Rows)
+                            {
+                                if (row.IsNewRow) continue;
+                                if (!int.TryParse(row.Cells[6].Value?.ToString(), out int qty)) qty = 0;
+                                string pcode = row.Cells[3].Value.ToString();
+                                string stockInID = row.Cells[1].Value.ToString();
 
-                            cn.Open();
-                            cm = new SQLiteCommand("UPDATE tblStockIn SET status = 'Done' WHERE id = @id", cn);
-                            cm.Parameters.AddWithValue("@id", dataGridView2.Rows[i].Cells[1].Value.ToString());
-                            cm.ExecuteNonQuery();
+                                // Update product qty
+                                using (SQLiteCommand cmd = new SQLiteCommand("UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode = @pcode", cn))
+                                {
+                                    cmd.Parameters.AddWithValue("@qty", qty);
+                                    cmd.Parameters.AddWithValue("@pcode", pcode);
+                                    cmd.ExecuteNonQuery();
+                                }
+
+                                // Update stockin status
+                                using (SQLiteCommand cmd = new SQLiteCommand("UPDATE tblStockIn SET status = 'Done' WHERE id = @id", cn))
+                                {
+                                    cmd.Parameters.AddWithValue("@id", stockInID);
+                                    cmd.ExecuteNonQuery();
+                                }
+                            }
+
+                            transaction.Commit();
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            throw ex;
+                        }
+                        finally
+                        {
                             cn.Close();
                         }
-                        MessageBox.Show("Stock in successfully saved!", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        Clear();
-                        LoadStockIn();
                     }
-                }
+                });
+
+                MessageBox.Show("Stock in successfully saved!", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Clear();
+                LoadStockIn();
             }
             catch (Exception ex)
             {
-                if (cn.State == ConnectionState.Open) cn.Close();
+                if (cn.State == System.Data.ConnectionState.Open) cn.Close();
                 MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                btnSave.Enabled = true;
+                dataGridView2.Enabled = true;
             }
         }
 

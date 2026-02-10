@@ -116,79 +116,102 @@ namespace PosSystem
 
             try
             {
-                printItems = dataGridView1.Rows.Cast<DataGridViewRow>()
-                    .Where(r => !r.IsNewRow && r.Cells[2].Value != null)
-                    .Select(r =>
+                // Safely collect items
+                printItems = new List<ReceiptItem>();
+                foreach (DataGridViewRow r in dataGridView1.Rows)
+                {
+                    if (r.IsNewRow) continue;
+                    if (r.Cells[2].Value == null) continue;
+
+                    decimal rowTotal = 0m;
+                    int rowQty = 1;
+
+                    // Safe parsing
+                    if (!decimal.TryParse(r.Cells[7].Value?.ToString(), out rowTotal)) continue;
+                    if (!int.TryParse(r.Cells[5].Value?.ToString(), out rowQty)) rowQty = 1;
+                    rowQty = Math.Max(1, rowQty);
+
+                    decimal rowVatable = Math.Round(rowTotal / 1.12m, 2);
+
+                    printItems.Add(new ReceiptItem
                     {
-                        decimal rowTotal = Convert.ToDecimal(r.Cells[7].Value);
-                        decimal rowVatable = Math.Round(rowTotal / 1.12m, 2);
-                        return new ReceiptItem
-                        {
-                            PCode = r.Cells[2].Value.ToString(),
-                            Description = r.Cells[3].Value?.ToString() ?? "Unknown",
-                            Qty = Math.Max(1, Convert.ToInt32(r.Cells[5].Value)),
-                            Total = rowTotal,
-                            Vatable = rowVatable,
-                            VatAmount = Math.Round(rowTotal - rowVatable, 2)
-                        };
-                    }).ToList();
+                        PCode = r.Cells[2].Value.ToString(),
+                        Description = r.Cells[3].Value?.ToString() ?? "Unknown",
+                        Qty = rowQty,
+                        Total = rowTotal,
+                        Vatable = rowVatable,
+                        VatAmount = Math.Round(rowTotal - rowVatable, 2)
+                    });
+                }
+
+                if (printItems.Count == 0) return;
 
                 receiptTotal = printItems.Sum(x => x.Total);
 
                 await Task.Run(() =>
                 {
-                    using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
+                    try
                     {
-                        cn.Open();
-                        using (SQLiteCommand cmdMode =
-                            new SQLiteCommand("PRAGMA journal_mode=WAL;", cn))
+                        using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                         {
-                            cmdMode.ExecuteNonQuery();
-                        }
+                            cn.Open();
 
-                        using (var transaction = cn.BeginTransaction())
-                        {
-                            try
+                            using (SQLiteCommand cmdMode = new SQLiteCommand("PRAGMA journal_mode=WAL;", cn))
+                                cmdMode.ExecuteNonQuery();
+
+                            using (var transaction = cn.BeginTransaction())
                             {
-                                foreach (var item in printItems)
+                                try
                                 {
-                                    using (SQLiteCommand cm = new SQLiteCommand(
-                                        "UPDATE tblProduct1 SET qty = qty - @qty WHERE pcode = @pcode AND qty >= @qty", cn))
+                                    foreach (var item in printItems)
                                     {
-                                        cm.Parameters.AddWithValue("@qty", item.Qty);
-                                        cm.Parameters.AddWithValue("@pcode", item.PCode);
+                                        using (SQLiteCommand cm = new SQLiteCommand(
+                                            "UPDATE tblProduct1 SET qty = qty - @qty WHERE pcode = @pcode AND qty >= @qty", cn))
+                                        {
+                                            cm.Parameters.AddWithValue("@qty", item.Qty);
+                                            cm.Parameters.AddWithValue("@pcode", item.PCode);
 
-                                        if (cm.ExecuteNonQuery() == 0)
-                                            throw new Exception($"Stock error: {item.Description} is out of stock.");
+                                            if (cm.ExecuteNonQuery() == 0)
+                                                throw new Exception($"Stock error: {item.Description} is out of stock.");
+                                        }
+                                    }
+
+                                    using (SQLiteCommand cm = new SQLiteCommand(
+                                        "UPDATE tblCart1 SET status = 'Sold' WHERE transno = @transno", cn))
+                                    {
+                                        cm.Parameters.AddWithValue("@transno", lblTransno.Text);
+                                        cm.ExecuteNonQuery();
+                                    }
+
+                                    transaction.Commit();
+                                    success = true;
+                                }
+                                catch (Exception ex)
+                                {
+                                    transaction.Rollback();
+                                    LogError("Settle Transaction", ex);
+
+                                    // Safely show messagebox on UI thread
+                                    if (this.IsHandleCreated)
+                                    {
+                                        this.Invoke(new Action(() =>
+                                            MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error)));
                                     }
                                 }
-
-                                using (SQLiteCommand cm = new SQLiteCommand(
-                                    "UPDATE tblCart1 SET status = 'Sold' WHERE transno = @transno", cn))
-                                {
-                                    cm.Parameters.AddWithValue("@transno", lblTransno.Text);
-                                    cm.ExecuteNonQuery();
-                                }
-
-                                transaction.Commit();
-                                success = true;
-                            }
-                            catch (Exception ex)
-                            {
-                                transaction.Rollback();
-                                LogError("Settle Transaction", ex);
-                                this.Invoke(new Action(() =>
-                                    MessageBox.Show(ex.Message, stitle,
-                                        MessageBoxButtons.OK, MessageBoxIcon.Error)));
                             }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError("Settle Transaction", ex);
                     }
                 });
 
                 if (success)
                 {
-                    if (MessageBox.Show("Transaction Complete. Print Receipt?",
-                        stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    if (this.IsHandleCreated && MessageBox.Show(
+                        "Transaction Complete. Print Receipt?", stitle,
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                     {
                         itemsPrinted = 0;
                         try { pd.Print(); }
@@ -203,8 +226,14 @@ namespace PosSystem
                     LoadCart();
                 }
             }
-            catch (Exception ex) { LogError("Settle", ex); }
-            finally { btnSattle.Enabled = true; }
+            catch (Exception ex)
+            {
+                LogError("Settle", ex);
+            }
+            finally
+            {
+                btnSattle.Enabled = true;
+            }
         }
 
         #endregion

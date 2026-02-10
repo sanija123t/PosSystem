@@ -1,9 +1,11 @@
-﻿using AForge.Video.DirectShow;
+﻿using AForge.Video;
+using AForge.Video.DirectShow;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using ZXing;
+using System.Diagnostics;
 
 namespace PosSystem
 {
@@ -13,8 +15,14 @@ namespace PosSystem
         FilterInfoCollection FilterInfoCollection;
         VideoCaptureDevice videoCaptureDevice;
 
-        // Create the barcode reader once for efficiency
+        // Barcode reader
         BarcodeReader reader = new BarcodeReader();
+
+        // Throttle decoding
+        Stopwatch decodeTimer = new Stopwatch();
+        const int DecodeInterval = 200; // milliseconds
+
+        bool barcodeDetected = false;
 
         public frmscanBarcode(frmProduct frm)
         {
@@ -29,7 +37,7 @@ namespace PosSystem
                 BarcodeFormat.CODE_128
             };
             reader.Options.TryHarder = true; // High accuracy
-            reader.AutoRotate = true;       // Scan even if the product is sideways
+            reader.AutoRotate = true;       // Scan even if sideways
         }
 
         private void frmscanBarcode_Load(object sender, EventArgs e)
@@ -43,9 +51,22 @@ namespace PosSystem
                 cbCamara.SelectedIndex = 0;
             else
                 MessageBox.Show("No camera detected.", "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+            decodeTimer.Start();
         }
 
         private void btnStart_Click(object sender, EventArgs e)
+        {
+            StartCamera();
+        }
+
+        private void btnReStart_Click(object sender, EventArgs e)
+        {
+            barcodeDetected = false; // Reset flag
+            StartCamera();           // Restart camera and scanning
+        }
+
+        private void StartCamera()
         {
             if (videoCaptureDevice != null && videoCaptureDevice.IsRunning) return;
 
@@ -55,7 +76,7 @@ namespace PosSystem
                 videoCaptureDevice.NewFrame += VideoCaptureDevice_NewFrame;
                 videoCaptureDevice.Start();
 
-                btnStart.Enabled = false; // Prevent starting multiple times
+                btnStart.Enabled = false;
             }
             catch (Exception ex)
             {
@@ -63,73 +84,70 @@ namespace PosSystem
             }
         }
 
-        private void VideoCaptureDevice_NewFrame(object sender, AForge.Video.NewFrameEventArgs eventArgs)
+        private void VideoCaptureDevice_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
-            Bitmap bitmap = null;
-            try
+            using (Bitmap bitmap = (Bitmap)eventArgs.Frame.Clone())
             {
-                bitmap = (Bitmap)eventArgs.Frame.Clone();
-                var result = reader.Decode(bitmap);
-
-                if (pictureBox.InvokeRequired)
+                // Throttle decoding to reduce CPU usage
+                if (!barcodeDetected && decodeTimer.ElapsedMilliseconds >= DecodeInterval)
                 {
-                    pictureBox.Invoke(new MethodInvoker(delegate ()
+                    decodeTimer.Restart();
+                    var result = reader.Decode(bitmap);
+                    if (result != null)
                     {
-                        // Update camera preview safely
-                        if (pictureBox.Image != null) pictureBox.Image.Dispose();
-                        pictureBox.Image = (Bitmap)bitmap.Clone();
-
-                        // If barcode detected, update parent form
-                        if (result != null)
-                        {
-                            if (f != null && f.txtBarcode != null)
-                            {
-                                f.txtBarcode.Invoke(new MethodInvoker(() =>
-                                {
-                                    f.txtBarcode.Text = result.Text;
-                                }));
-                            }
-
-                            // Optional: beep on successful scan
-                            System.Media.SystemSounds.Beep.Play();
-
-                            // Stop camera and close form automatically
-                            StopCamera();
-                            this.Close();
-                        }
-                    }));
+                        barcodeDetected = true;
+                        UpdateParentBarcode(result.Text);
+                    }
                 }
-                else
+
+                // Update camera preview safely
+                pictureBox.Invoke(new MethodInvoker(() =>
                 {
                     if (pictureBox.Image != null) pictureBox.Image.Dispose();
                     pictureBox.Image = (Bitmap)bitmap.Clone();
-                }
+                }));
             }
-            catch { /* ignore frame errors */ }
-            finally
+        }
+
+        private void UpdateParentBarcode(string barcode)
+        {
+            if (f != null && f.txtBarcode != null)
             {
-                if (bitmap != null) bitmap.Dispose();
+                f.txtBarcode.Invoke(new MethodInvoker(() =>
+                {
+                    f.txtBarcode.Text = barcode;
+                }));
             }
+
+            // Optional: beep on successful scan
+            System.Media.SystemSounds.Beep.Play();
+
+            // Stop camera after success
+            StopCamera();
         }
 
         private void StopCamera()
         {
-            if (videoCaptureDevice != null)
+            if (videoCaptureDevice != null && videoCaptureDevice.IsRunning)
             {
-                if (videoCaptureDevice.IsRunning)
-                {
-                    videoCaptureDevice.SignalToStop();
-                    videoCaptureDevice.WaitForStop(); // Ensure proper shutdown
-                }
+                videoCaptureDevice.SignalToStop();
+                videoCaptureDevice.WaitForStop();
                 videoCaptureDevice.NewFrame -= VideoCaptureDevice_NewFrame;
                 videoCaptureDevice = null;
-                btnStart.Enabled = true; // Re-enable start button if form reused
             }
+            btnStart.Invoke(new MethodInvoker(() => btnStart.Enabled = true));
         }
 
         private void frmscanBarcode_FormClosing(object sender, FormClosingEventArgs e)
         {
-            StopCamera(); // Ensure camera stops on form close
+            StopCamera();
+
+            // Dispose preview image to free memory
+            if (pictureBox.Image != null)
+            {
+                pictureBox.Image.Dispose();
+                pictureBox.Image = null;
+            }
         }
 
         private void pictureBox2_Click(object sender, EventArgs e)
