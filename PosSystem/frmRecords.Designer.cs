@@ -1,4 +1,7 @@
 ﻿
+using System;
+using System.Windows.Forms;
+
 namespace PosSystem
 {
     partial class frmRecords
@@ -55,6 +58,7 @@ namespace PosSystem
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle23 = new System.Windows.Forms.DataGridViewCellStyle();
             this.panel1 = new System.Windows.Forms.Panel();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
+            this.pictureBox2.Click += new System.EventHandler(this.pictureBox2_Click);
             this.label2 = new System.Windows.Forms.Label();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.panel3 = new System.Windows.Forms.Panel();
@@ -1305,6 +1309,36 @@ namespace PosSystem
 
         }
 
+        // Paint events
+        private void panel1_Paint(object sender, PaintEventArgs e) { }
+        private void panel2_Paint(object sender, PaintEventArgs e) { }
+        private void panel8_Paint(object sender, PaintEventArgs e) { }
+
+        // DataGridView events
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e) { }
+        private void dataGridView3_CellContentClick(object sender, DataGridViewCellEventArgs e) { }
+        private void dataGridView4_CellContentClick(object sender, DataGridViewCellEventArgs e) { }
+        private void dataGridView5_CellContentClick(object sender, DataGridViewCellEventArgs e) { }
+
+        // LinkLabel events
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel3_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel4_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel5_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel6_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel7_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel8_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel9_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel10_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+
+        // Tab events
+        private void tabControl1_SelectedIndexChanged(object sender, EventArgs e) { }
+        private void tabPage6_Click(object sender, EventArgs e) { }
+
+        // ComboBox KeyPress
+        private void cdTopSelling_KeyPress(object sender, KeyPressEventArgs e) { }
+
         #endregion
 
         private System.Windows.Forms.Panel panel1;
@@ -1400,7 +1434,6 @@ namespace PosSystem
         private System.Windows.Forms.DataGridViewTextBoxColumn Column18;
         private System.Windows.Forms.LinkLabel linkLabel5;
         private System.Windows.Forms.ComboBox cdTopSelling;
-        private System.Windows.Forms.DataVisualization.Charting.Chart chart1;
         private System.Windows.Forms.LinkLabel linkLabel6;
         private System.Windows.Forms.LinkLabel linkLabel7;
         private System.Windows.Forms.LinkLabel linkLabel8;

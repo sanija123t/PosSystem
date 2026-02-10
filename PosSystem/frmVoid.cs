@@ -1,29 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
+using System.Data.SQLite; // Ensure this matches your project (SQLite or SqlClient)
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data.SqlClient;
 
 namespace PosSystem
 {
     public partial class frmVoid : Form
     {
-        SqlConnection cn = new SqlConnection();
-        SqlCommand cm = new SqlCommand();
-        SqlDataReader dr;
+        // Use SQLiteConnection if your DB is SQLite, otherwise SqlConnection
+        SQLiteConnection cn;
+        SQLiteCommand cm;
+        SQLiteDataReader dr;
         frmCancelDetails f;
-        // Removed: DBConnection dbcon = new DBConnection();
 
         public frmVoid(frmCancelDetails frm)
         {
             InitializeComponent();
-            // Fixed: Accessed via static type name 'DBConnection'
-            cn = new SqlConnection(DBConnection.MyConnection());
+            cn = new SQLiteConnection(DBConnection.MyConnection());
             f = frm;
         }
 
@@ -32,35 +25,48 @@ namespace PosSystem
             this.Dispose();
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
+        // Added 'async' so we can 'await' the refresh list
+        private async void btnSave_Click(object sender, EventArgs e)
         {
             try
             {
-                if (txtPass.Text != String.Empty)
+                if (!string.IsNullOrEmpty(txtPass.Text))
                 {
                     string user;
                     cn.Open();
-                    cm = new SqlCommand("select * from tblUser where username = @username and password =@password", cn);
+                    // Parameterized login check
+                    cm = new SQLiteCommand("SELECT * FROM tblUser WHERE username = @username AND password = @password", cn);
                     cm.Parameters.AddWithValue("@username", txtUser.Text);
                     cm.Parameters.AddWithValue("@password", txtPass.Text);
+
                     dr = cm.ExecuteReader();
-                    dr.Read();
-                    if (dr.HasRows)
+                    bool hasRows = dr.Read();
+
+                    if (hasRows)
                     {
                         user = dr["username"].ToString();
                         dr.Close();
                         cn.Close();
 
+                        // 1. Record the cancellation
                         SaveCancelOrder(user);
+
+                        // 2. Update Product Inventory if action is 'Yes'
                         if (f.cbAction.Text == "Yes")
                         {
-                            UpdateData("update TblProduct1 set qty = qty +" + int.Parse(f.txtCancelQty.Text) + " where pcode = '" + f.txtPcode.Text + "'");
+                            UpdateProductQty(f.txtPcode.Text, int.Parse(f.txtCancelQty.Text));
                         }
-                        UpdateData("update tblCart set qty = qty -" + int.Parse(f.txtCancelQty.Text) + " where id like '" + f.txtID.Text + "'");
+
+                        // 3. Update Cart Quantity
+                        UpdateCartQty(f.txtID.Text, int.Parse(f.txtCancelQty.Text));
+
                         MessageBox.Show("Order transaction successfully cancelled!", "Cancel Order", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        // 4. Await the refresh of the parent grid
+                        await f.RefreshList();
+
+                        // 5. Close this form
                         this.Dispose();
-                        f.RefreshList();
-                        f.Dispose();
                     }
                     else
                     {
@@ -72,7 +78,7 @@ namespace PosSystem
             }
             catch (Exception ex)
             {
-                cn.Close();
+                if (cn.State == System.Data.ConnectionState.Open) cn.Close();
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
@@ -80,12 +86,13 @@ namespace PosSystem
         public void SaveCancelOrder(string user)
         {
             cn.Open();
-            cm = new SqlCommand("insert into tblCancel (transno,pcode,price,qty,sdate,voidby,cancelledby,reason,action) values (@transno,@pcode,@price,@qty,@sdate,@voidby,@cancelledby,@reason,@action)", cn);
+            cm = new SQLiteCommand("INSERT INTO tblCancel (transno, pcode, price, qty, sdate, voidby, cancelledby, reason, action) " +
+                                   "VALUES (@transno, @pcode, @price, @qty, @sdate, @voidby, @cancelledby, @reason, @action)", cn);
             cm.Parameters.AddWithValue("@transno", f.txtTransno.Text);
             cm.Parameters.AddWithValue("@pcode", f.txtPcode.Text);
             cm.Parameters.AddWithValue("@price", double.Parse(f.txtPrice.Text));
             cm.Parameters.AddWithValue("@qty", int.Parse(f.txtCancelQty.Text));
-            cm.Parameters.AddWithValue("@sdate", DateTime.Now);
+            cm.Parameters.AddWithValue("@sdate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             cm.Parameters.AddWithValue("@voidby", user);
             cm.Parameters.AddWithValue("@cancelledby", f.txtCancelled.Text);
             cm.Parameters.AddWithValue("@reason", f.txtReason.Text);
@@ -94,10 +101,23 @@ namespace PosSystem
             cn.Close();
         }
 
-        public void UpdateData(string sql)
+        // ENTERPRISE IMPROVEMENT: Specialized methods with parameters to prevent SQL Injection
+        public void UpdateProductQty(string pcode, int qty)
         {
             cn.Open();
-            cm = new SqlCommand(sql, cn);
+            cm = new SQLiteCommand("UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode = @pcode", cn);
+            cm.Parameters.AddWithValue("@qty", qty);
+            cm.Parameters.AddWithValue("@pcode", pcode);
+            cm.ExecuteNonQuery();
+            cn.Close();
+        }
+
+        public void UpdateCartQty(string cartId, int qty)
+        {
+            cn.Open();
+            cm = new SQLiteCommand("UPDATE tblCart1 SET qty = qty - @qty WHERE id = @id", cn);
+            cm.Parameters.AddWithValue("@qty", qty);
+            cm.Parameters.AddWithValue("@id", cartId);
             cm.ExecuteNonQuery();
             cn.Close();
         }

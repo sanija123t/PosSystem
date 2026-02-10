@@ -19,7 +19,7 @@ namespace PosSystem
                 Form1 dashboard = new Form1();
 
                 // Make sure these labels exist in Form1 and are set to PUBLIC
-                dashboard.lblUser.Text = "DEVELOPER_MODE";
+                dashboard.lblUserName.Text = "DEVELOPER_MODE";
                 dashboard.lblRole.Text = "System Owner";
 
                 Application.Run(dashboard);

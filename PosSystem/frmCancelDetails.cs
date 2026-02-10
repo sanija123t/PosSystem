@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PosSystem
@@ -63,10 +64,10 @@ namespace PosSystem
             }
         }
 
-        public void RefreshList()
+        public async Task RefreshList()
         {
-            // Changed from LoadRecords() to LocalRecord() to match the method name in your frmSoldItems class
-            f.LocalRecord();
+            // Now 'await' is valid because the method is marked 'async'
+            await f.LoadSoldItemsAsync();
         }
     }
 }

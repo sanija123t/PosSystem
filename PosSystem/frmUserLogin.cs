@@ -79,7 +79,7 @@ namespace PosSystem
                 StartPosition = FormStartPosition.CenterScreen
             };
 
-            dashboard.lblUser.Text = username;
+            dashboard.lblUserName.Text = username;
             dashboard.lblRole.Text = role;
 
             dashboard.FormClosed += (s, e) => this.Close();

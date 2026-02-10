@@ -262,7 +262,7 @@
             this.cbCashier.Name = "cbCashier";
             this.cbCashier.Size = new System.Drawing.Size(197, 28);
             this.cbCashier.TabIndex = 16;
-            this.cbCashier.SelectedIndexChanged += new System.EventHandler(this.cbCashier_SelectedIndexChanged_1);
+            this.cbCashier.SelectedIndexChanged += new System.EventHandler(this.cbCashier_SelectedIndexChanged);
             // 
             // dateTimePicker2
             // 

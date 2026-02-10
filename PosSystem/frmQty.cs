@@ -63,7 +63,7 @@ namespace PosSystem
             try
             {
                 string currentTransNo = fPOS != null ? fPOS.lblTransno.Text : transno;
-                string currentUser = fPOS != null ? fPOS.LblUser.Text : f?.lblUser.Text ?? "Unknown Cashier";
+                string currentUser = fPOS != null ? fPOS.LblUser.Text : f?.lblUserName.Text ?? "Unknown Cashier";
 
                 // Check if product already exists in cart
                 bool found = false;

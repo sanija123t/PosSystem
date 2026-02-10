@@ -40,7 +40,7 @@ namespace PosSystem
             //this.reportViewer1.ServerReport.BearerToken = null;
             this.reportViewer1.Size = new System.Drawing.Size(361, 484);
             this.reportViewer1.TabIndex = 4;
-            this.reportViewer1.Load += new System.EventHandler(this.reportViewer1_Load_1);
+            this.reportViewer1.Load += new System.EventHandler(this.reportViewer1_Load);
             // 
             // frmResipt
             // 

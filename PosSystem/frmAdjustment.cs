@@ -1,85 +1,107 @@
 ﻿using System;
-using System.Data;
 using System.Data.SQLite;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace PosSystem
 {
     public partial class frmAdjustment : Form
     {
-        private SQLiteCommand cm;
-        private SQLiteConnection cn;
-        private SQLiteDataReader dr;
-        private Form1 f;
-        private int _qty = 0;
+        Form1 f;
+        public string suser;
+        private const string STATUS_SOLD = "sold";
 
-        public frmAdjustment(Form1 f)
+        private Label lblTotal1;
+
+        #region Drag Form Logic
+        [DllImport("user32.dll")]
+        public static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
+        #endregion
+
+        public frmAdjustment()
         {
             InitializeComponent();
-            this.f = f;
-            txtSearch.WaterMark = "Search here";
+
+            // Initialize missing label
+            lblTotal1 = new Label { Visible = false };
+            this.Controls.Add(lblTotal1);
+
+            txtSearch.TextChanged += async (s, e) => await LoadRecordsAsync();
+            panel1.MouseDown += panel1_MouseDown;
+        }
+
+        public frmAdjustment(Form1 frm) : this()
+        {
+            this.f = frm;
+            this.suser = frm._user;
         }
 
         private void frmAdjustment_Load(object sender, EventArgs e)
         {
+            txtUser.Text = suser;
             referenceNo();
-            LoadRecords();
+            _ = LoadRecordsAsync();
         }
 
         public void referenceNo()
         {
-            Random rnd = new Random();
-            txtRef.Text = rnd.Next(100000, 999999).ToString();
-        }
-
-        private void pictureBox2_Click(object sender, EventArgs e)
-        {
-            this.Dispose();
+            Random r = new Random();
+            int num = r.Next(100000, 999999);
+            txtRef.Text = "ADJ-" + num.ToString();
         }
 
         public void LoadRecords()
         {
+            _ = LoadRecordsAsync();
+        }
+
+        public async Task LoadRecordsAsync()
+        {
+            dataGridView1.Rows.Clear();
+            int i = 0;
+            string searchText = txtSearch.Text.Trim();
+
             try
             {
-                dataGridView1.Rows.Clear();
-                int i = 0;
-
-                using (cn = new SQLiteConnection(DBConnection.MyConnection()))
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    string query = @"
-                        SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.qty
-                        FROM TblProduct1 AS p
-                        INNER JOIN BrandTbl AS b ON b.id = p.bid
-                        INNER JOIN TblCategory AS c ON c.id = p.cid
-                        WHERE p.pdesc LIKE @search OR p.pcode LIKE @search OR p.barcode LIKE @search";
+                    await cn.OpenAsync();
 
-                    using (cm = new SQLiteCommand(query, cn))
+                    string query = "SELECT pcode, pdesc, qty FROM tblProduct WHERE pdesc LIKE @search";
+
+                    using (var cmd = new SQLiteCommand(query, cn))
                     {
-                        cm.Parameters.AddWithValue("@search", "%" + txtSearch.Text.Trim() + "%");
-                        cn.Open();
-                        using (dr = cm.ExecuteReader())
+                        cmd.Parameters.AddWithValue("@search", $"%{searchText}%");
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
                         {
-                            while (dr.Read())
+                            while (await reader.ReadAsync())
                             {
                                 i++;
                                 dataGridView1.Rows.Add(
                                     i,
-                                    dr["pcode"].ToString(),
-                                    dr["barcode"].ToString(),
-                                    dr["pdesc"].ToString(),
-                                    dr["brand"].ToString(),
-                                    dr["category"].ToString(),
-                                    dr["price"].ToString(),
-                                    dr["qty"].ToString()
+                                    reader["pcode"].ToString(),
+                                    reader["pdesc"].ToString(),
+                                    reader["qty"].ToString()
                                 );
                             }
                         }
                     }
                 }
+
+                lblTotal1.Text = i.ToString();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Load Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Error: " + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -87,7 +109,88 @@ namespace PosSystem
         {
             if (e.KeyChar == (char)Keys.Enter)
             {
-                LoadRecords();
+                e.Handled = true;
+                _ = LoadRecordsAsync();
+            }
+        }
+
+        private async void btnSave_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(cbCommands.Text) || string.IsNullOrEmpty(txtQty.Text))
+            {
+                MessageBox.Show("Please fill in the Command and Quantity.", "Warning",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!int.TryParse(txtQty.Text.Trim(), out int adjQty))
+            {
+                MessageBox.Show("Quantity must be a valid number.", "Warning",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string command = cbCommands.Text.Trim();
+            string pcode = txtPcode.Text.Trim();
+
+            if (string.IsNullOrEmpty(pcode))
+            {
+                MessageBox.Show("Please select a product from the grid.", "Warning",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
+                {
+                    await cn.OpenAsync();
+                    using (var tran = cn.BeginTransaction())
+                    {
+                        // 1️⃣ Update tblProduct quantity
+                        string updateSql = command.ToLower() == "add"
+                            ? "UPDATE tblProduct SET qty = qty + @adjQty WHERE pcode = @pcode"
+                            : "UPDATE tblProduct SET qty = qty - @adjQty WHERE pcode = @pcode";
+
+                        using (var cmd = new SQLiteCommand(updateSql, cn, tran))
+                        {
+                            cmd.Parameters.AddWithValue("@adjQty", adjQty);
+                            cmd.Parameters.AddWithValue("@pcode", pcode);
+                            int rows = await cmd.ExecuteNonQueryAsync();
+                            if (rows == 0)
+                                throw new Exception("Product not found or adjustment failed.");
+                        }
+
+                        // 2️⃣ Insert into tblAdjustmentHistory
+                        string insertSql = @"INSERT INTO tblAdjustmentHistory 
+                                             (pcode, command, qty, adjustedBy, refNo, adjDate) 
+                                             VALUES (@pcode, @command, @qty, @user, @refNo, @date)";
+
+                        using (var cmd2 = new SQLiteCommand(insertSql, cn, tran))
+                        {
+                            cmd2.Parameters.AddWithValue("@pcode", pcode);
+                            cmd2.Parameters.AddWithValue("@command", command);
+                            cmd2.Parameters.AddWithValue("@qty", adjQty);
+                            cmd2.Parameters.AddWithValue("@user", suser);
+                            cmd2.Parameters.AddWithValue("@refNo", txtRef.Text);
+                            cmd2.Parameters.AddWithValue("@date", DateTime.Now);
+                            await cmd2.ExecuteNonQueryAsync();
+                        }
+
+                        tran.Commit();
+                    }
+                }
+
+                MessageBox.Show("Stock has been successfully adjusted.", "Process Completed",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                referenceNo();
+                _ = LoadRecordsAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Adjustment failed: " + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -95,106 +198,25 @@ namespace PosSystem
         {
             if (e.RowIndex < 0) return;
 
-            string colName = dataGridView1.Columns[e.ColumnIndex].Name;
-            if (colName == "ActionSelect")
+            if (e.ColumnIndex == dataGridView1.Columns["ActionSelect"].Index)
             {
                 txtPcode.Text = dataGridView1.Rows[e.RowIndex].Cells[1].Value.ToString();
-                txtdesc.Text = dataGridView1.Rows[e.RowIndex].Cells[3].Value.ToString() + " (" +
-                               dataGridView1.Rows[e.RowIndex].Cells[2].Value.ToString() + ")";
-
-                // Ensure we get the latest quantity from the grid
-                int.TryParse(dataGridView1.Rows[e.RowIndex].Cells[7].Value.ToString(), out _qty);
+                txtdesc.Text = dataGridView1.Rows[e.RowIndex].Cells[2].Value.ToString();
             }
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
+        private void panel1_MouseDown(object sender, MouseEventArgs e)
         {
-            if (string.IsNullOrEmpty(txtPcode.Text))
+            if (e.Button == MouseButtons.Left)
             {
-                MessageBox.Show("Please select a product first.", "Missing Product", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (!int.TryParse(txtQty.Text.Trim(), out int adjustQty) || adjustQty <= 0)
-            {
-                MessageBox.Show("Please enter a valid quantity.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (string.IsNullOrEmpty(cbCommands.Text))
-            {
-                MessageBox.Show("Please select a command (Add or Remove).", "Missing Command", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            // Validation logic for removal
-            if (cbCommands.Text == "Remove from Inventory" && adjustQty > _qty)
-            {
-                MessageBox.Show("Stock on hand quantity (" + _qty + ") is less than adjustment quantity.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            try
-            {
-                using (cn = new SQLiteConnection(DBConnection.MyConnection()))
-                {
-                    cn.Open();
-                    using (var transaction = cn.BeginTransaction())
-                    {
-                        // 1. Update stock quantity
-                        string sqlUpdate = cbCommands.Text == "Remove from Inventory"
-                            ? "UPDATE TblProduct1 SET qty = qty - @qty WHERE pcode = @pcode"
-                            : "UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode = @pcode";
-
-                        using (cm = new SQLiteCommand(sqlUpdate, cn))
-                        {
-                            cm.Parameters.AddWithValue("@qty", adjustQty);
-                            cm.Parameters.AddWithValue("@pcode", txtPcode.Text.Trim());
-                            cm.ExecuteNonQuery();
-                        }
-
-                        // 2. Insert into adjustment log
-                        string sqlInsert = @"
-                            INSERT INTO tblAdjustment (referenceno, pcode, qty, action, remarks, sdate, [user])
-                            VALUES (@ref, @pcode, @qty, @action, @remarks, @sdate, @user)";
-
-                        using (cm = new SQLiteCommand(sqlInsert, cn))
-                        {
-                            cm.Parameters.AddWithValue("@ref", txtRef.Text.Trim());
-                            cm.Parameters.AddWithValue("@pcode", txtPcode.Text.Trim());
-                            cm.Parameters.AddWithValue("@qty", adjustQty);
-                            cm.Parameters.AddWithValue("@action", cbCommands.Text.Trim());
-                            cm.Parameters.AddWithValue("@remarks", txtRemarks.Text.Trim());
-                            cm.Parameters.AddWithValue("@sdate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                            cm.Parameters.AddWithValue("@user", txtUser.Text.Trim());
-                            cm.ExecuteNonQuery();
-                        }
-
-                        transaction.Commit();
-                    }
-                }
-
-                MessageBox.Show("Stock has been successfully adjusted.", "Process Completed", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                if (f != null) f.MyDashbord();
-                LoadRecords();
-                Clear();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ReleaseCapture();
+                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
             }
         }
 
-        public void Clear()
+        private void pictureBox2_Click(object sender, EventArgs e)
         {
-            txtdesc.Clear();
-            txtPcode.Clear();
-            txtQty.Clear();
-            txtRemarks.Clear();
-            cbCommands.SelectedIndex = -1;
-            _qty = 0;
-            referenceNo();
+            this.Dispose();
         }
     }
 }

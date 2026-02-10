@@ -28,12 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.panel2 = new System.Windows.Forms.Panel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.button9 = new System.Windows.Forms.Button();
-            this.lblUser = new System.Windows.Forms.Label();
             this.button2 = new System.Windows.Forms.Button();
             this.lblRole = new System.Windows.Forms.Label();
             this.button8 = new System.Windows.Forms.Button();
@@ -44,14 +42,10 @@
             this.button4 = new System.Windows.Forms.Button();
             this.btnStock = new System.Windows.Forms.Button();
             this.btnVendor = new System.Windows.Forms.Button();
-            this.lblName = new System.Windows.Forms.Label();
+            this.lblUserName = new System.Windows.Forms.Label();
             this.btnProduct = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.panel3 = new System.Windows.Forms.Panel();
-            this.guna2BorderlessForm1 = new Guna.UI2.WinForms.Guna2BorderlessForm(this.components);
-            this.guna2BorderlessForm2 = new Guna.UI2.WinForms.Guna2BorderlessForm(this.components);
-
-            // Initializing missing components
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.lblTransno = new System.Windows.Forms.Label();
             this.lblTotal = new System.Windows.Forms.Label();
@@ -60,7 +54,6 @@
             this.lblSname = new System.Windows.Forms.Label();
             this.lblAddress = new System.Windows.Forms.Label();
             this.lblDiscount = new System.Windows.Forms.Label();
-
             this.panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
@@ -71,7 +64,6 @@
             this.panel2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(38)))));
             this.panel2.Controls.Add(this.pictureBox1);
             this.panel2.Controls.Add(this.button9);
-            this.panel2.Controls.Add(this.lblUser);
             this.panel2.Controls.Add(this.button2);
             this.panel2.Controls.Add(this.lblRole);
             this.panel2.Controls.Add(this.button8);
@@ -82,7 +74,7 @@
             this.panel2.Controls.Add(this.button4);
             this.panel2.Controls.Add(this.btnStock);
             this.panel2.Controls.Add(this.btnVendor);
-            this.panel2.Controls.Add(this.lblName);
+            this.panel2.Controls.Add(this.lblUserName);
             this.panel2.Controls.Add(this.btnProduct);
             this.panel2.Controls.Add(this.button1);
             this.panel2.Location = new System.Drawing.Point(-2, 37);
@@ -117,16 +109,6 @@
             this.button9.Text = "Log Out";
             this.button9.UseVisualStyleBackColor = true;
             this.button9.Click += new System.EventHandler(this.button9_Click);
-            // 
-            // lblUser
-            // 
-            this.lblUser.AutoSize = true;
-            this.lblUser.Location = new System.Drawing.Point(198, 8);
-            this.lblUser.Name = "lblUser";
-            this.lblUser.Size = new System.Drawing.Size(43, 17);
-            this.lblUser.TabIndex = 14;
-            this.lblUser.Text = "label1";
-            this.lblUser.Visible = false;
             // 
             // button2
             // 
@@ -285,16 +267,17 @@
             this.btnVendor.UseVisualStyleBackColor = true;
             this.btnVendor.Click += new System.EventHandler(this.btnVendor_Click);
             // 
-            // lblName
+            // lblUserName
             // 
-            this.lblName.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblName.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(158)))), ((int)(((byte)(132)))));
-            this.lblName.Location = new System.Drawing.Point(46, 57);
-            this.lblName.Name = "lblName";
-            this.lblName.Size = new System.Drawing.Size(150, 29);
-            this.lblName.TabIndex = 1;
-            this.lblName.Text = "User Name";
-            this.lblName.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.lblUserName.Font = new System.Drawing.Font("Georgia", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblUserName.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(158)))), ((int)(((byte)(132)))));
+            this.lblUserName.Location = new System.Drawing.Point(46, 56);
+            this.lblUserName.Name = "lblUserName";
+            this.lblUserName.Size = new System.Drawing.Size(150, 29);
+            this.lblUserName.TabIndex = 1;
+            this.lblUserName.Text = "User Name";
+            this.lblUserName.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.lblUserName.Click += new System.EventHandler(this.lblName_Click);
             // 
             // btnProduct
             // 
@@ -338,45 +321,72 @@
             this.panel3.TabIndex = 2;
             this.panel3.Paint += new System.Windows.Forms.PaintEventHandler(this.panel3_Paint);
             // 
-            // guna2BorderlessForm1
+            // dataGridView1
             // 
-            this.guna2BorderlessForm1.ContainerControl = this;
-            this.guna2BorderlessForm1.DockIndicatorTransparencyValue = 0.6D;
-            this.guna2BorderlessForm1.TransparentWhileDrag = true;
-            // 
-            // guna2BorderlessForm2
-            // 
-            this.guna2BorderlessForm2.ContainerControl = this;
-            this.guna2BorderlessForm2.DockIndicatorTransparencyValue = 0.6D;
-            this.guna2BorderlessForm2.TransparentWhileDrag = true;
-
-            // dataGridView1 (Internal Configuration)
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridView1.Location = new System.Drawing.Point(0, 0);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.Size = new System.Drawing.Size(10, 10);
             this.dataGridView1.TabIndex = 0;
             this.dataGridView1.Visible = false;
-
-            // Hidden Data Labels
+            // 
+            // lblTransno
+            // 
             this.lblTransno.AutoSize = true;
             this.lblTransno.Location = new System.Drawing.Point(0, 0);
             this.lblTransno.Name = "lblTransno";
+            this.lblTransno.Size = new System.Drawing.Size(0, 17);
+            this.lblTransno.TabIndex = 3;
             this.lblTransno.Visible = false;
-
+            // 
+            // lblTotal
+            // 
             this.lblTotal.AutoSize = true;
             this.lblTotal.Location = new System.Drawing.Point(0, 0);
             this.lblTotal.Name = "lblTotal";
+            this.lblTotal.Size = new System.Drawing.Size(0, 17);
+            this.lblTotal.TabIndex = 4;
             this.lblTotal.Visible = false;
-
+            // 
+            // lblDisplayTotal
+            // 
             this.lblDisplayTotal.AutoSize = true;
             this.lblDisplayTotal.Location = new System.Drawing.Point(0, 0);
             this.lblDisplayTotal.Name = "lblDisplayTotal";
+            this.lblDisplayTotal.Size = new System.Drawing.Size(0, 17);
+            this.lblDisplayTotal.TabIndex = 5;
             this.lblDisplayTotal.Visible = false;
-
+            // 
+            // lblPhone
+            // 
+            this.lblPhone.Location = new System.Drawing.Point(0, 0);
+            this.lblPhone.Name = "lblPhone";
+            this.lblPhone.Size = new System.Drawing.Size(100, 23);
+            this.lblPhone.TabIndex = 0;
             this.lblPhone.Visible = false;
+            // 
+            // lblSname
+            // 
+            this.lblSname.Location = new System.Drawing.Point(0, 0);
+            this.lblSname.Name = "lblSname";
+            this.lblSname.Size = new System.Drawing.Size(100, 23);
+            this.lblSname.TabIndex = 0;
             this.lblSname.Visible = false;
+            // 
+            // lblAddress
+            // 
+            this.lblAddress.Location = new System.Drawing.Point(0, 0);
+            this.lblAddress.Name = "lblAddress";
+            this.lblAddress.Size = new System.Drawing.Size(100, 23);
+            this.lblAddress.TabIndex = 0;
             this.lblAddress.Visible = false;
+            // 
+            // lblDiscount
+            // 
+            this.lblDiscount.Location = new System.Drawing.Point(0, 0);
+            this.lblDiscount.Name = "lblDiscount";
+            this.lblDiscount.Size = new System.Drawing.Size(100, 23);
+            this.lblDiscount.TabIndex = 0;
             this.lblDiscount.Visible = false;
             // 
             // Form1
@@ -404,6 +414,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -418,13 +429,12 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Panel panel3;
         private System.Windows.Forms.Button btnStock;
-        public System.Windows.Forms.Label lblName;
+        public System.Windows.Forms.Label lblUserName;
         private System.Windows.Forms.Button button8;
         private System.Windows.Forms.Button btnSalesHistory;
         private System.Windows.Forms.Button btnVendor;
         public System.Windows.Forms.Label lblRole;
         private System.Windows.Forms.Button button2;
-        public System.Windows.Forms.Label lblUser;
         private System.Windows.Forms.PictureBox pictureBox1;
         private Guna.UI2.WinForms.Guna2BorderlessForm guna2BorderlessForm1;
         private Guna.UI2.WinForms.Guna2BorderlessForm guna2BorderlessForm2;

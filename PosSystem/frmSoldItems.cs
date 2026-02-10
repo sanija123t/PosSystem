@@ -1,98 +1,195 @@
 ﻿using System;
+using System.Data;
 using System.Data.SQLite;
-using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace PosSystem
 {
     public partial class frmSoldItems : Form
     {
-        SQLiteConnection cn;
-        SQLiteCommand cm;
-        SQLiteDataReader dr;
         public string suser;
+        private const string STATUS_SOLD = "sold";
 
+        #region Drag Form
         [DllImport("user32.dll")]
         public static extern bool ReleaseCapture();
 
         [DllImport("user32.dll")]
         public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
 
-        const int WM_NCLBUTTONDOWN = 0xA1;
-        const int HT_CAPTION = 0x2;
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
+        #endregion
 
         public frmSoldItems()
         {
             InitializeComponent();
-            cn = new SQLiteConnection(DBConnection.MyConnection());
             dateTimePicker1.Value = DateTime.Now;
             dateTimePicker2.Value = DateTime.Now;
-            LoadCashier();
-            LocalRecord();
         }
 
-        private void frmSoldItems_Load(object sender, EventArgs e)
+        private async void frmSoldItems_Load(object sender, EventArgs e)
         {
-            LocalRecord();
+            await LoadCashierAsync();
+            await LoadSoldItemsAsync();
         }
 
-        public void LocalRecord()
+        #region Sold Items Logic
+
+        public async Task LoadSoldItemsAsync()
         {
+            dataGridView1.Rows.Clear();
+            double totalAmount = 0;
+            int i = 0;
+
+            DateTime startDate = dateTimePicker1.Value.Date;
+            DateTime endDate = dateTimePicker2.Value.Date.AddDays(1).AddSeconds(-1);
+
             try
             {
-                int i = 0;
-                double _total = 0;
-                dataGridView1.Rows.Clear();
-                cn.Open();
-
-                string sql = "SELECT c.id, c.transno, c.pcode, p.pdesc, c.price, c.qty, c.disc, (c.qty * c.price) - c.disc as total " +
-                             "FROM tblCart1 as c INNER JOIN TblProduct1 as p ON c.pcode = p.pcode " +
-                             "WHERE status LIKE 'sold' AND sdate BETWEEN @date1 AND @date2";
-
-                if (cbCashier.Text != "All Cashier" && !string.IsNullOrEmpty(cbCashier.Text))
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    sql += " AND cashier LIKE @cashier";
+                    await cn.OpenAsync();
+
+                    string query =
+                        @"SELECT c.id, c.transno, c.pcode, p.pdesc,
+                                 c.price, c.qty, c.disc,
+                                 (c.qty * c.price) - c.disc AS total
+                          FROM tblCart1 c
+                          INNER JOIN TblProduct1 p ON c.pcode = p.pcode
+                          WHERE c.status = @status
+                          AND c.sdate BETWEEN @date1 AND @date2";
+
+                    if (cbCashier.Text != "All Cashier")
+                        query += " AND c.cashier = @cashier";
+
+                    using (var cmd = new SQLiteCommand(query, cn))
+                    {
+                        cmd.Parameters.AddWithValue("@status", STATUS_SOLD);
+                        cmd.Parameters.AddWithValue("@date1", startDate);
+                        cmd.Parameters.AddWithValue("@date2", endDate);
+
+                        if (cbCashier.Text != "All Cashier")
+                            cmd.Parameters.AddWithValue("@cashier", cbCashier.Text);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                i++;
+                                double rowTotal = Convert.ToDouble(reader["total"]);
+                                totalAmount += rowTotal;
+
+                                dataGridView1.Rows.Add(
+                                    i,
+                                    reader["id"].ToString(),
+                                    reader["transno"].ToString(),
+                                    reader["pcode"].ToString(),
+                                    reader["pdesc"].ToString(),
+                                    reader["price"].ToString(),
+                                    reader["qty"].ToString(),
+                                    reader["disc"].ToString(),
+                                    rowTotal.ToString("#,##0.00")
+                                );
+                            }
+                        }
+                    }
                 }
 
-                cm = new SQLiteCommand(sql, cn);
-                cm.Parameters.AddWithValue("@date1", dateTimePicker1.Value.ToString("yyyy-MM-dd"));
-                cm.Parameters.AddWithValue("@date2", dateTimePicker2.Value.ToString("yyyy-MM-dd"));
-
-                if (cbCashier.Text != "All Cashier" && !string.IsNullOrEmpty(cbCashier.Text))
-                {
-                    cm.Parameters.AddWithValue("@cashier", cbCashier.Text);
-                }
-
-                dr = cm.ExecuteReader();
-                while (dr.Read())
-                {
-                    i++;
-                    double total = dr["total"] != DBNull.Value ? Convert.ToDouble(dr["total"]) : 0;
-                    _total += total;
-                    dataGridView1.Rows.Add(i, dr["id"].ToString(), dr["transno"].ToString(), dr["pcode"].ToString(), dr["pdesc"].ToString(), dr["price"].ToString(), dr["qty"].ToString(), dr["disc"].ToString(), total.ToString("#,##0.00"));
-                }
-                dr.Close();
-                cn.Close();
-                lblTotal1.Text = _total.ToString("#,##0.00");
+                lblTotal1.Text = totalAmount.ToString("#,##0.00");
             }
             catch (Exception ex)
             {
-                if (cn.State == System.Data.ConnectionState.Open) cn.Close();
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(ex.Message, "Load Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+        }
+
+        #endregion
+
+        #region Cashier Logic
+
+        private async Task LoadCashierAsync()
+        {
+            try
+            {
+                cbCashier.Items.Clear();
+                cbCashier.Items.Add("All Cashier");
+
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
+                {
+                    await cn.OpenAsync();
+                    using (var cmd = new SQLiteCommand(
+                        "SELECT username FROM tblUser WHERE role = 'Cashier'", cn))
+                    {
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                cbCashier.Items.Add(reader["username"].ToString());
+                            }
+                        }
+                    }
+                }
+
+                cbCashier.SelectedIndex = 0;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Cashier Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        #endregion
+
+        #region Events
+
+        private async void cbCashier_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            await LoadSoldItemsAsync();
+        }
+
+        private async void dateTimePicker1_ValueChanged(object sender, EventArgs e)
+        {
+            await LoadSoldItemsAsync();
+        }
+
+        private async void dateTimePicker2_ValueChanged(object sender, EventArgs e)
+        {
+            await LoadSoldItemsAsync();
+        }
+
+        private void cbCashier_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            e.Handled = true;
         }
 
         private void pictureBox2_Click(object sender, EventArgs e)
         {
-            this.Dispose();
+            Dispose();
         }
+
+        private void panel1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                ReleaseCapture();
+                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+            }
+        }
+
+        #endregion
+
+        #region Cancel Item
 
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
 
-            string colName = dataGridView1.Columns[e.ColumnIndex].Name;
-            if (colName == "ColCancel")
+            if (dataGridView1.Columns[e.ColumnIndex].Name == "ColCancel")
             {
                 frmCancelDetails f = new frmCancelDetails(this);
                 f.txtID.Text = dataGridView1.Rows[e.RowIndex].Cells[1].Value.ToString();
@@ -108,6 +205,15 @@ namespace PosSystem
             }
         }
 
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+            // intentionally left empty
+        }
+
+        #endregion
+
+        #region Report
+
         private void btnSave_Click(object sender, EventArgs e)
         {
             frmReportSold frm = new frmReportSold(this);
@@ -115,62 +221,6 @@ namespace PosSystem
             frm.ShowDialog();
         }
 
-        private void cbCashier_KeyPress(object sender, KeyPressEventArgs e)
-        {
-            e.Handled = true;
-        }
-
-        public void LoadCashier()
-        {
-            try
-            {
-                cbCashier.Items.Clear();
-                cbCashier.Items.Add("All Cashier");
-                cn.Open();
-                cm = new SQLiteCommand("SELECT username FROM tblUser WHERE role LIKE 'Cashier'", cn);
-                dr = cm.ExecuteReader();
-                while (dr.Read())
-                {
-                    cbCashier.Items.Add(dr["username"].ToString());
-                }
-                dr.Close();
-                cn.Close();
-                cbCashier.SelectedIndex = 0;
-            }
-            catch (Exception ex)
-            {
-                if (cn.State == System.Data.ConnectionState.Open) cn.Close();
-                MessageBox.Show(ex.Message);
-            }
-        }
-
-        private void cbCashier_SelectedIndexChanged_1(object sender, EventArgs e)
-        {
-            LocalRecord();
-        }
-
-        private void dateTimePicker1_ValueChanged(object sender, EventArgs e)
-        {
-            LocalRecord();
-        }
-
-        private void dateTimePicker2_ValueChanged(object sender, EventArgs e)
-        {
-            LocalRecord();
-        }
-
-        private void panel1_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left)
-            {
-                ReleaseCapture();
-                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
-            }
-        }
-
-        private void panel1_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
+        #endregion
     }
 }

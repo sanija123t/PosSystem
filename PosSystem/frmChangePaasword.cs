@@ -42,7 +42,7 @@ namespace PosSystem
                 string checkQuery = "SELECT password FROM tblUser WHERE username = @username";
                 using (SQLiteCommand checkCmd = new SQLiteCommand(checkQuery, cn))
                 {
-                    checkCmd.Parameters.AddWithValue("@username", f.lblUser.Text);
+                    checkCmd.Parameters.AddWithValue("@username", f.lblUserName.Text);
                     object result = checkCmd.ExecuteScalar();
 
                     if (result != null && result.ToString() == hashedOldInput)
@@ -69,7 +69,7 @@ namespace PosSystem
                     cn.Open();
                     cm = new SQLiteCommand("UPDATE tblUser SET password = @password WHERE username = @username", cn);
                     cm.Parameters.AddWithValue("@password", DBConnection.GetHash(txtNew.Text));
-                    cm.Parameters.AddWithValue("@username", f.lblUser.Text);
+                    cm.Parameters.AddWithValue("@username", f.lblUserName.Text);
                     cm.ExecuteNonQuery();
                     cn.Close();
 

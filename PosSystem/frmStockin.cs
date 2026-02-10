@@ -1,27 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
+using System.Data.SQLite;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data.SQLite;
 
 namespace PosSystem
 {
+    // Model class for Stock-In item
+    public class StockInModel
+    {
+        public string ID { get; set; }
+        public string PCode { get; set; }
+        public int Qty { get; set; }
+    }
+
     public partial class frmStockin : Form
     {
-        SQLiteConnection cn;
-        SQLiteCommand cm;
-        SQLiteDataReader dr;
-        string stitle = "PosSystem";
+        private readonly string stitle = "PosSystem";
+        private readonly string connStr;
 
-        public frmStockin()
+        public frmStockin(string connectionString)
         {
             InitializeComponent();
-            cn = new SQLiteConnection(DBConnection.MyConnection());
+            connStr = connectionString;
             LoadVendor();
         }
 
@@ -30,84 +33,117 @@ namespace PosSystem
             GenerateReferenceNo();
         }
 
-        // Automated Reference Number Generation (Safe parsing)
-        public void GenerateReferenceNo()
+        // Validates if there are rows in the grid
+        private bool ValidateStockIn()
+        {
+            if (dataGridView2.Rows.Count == 0)
+            {
+                MessageBox.Show("No items to save.", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            return true;
+        }
+
+        // Atomic reference number generation
+        public void GenerateReferenceNo()
         {
             try
             {
                 string sdate = DateTime.Now.ToString("yyyyMMdd");
-                int count = 1000; // default starting number
-                cn.Open();
-                cm = new SQLiteCommand("SELECT refno FROM tblStockIn WHERE refno LIKE @sdate ORDER BY id DESC LIMIT 1", cn);
-                cm.Parameters.AddWithValue("@sdate", sdate + "%");
-                dr = cm.ExecuteReader();
-                if (dr.Read())
+                int nextNumber = 1001;
+
+                using (var cn = new SQLiteConnection(connStr))
                 {
-                    string lastRef = dr[0].ToString();
-                    if (lastRef.Length >= 12 && int.TryParse(lastRef.Substring(8), out int lastCount))
+                    cn.Open();
+                    using (var tran = cn.BeginTransaction())
                     {
-                        count = lastCount;
+                        using (var cmd = new SQLiteCommand("SELECT refno FROM tblStockIn WHERE refno LIKE @sdate ORDER BY id DESC LIMIT 1", cn, tran))
+                        {
+                            cmd.Parameters.Add("@sdate", DbType.String).Value = sdate + "%";
+                            var lastRef = cmd.ExecuteScalar()?.ToString();
+                            if (!string.IsNullOrEmpty(lastRef) && lastRef.Length >= 12)
+                            {
+                                if (int.TryParse(lastRef.Substring(8), out int lastCount))
+                                    nextNumber = lastCount + 1;
+                            }
+                        }
+                        txtRefNo.Text = sdate + nextNumber;
+                        tran.Commit();
                     }
                 }
-                txtRefNo.Text = sdate + (count + 1);
-                dr.Close();
-                cn.Close();
             }
             catch (Exception ex)
             {
-                if (cn.State == ConnectionState.Open) cn.Close();
                 MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        public void LoadStockIn()
+        // Load pending stock-in items
+        public void LoadStockIn()
         {
+            dataGridView2.Rows.Clear();
             try
             {
-                int i = 0;
-                dataGridView2.Rows.Clear();
-                cn.Open();
-                cm = new SQLiteCommand("SELECT * FROM tblStockIn WHERE refno LIKE @refno AND status = 'Pending'", cn);
-                cm.Parameters.AddWithValue("@refno", txtRefNo.Text);
-                dr = cm.ExecuteReader();
-                while (dr.Read())
+                using (var cn = new SQLiteConnection(connStr))
+                using (var cmd = new SQLiteCommand("SELECT * FROM tblStockIn WHERE refno = @refno AND status='Pending'", cn))
                 {
-                    i++;
-                    dataGridView2.Rows.Add(i, dr["id"].ToString(), dr["refno"].ToString(), dr["pcode"].ToString(), "", "", dr["qty"].ToString(), dr["sdate"].ToString(), dr["stockinby"].ToString());
+                    cmd.Parameters.Add("@refno", DbType.String).Value = txtRefNo.Text;
+                    cn.Open();
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        int i = 0;
+                        while (dr.Read())
+                        {
+                            i++;
+                            dataGridView2.Rows.Add(
+                              i,
+                              dr["id"].ToString(),
+                              dr["refno"].ToString(),
+                              dr["pcode"].ToString(),
+                              "",
+                              "",
+                              dr["qty"].ToString(),
+                              dr["sdate"].ToString(),
+                              dr["stockinby"].ToString()
+                            );
+                        }
+                    }
                 }
-                dr.Close();
-                cn.Close();
             }
             catch (Exception ex)
             {
-                if (cn.State == ConnectionState.Open) cn.Close();
                 MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void dataGridView2_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex < 0) return;
-            string colName = dataGridView2.Columns[e.ColumnIndex].Name;
-            if (colName == "Delete")
+            if (e.RowIndex < 0 || dataGridView2.Columns[e.ColumnIndex].Name != "Delete") return;
+
+            if (MessageBox.Show("Remove this item?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                if (MessageBox.Show("Remove this item?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                try
                 {
-                    cn.Open();
-                    cm = new SQLiteCommand("DELETE FROM tblStockIn WHERE id = @id", cn);
-                    cm.Parameters.AddWithValue("@id", dataGridView2.Rows[e.RowIndex].Cells[1].Value.ToString());
-                    cm.ExecuteNonQuery();
-                    cn.Close();
-                    MessageBox.Show("Item has been successfully deleted", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    using (var cn = new SQLiteConnection(connStr))
+                    using (var cmd = new SQLiteCommand("DELETE FROM tblStockIn WHERE id=@id", cn))
+                    {
+                        cmd.Parameters.Add("@id", DbType.String).Value = dataGridView2.Rows[e.RowIndex].Cells[1].Value.ToString();
+                        cn.Open();
+                        cmd.ExecuteNonQuery();
+                    }
                     LoadStockIn();
+                    MessageBox.Show("Item deleted successfully.", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        public void Clear()
+        private void Clear()
         {
             txtBy.Clear();
-            txtRefNo.Clear();
             dt1.Value = DateTime.Now;
             GenerateReferenceNo();
         }
@@ -119,76 +155,72 @@ namespace PosSystem
                 MessageBox.Show("Please generate a reference number first.", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            frmSearchProductStokin frm = new frmSearchProductStokin(this);
+            var frm = new frmSearchProductStokin(this);
             frm.LoadProduct();
             frm.ShowDialog();
         }
 
-        // Async Stock-in Save with Transaction & Safe UI
-        private async void btnSave_Click(object sender, EventArgs e)
+        // Async save with transaction & UI thread safety
+        private async void btnSave_Click(object sender, EventArgs e)
         {
-            if (dataGridView2.Rows.Count == 0) return;
-
-            if (MessageBox.Show("Are you sure you want to save this record?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
+            if (!ValidateStockIn()) return;
 
             btnSave.Enabled = false;
-            dataGridView2.Enabled = false; // prevent edits while saving
+            dataGridView2.Enabled = false;
+
+            var stockItems = dataGridView2.Rows
+              .Cast<DataGridViewRow>()
+              .Where(r => !r.IsNewRow)
+              .Select(r => new StockInModel
+              {
+                  ID = r.Cells[1].Value.ToString(),
+                  PCode = r.Cells[3].Value.ToString(),
+                  Qty = int.TryParse(r.Cells[6].Value?.ToString(), out int q) ? q : 0
+              }).ToList();
+
+            int vendorID = int.TryParse(lblVendorID.Text, out int vid) ? vid : 0;
+            string stockInBy = txtBy.Text;
 
             try
             {
                 await Task.Run(() =>
                 {
-                    cn.Open();
-                    using (var transaction = cn.BeginTransaction())
+                    using (var cn = new SQLiteConnection(connStr))
                     {
-                        try
+                        cn.Open();
+                        using (var tran = cn.BeginTransaction())
                         {
-                            foreach (DataGridViewRow row in dataGridView2.Rows)
+                            foreach (var item in stockItems)
                             {
-                                if (row.IsNewRow) continue;
-                                if (!int.TryParse(row.Cells[6].Value?.ToString(), out int qty)) qty = 0;
-                                string pcode = row.Cells[3].Value.ToString();
-                                string stockInID = row.Cells[1].Value.ToString();
-
-                                // Update product qty
-                                using (SQLiteCommand cmd = new SQLiteCommand("UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode = @pcode", cn))
+                                // Update product quantity
+                                using (var cmd = new SQLiteCommand("UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode=@pcode", cn, tran))
                                 {
-                                    cmd.Parameters.AddWithValue("@qty", qty);
-                                    cmd.Parameters.AddWithValue("@pcode", pcode);
+                                    cmd.Parameters.Add("@qty", DbType.Int32).Value = item.Qty;
+                                    cmd.Parameters.Add("@pcode", DbType.String).Value = item.PCode;
                                     cmd.ExecuteNonQuery();
                                 }
 
-                                // Update stockin status
-                                using (SQLiteCommand cmd = new SQLiteCommand("UPDATE tblStockIn SET status = 'Done' WHERE id = @id", cn))
+                                // Update stock-in status
+                                using (var cmd = new SQLiteCommand("UPDATE tblStockIn SET status='Done', vendorid=@vendorid, stockinby=@stockinby WHERE id=@id", cn, tran))
                                 {
-                                    cmd.Parameters.AddWithValue("@id", stockInID);
+                                    cmd.Parameters.Add("@id", DbType.String).Value = item.ID;
+                                    cmd.Parameters.Add("@vendorid", DbType.Int32).Value = vendorID;
+                                    cmd.Parameters.Add("@stockinby", DbType.String).Value = stockInBy;
                                     cmd.ExecuteNonQuery();
                                 }
                             }
-
-                            transaction.Commit();
-                        }
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            throw ex;
-                        }
-                        finally
-                        {
-                            cn.Close();
+                            tran.Commit();
                         }
                     }
                 });
 
-                MessageBox.Show("Stock in successfully saved!", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Stock-in successfully saved!", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Clear();
                 LoadStockIn();
             }
             catch (Exception ex)
             {
-                if (cn.State == System.Data.ConnectionState.Open) cn.Close();
-                MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -197,96 +229,96 @@ namespace PosSystem
             }
         }
 
-        private void LoadStockHistory()
+        // Load stock-in history
+        private void LoadStockHistory()
         {
+            dataGridView1.Rows.Clear();
             try
             {
-                int i = 0;
-                dataGridView1.Rows.Clear();
-                cn.Open();
-                cm = new SQLiteCommand("SELECT * FROM tblStockIn WHERE sdate BETWEEN @d1 AND @d2 AND status = 'Done'", cn);
-                cm.Parameters.AddWithValue("@d1", date1.Value.ToString("yyyy-MM-dd"));
-                cm.Parameters.AddWithValue("@d2", date2.Value.ToString("yyyy-MM-dd"));
-                dr = cm.ExecuteReader();
-                while (dr.Read())
+                using (var cn = new SQLiteConnection(connStr))
+                using (var cmd = new SQLiteCommand("SELECT * FROM tblStockIn WHERE DATE(sdate) BETWEEN @d1 AND @d2 AND status='Done'", cn))
                 {
-                    i++;
-                    dataGridView1.Rows.Add(i, dr["id"].ToString(), dr["refno"].ToString(), dr["pcode"].ToString(), "", "", dr["qty"].ToString(), dr["sdate"].ToString(), dr["stockinby"].ToString());
+                    cmd.Parameters.Add("@d1", DbType.String).Value = date1.Value.ToString("yyyy-MM-dd");
+                    cmd.Parameters.Add("@d2", DbType.String).Value = date2.Value.ToString("yyyy-MM-dd");
+                    cn.Open();
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        int i = 0;
+                        while (dr.Read())
+                        {
+                            i++;
+                            dataGridView1.Rows.Add(
+                              i,
+                              dr["id"].ToString(),
+                              dr["refno"].ToString(),
+                              dr["pcode"].ToString(),
+                              "",
+                              "",
+                              dr["qty"].ToString(),
+                              dr["sdate"].ToString(),
+                              dr["stockinby"].ToString()
+                            );
+                        }
+                    }
                 }
-                dr.Close();
-                cn.Close();
             }
             catch (Exception ex)
             {
-                if (cn.State == ConnectionState.Open) cn.Close();
                 MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void load_Click(object sender, EventArgs e)
-        {
-            LoadStockHistory();
-        }
-
-        private void pictureBox1_Click(object sender, EventArgs e)
-        {
-            this.Dispose();
-        }
+        private void load_Click(object sender, EventArgs e) => LoadStockHistory();
+        private void pictureBox1_Click(object sender, EventArgs e) => this.Dispose();
 
         public void LoadVendor()
         {
+            cbVendor.Items.Clear();
             try
             {
-                cbVendor.Items.Clear();
-                cn.Open();
-                cm = new SQLiteCommand("SELECT * FROM tblVendor", cn);
-                dr = cm.ExecuteReader();
-                while (dr.Read())
+                using (var cn = new SQLiteConnection(connStr))
+                using (var cmd = new SQLiteCommand("SELECT * FROM tblVendor", cn))
                 {
-                    cbVendor.Items.Add(dr["vendor"].ToString());
+                    cn.Open();
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                            cbVendor.Items.Add(dr["vendor"].ToString());
+                    }
                 }
-                dr.Close();
-                cn.Close();
             }
             catch (Exception ex)
             {
-                if (cn.State == ConnectionState.Open) cn.Close();
                 MessageBox.Show("Vendor Load Error: " + ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void cbVendor_KeyPress(object sender, KeyPressEventArgs e)
-        {
-            e.Handled = true;
-        }
+        private void cbVendor_KeyPress(object sender, KeyPressEventArgs e) => e.Handled = true;
 
         private void cbVendor_TextChanged(object sender, EventArgs e)
         {
             try
             {
-                cn.Open();
-                cm = new SQLiteCommand("SELECT * FROM tblVendor WHERE vendor = @vendor", cn);
-                cm.Parameters.AddWithValue("@vendor", cbVendor.Text);
-                dr = cm.ExecuteReader();
-                if (dr.Read())
+                using (var cn = new SQLiteConnection(connStr))
+                using (var cmd = new SQLiteCommand("SELECT * FROM tblVendor WHERE vendor=@vendor", cn))
                 {
-                    lblVendorID.Text = dr["id"].ToString();
-                    txtAddress.Text = dr["address"].ToString();
-                    txtPerson.Text = dr["contactperson"].ToString();
+                    cmd.Parameters.Add("@vendor", DbType.String).Value = cbVendor.Text;
+                    cn.Open();
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        if (dr.Read())
+                        {
+                            lblVendorID.Text = dr["id"].ToString();
+                            txtAddress.Text = dr["address"].ToString();
+                            txtPerson.Text = dr["contactperson"].ToString();
+                        }
+                    }
                 }
-                dr.Close();
-                cn.Close();
             }
-            catch
-            {
-                if (cn.State == ConnectionState.Open) cn.Close();
-            }
+            catch { }
         }
 
-        private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            GenerateReferenceNo();
-        }
+        private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) => GenerateReferenceNo();
 
         private void panel1_Paint(object sender, PaintEventArgs e) { }
         private void panel2_Paint(object sender, PaintEventArgs e) { }
