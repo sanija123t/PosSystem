@@ -9,18 +9,12 @@ namespace PosSystem
 {
     public static class DBConnection
     {
-        private static readonly string dbPath =
-            Path.Combine(Application.StartupPath, "DATABASE", "PosDB.db");
-
-        private static readonly string con =
-            $"Data Source={dbPath};Journal Mode=WAL;";
-
+        private static readonly string dbDirectory = Path.Combine(Application.StartupPath, "DATABASE");
+        private static readonly string dbPath = Path.Combine(dbDirectory, "PosDB.db");
+        private static readonly string con = $"Data Source={dbPath};Version=3;New=False;Compress=True;Journal Mode=WAL;";
         private static bool _initialized = false;
 
-        public static string MyConnection()
-        {
-            return con;
-        }
+        public static string MyConnection() => con;
 
         public static string GetHash(string password)
         {
@@ -41,200 +35,47 @@ namespace PosSystem
 
             try
             {
-                string directory = Path.GetDirectoryName(dbPath);
-                if (!Directory.Exists(directory))
-                    Directory.CreateDirectory(directory);
-
-                if (!File.Exists(dbPath))
-                    SQLiteConnection.CreateFile(dbPath);
+                if (!Directory.Exists(dbDirectory)) Directory.CreateDirectory(dbDirectory);
+                if (!File.Exists(dbPath)) SQLiteConnection.CreateFile(dbPath);
 
                 using (SQLiteConnection cn = new SQLiteConnection(MyConnection()))
                 {
                     cn.Open();
-
-                    // Migration logic: Ensure 'name' column exists if table was already created without it
-                    using (SQLiteCommand cmMigrate = new SQLiteCommand("PRAGMA table_info(tblUser)", cn))
-                    {
-                        bool hasName = false;
-                        using (var reader = cmMigrate.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                if (reader["name"].ToString().Equals("name", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    hasName = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!hasName)
-                        {
-                            try
-                            {
-                                using (SQLiteCommand cmAddCol = new SQLiteCommand("ALTER TABLE tblUser ADD COLUMN name TEXT", cn))
-                                {
-                                    cmAddCol.ExecuteNonQuery();
-                                }
-                            }
-                            catch { /* Table might not exist yet; handled in create script below */ }
-                        }
-                    }
-
                     string script = @"
-                    CREATE TABLE IF NOT EXISTS BrandTbl (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        brand TEXT NOT NULL
-                    );
-
-                    CREATE TABLE IF NOT EXISTS TblCategory (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        category TEXT NOT NULL
-                    );
-
-                    CREATE TABLE IF NOT EXISTS tblStore (
-                        store TEXT,
-                        address TEXT,
-                        phone TEXT
-                    );
-
-                    CREATE TABLE IF NOT EXISTS tblVat (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        vat REAL DEFAULT 0
-                    );
-
-                    CREATE TABLE IF NOT EXISTS TblProduct1 (
-                        pcode TEXT PRIMARY KEY,
-                        barcode TEXT,
-                        pdesc TEXT NOT NULL,
-                        bid INTEGER,
-                        cid INTEGER,
-                        price REAL DEFAULT 0,
-                        qty INTEGER DEFAULT 0,
-                        reorder INTEGER DEFAULT 0
-                    );
-
-                    CREATE TABLE IF NOT EXISTS tblUser (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username TEXT UNIQUE,
-                        password TEXT,
-                        role TEXT,
-                        name TEXT, 
-                        isactive INTEGER DEFAULT 1,
-                        isdeleted INTEGER DEFAULT 0
-                    );
-
-                    CREATE TABLE IF NOT EXISTS tblCart1 (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        transno TEXT,
-                        pcode TEXT,
-                        price REAL,
-                        qty INTEGER,
-                        sdate TEXT,
-                        status TEXT DEFAULT 'Pending',
-                        disc REAL DEFAULT 0,
-                        total REAL DEFAULT 0
-                    );
-
-                    CREATE TABLE IF NOT EXISTS tblAdjustment (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        referenceno TEXT,
-                        pcode TEXT,
-                        qty INTEGER,
-                        action TEXT,
-                        remarks TEXT,
-                        sdate TEXT,
-                        [user] TEXT
-                    );
-
-                    CREATE TABLE IF NOT EXISTS tblVendor (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        vendor TEXT,
-                        address TEXT,
-                        contactperson TEXT,
-                        telephone TEXT,
-                        email TEXT,
-                        fax TEXT
-                    );
-
-                    CREATE TABLE IF NOT EXISTS tblStockIn (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        refno TEXT,
-                        pcode TEXT,
-                        qty INTEGER DEFAULT 0,
-                        sdate TEXT,
-                        stockinby TEXT,
-                        vendorid INTEGER,
-                        status TEXT DEFAULT 'Pending'
-                    );
-
-                    CREATE TABLE IF NOT EXISTS tblCancel (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        transno TEXT,
-                        pcode TEXT,
-                        price REAL,
-                        qty INTEGER,
-                        total REAL,
-                        sdate TEXT,
-                        voidby TEXT,
-                        cancelledby TEXT,
-                        reason TEXT,
-                        action TEXT
-                    );
+                    CREATE TABLE IF NOT EXISTS BrandTbl (id INTEGER PRIMARY KEY AUTOINCREMENT, brand TEXT NOT NULL);
+                    CREATE TABLE IF NOT EXISTS TblCategory (id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL);
+                    CREATE TABLE IF NOT EXISTS tblStore (store TEXT, address TEXT, phone TEXT);
+                    CREATE TABLE IF NOT EXISTS tblVat (id INTEGER PRIMARY KEY AUTOINCREMENT, vat REAL DEFAULT 0);
+                    CREATE TABLE IF NOT EXISTS TblProduct1 (pcode TEXT PRIMARY KEY, barcode TEXT, pdesc TEXT NOT NULL, bid INTEGER, cid INTEGER, price REAL DEFAULT 0, qty INTEGER DEFAULT 0, reorder INTEGER DEFAULT 0, FOREIGN KEY (bid) REFERENCES BrandTbl(id), FOREIGN KEY (cid) REFERENCES TblCategory(id));
+                    CREATE TABLE IF NOT EXISTS tblUser (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, role TEXT, name TEXT, isactive INTEGER DEFAULT 1, isdeleted INTEGER DEFAULT 0);
+                    CREATE TABLE IF NOT EXISTS tblCart1 (id INTEGER PRIMARY KEY AUTOINCREMENT, transno TEXT, pcode TEXT, price REAL, qty INTEGER, sdate TEXT, status TEXT DEFAULT 'Pending', disc REAL DEFAULT 0, total REAL DEFAULT 0, FOREIGN KEY (pcode) REFERENCES TblProduct1(pcode));
+                    CREATE TABLE IF NOT EXISTS tblAdjustment (id INTEGER PRIMARY KEY AUTOINCREMENT, referenceno TEXT, pcode TEXT, qty INTEGER, action TEXT, remarks TEXT, sdate TEXT, [user] TEXT, FOREIGN KEY (pcode) REFERENCES TblProduct1(pcode));
+                    CREATE TABLE IF NOT EXISTS tblVendor (id INTEGER PRIMARY KEY AUTOINCREMENT, vendor TEXT, address TEXT, contactperson TEXT, telephone TEXT, email TEXT, fax TEXT);
+                    CREATE TABLE IF NOT EXISTS tblStockIn (id INTEGER PRIMARY KEY AUTOINCREMENT, refno TEXT, pcode TEXT, qty INTEGER DEFAULT 0, sdate TEXT, stockinby TEXT, vendorid INTEGER, status TEXT DEFAULT 'Pending', FOREIGN KEY (pcode) REFERENCES TblProduct1(pcode), FOREIGN KEY (vendorid) REFERENCES tblVendor(id));
+                    CREATE TABLE IF NOT EXISTS tblCancel (id INTEGER PRIMARY KEY AUTOINCREMENT, transno TEXT, pcode TEXT, price REAL, qty INTEGER, total REAL, sdate TEXT, voidby TEXT, cancelledby TEXT, reason TEXT, action TEXT);
 
                     DROP VIEW IF EXISTS vwCriticalItems;
-                    CREATE VIEW vwCriticalItems AS 
-                    SELECT * FROM TblProduct1 WHERE qty <= reorder;
+                    CREATE VIEW vwCriticalItems AS SELECT * FROM TblProduct1 WHERE qty <= reorder;
 
                     DROP VIEW IF EXISTS vwInventory;
-                    CREATE VIEW vwInventory AS
-                    SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.qty, p.reorder
-                    FROM TblProduct1 as p
-                    INNER JOIN BrandTbl as b ON b.id = p.bid
-                    INNER JOIN TblCategory as c ON c.id = p.cid;
+                    CREATE VIEW vwInventory AS SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.qty, p.reorder FROM TblProduct1 as p INNER JOIN BrandTbl as b ON b.id = p.bid INNER JOIN TblCategory as c ON c.id = p.cid;";
 
-                    DROP VIEW IF EXISTS vwSoldItems;
-                    CREATE VIEW vwSoldItems AS
-                    SELECT c.pcode, p.pdesc, c.qty, c.total, c.sdate, c.status, c.disc, c.price
-                    FROM tblCart1 AS c
-                    INNER JOIN TblProduct1 AS p ON c.pcode = p.pcode;
-
-                    DROP VIEW IF EXISTS vwStockin;
-                    CREATE VIEW vwStockin AS
-                    SELECT s.id, s.refno, s.pcode, p.pdesc, s.qty, s.sdate, s.stockinby, v.vendor, s.status
-                    FROM tblStockIn AS s
-                    INNER JOIN TblProduct1 AS p ON s.pcode = p.pcode
-                    INNER JOIN tblVendor AS v ON s.vendorid = v.id;
-
-                    DROP VIEW IF EXISTS vwCancelledOrder;
-                    CREATE VIEW vwCancelledOrder AS
-                    SELECT c.id, c.transno, c.pcode, p.pdesc, c.price, c.qty, c.total, c.sdate, c.voidby, c.cancelledby, c.reason, c.action
-                    FROM tblCancel AS c
-                    INNER JOIN TblProduct1 AS p ON c.pcode = p.pcode;";
-
-                    using (SQLiteCommand cm = new SQLiteCommand(script, cn))
-                    {
-                        cm.ExecuteNonQuery();
-                    }
+                    using (SQLiteCommand cm = new SQLiteCommand(script, cn)) { cm.ExecuteNonQuery(); }
 
                     using (SQLiteCommand cmCheck = new SQLiteCommand("SELECT COUNT(*) FROM tblUser", cn))
                     {
                         if (Convert.ToInt32(cmCheck.ExecuteScalar()) == 0)
                         {
-                            string adminPass = GetHash("admin123");
-                            using (SQLiteCommand cmInsert = new SQLiteCommand(
-                                "INSERT INTO tblUser (username, password, role, name) VALUES ('admin', @pass, 'Administrator', 'System Admin')", cn))
+                            using (SQLiteCommand cmInsert = new SQLiteCommand("INSERT INTO tblUser (username, password, role, name) VALUES ('admin', @pass, 'Administrator', 'System Admin')", cn))
                             {
-                                cmInsert.Parameters.AddWithValue("@pass", adminPass);
+                                cmInsert.Parameters.AddWithValue("@pass", GetHash("admin123"));
                                 cmInsert.ExecuteNonQuery();
                             }
                         }
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("DB Init Error: " + ex.Message);
-            }
+            catch (Exception ex) { MessageBox.Show("Critical Database Error: " + ex.Message); }
         }
 
         public static double GetVal()
@@ -261,8 +102,7 @@ namespace PosSystem
                 using (SQLiteConnection cn = new SQLiteConnection(MyConnection()))
                 {
                     cn.Open();
-                    using (SQLiteCommand cm = new SQLiteCommand(
-                        "SELECT TOTAL(qty * price) FROM tblCart1 WHERE sdate LIKE @d AND status='Sold'", cn))
+                    using (SQLiteCommand cm = new SQLiteCommand("SELECT TOTAL(total) FROM tblCart1 WHERE sdate LIKE @d AND status='Sold'", cn))
                     {
                         cm.Parameters.AddWithValue("@d", DateTime.Now.ToString("yyyy-MM-dd") + "%");
                         return Convert.ToDouble(cm.ExecuteScalar());
@@ -279,10 +119,7 @@ namespace PosSystem
                 using (SQLiteConnection cn = new SQLiteConnection(MyConnection()))
                 {
                     cn.Open();
-                    using (SQLiteCommand cm = new SQLiteCommand("SELECT COUNT(*) FROM TblProduct1", cn))
-                    {
-                        return Convert.ToDouble(cm.ExecuteScalar());
-                    }
+                    using (SQLiteCommand cm = new SQLiteCommand("SELECT COUNT(*) FROM TblProduct1", cn)) return Convert.ToDouble(cm.ExecuteScalar());
                 }
             }
             catch { return 0; }
@@ -295,10 +132,7 @@ namespace PosSystem
                 using (SQLiteConnection cn = new SQLiteConnection(MyConnection()))
                 {
                     cn.Open();
-                    using (SQLiteCommand cm = new SQLiteCommand("SELECT TOTAL(qty) FROM TblProduct1", cn))
-                    {
-                        return Convert.ToDouble(cm.ExecuteScalar());
-                    }
+                    using (SQLiteCommand cm = new SQLiteCommand("SELECT TOTAL(qty) FROM TblProduct1", cn)) return Convert.ToDouble(cm.ExecuteScalar());
                 }
             }
             catch { return 0; }
@@ -311,15 +145,13 @@ namespace PosSystem
                 using (SQLiteConnection cn = new SQLiteConnection(MyConnection()))
                 {
                     cn.Open();
-                    using (SQLiteCommand cm = new SQLiteCommand("SELECT COUNT(*) FROM tblUser", cn))
-                    {
-                        return Convert.ToInt32(cm.ExecuteScalar()) > 0;
-                    }
+                    using (SQLiteCommand cm = new SQLiteCommand("SELECT COUNT(*) FROM tblUser WHERE isdeleted = 0", cn)) return Convert.ToInt32(cm.ExecuteScalar()) > 0;
                 }
             }
             catch { return false; }
         }
 
+        // Required for Form1.cs Line 135
         public static double CraticalItems()
         {
             try
@@ -327,14 +159,12 @@ namespace PosSystem
                 using (SQLiteConnection cn = new SQLiteConnection(MyConnection()))
                 {
                     cn.Open();
-                    using (SQLiteCommand cm = new SQLiteCommand(
-                        "SELECT COUNT(*) FROM TblProduct1 WHERE qty <= reorder", cn))
-                    {
-                        return Convert.ToDouble(cm.ExecuteScalar());
-                    }
+                    using (SQLiteCommand cm = new SQLiteCommand("SELECT COUNT(*) FROM vwCriticalItems", cn)) return Convert.ToDouble(cm.ExecuteScalar());
                 }
             }
             catch { return 0; }
         }
+
+        public static double CriticalItemsCount() => CraticalItems();
     }
 }
