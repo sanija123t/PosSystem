@@ -1,56 +1,52 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Data.SQLite;
 using System.Windows.Forms;
-using System.Data.SqlClient;
 
 namespace PosSystem
 {
     public partial class frmProduct : Form
     {
-        SqlConnection cn = new SqlConnection();
-        SqlCommand cm = new SqlCommand();
-        SqlDataReader dr;
         frmProduct_List flist;
 
         public frmProduct(frmProduct_List frm)
         {
             InitializeComponent();
-            cn = new SqlConnection(DBConnection.MyConnection());
             flist = frm;
         }
 
         public void LocalCategory()
         {
             comboBox2.Items.Clear();
-            cn.Open();
-            cm = new SqlCommand("SELECT category FROM TblCatecory", cn);
-            dr = cm.ExecuteReader();
-            while (dr.Read())
+            using (SQLiteConnection con = new SQLiteConnection(DBConnection.MyConnection()))
             {
-                comboBox2.Items.Add(dr[0].ToString());
+                con.Open();
+                using (SQLiteCommand cmd = new SQLiteCommand("SELECT category FROM TblCategory", con))
+                using (SQLiteDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        comboBox2.Items.Add(reader[0].ToString());
+                    }
+                }
             }
-            dr.Close();
-            cn.Close();
         }
 
         public void LocalBrand()
         {
             comboBox1.Items.Clear();
-            cn.Open();
-            cm = new SqlCommand("SELECT brand FROM BrandTbl", cn);
-            dr = cm.ExecuteReader();
-            while (dr.Read())
+            using (SQLiteConnection con = new SQLiteConnection(DBConnection.MyConnection()))
             {
-                comboBox1.Items.Add(dr[0].ToString());
+                con.Open();
+                using (SQLiteCommand cmd = new SQLiteCommand("SELECT brand FROM BrandTbl", con))
+                using (SQLiteDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        comboBox1.Items.Add(reader[0].ToString());
+                    }
+                }
             }
-            dr.Close();
-            cn.Close();
         }
 
         private void pictureBox2_Click(object sender, EventArgs e)
@@ -68,61 +64,102 @@ namespace PosSystem
         {
             try
             {
-                if (MessageBox.Show("Are you sure you want to save this product?", "Save product", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                if (string.IsNullOrEmpty(TxtPcode.Text) || string.IsNullOrEmpty(txtBarcode.Text))
                 {
-                    // Check for duplicate Barcode or Pcode
-                    cn.Open();
-                    cm = new SqlCommand("SELECT COUNT(*) FROM TblProduct1 WHERE barcode = @barcode OR pcode = @pcode", cn);
-                    cm.Parameters.AddWithValue("@barcode", txtBarcode.Text);
-                    cm.Parameters.AddWithValue("@pcode", TxtPcode.Text);
-                    int count = Convert.ToInt32(cm.ExecuteScalar());
-                    cn.Close();
+                    MessageBox.Show("Please fill in required fields.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
-                    if (count > 0)
+                if (comboBox1.SelectedIndex < 0 || comboBox2.SelectedIndex < 0)
+                {
+                    MessageBox.Show("Please select a Brand and Category.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (!double.TryParse(txtPrice.Text, out double price))
+                {
+                    MessageBox.Show("Invalid Price value.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtPrice.Focus();
+                    return;
+                }
+
+                if (!int.TryParse(txtReOrder.Text, out int reorder))
+                {
+                    MessageBox.Show("Invalid Reorder value.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtReOrder.Focus();
+                    return;
+                }
+
+                if (MessageBox.Show("Save this product?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    using (SQLiteConnection connection = new SQLiteConnection(DBConnection.MyConnection()))
                     {
-                        MessageBox.Show("Barcode or Product Code already exists!", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
+                        connection.Open();
+
+                        // Check for duplicate Barcode
+                        using (SQLiteCommand cmdCheck = new SQLiteCommand(
+                            "SELECT COUNT(*) FROM TblProduct1 WHERE barcode = @barcode", connection))
+                        {
+                            cmdCheck.Parameters.AddWithValue("@barcode", txtBarcode.Text);
+                            int count = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                            if (count > 0)
+                            {
+                                MessageBox.Show("Barcode already exists!", "Duplicate", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
+
+                        // Get BrandID and CategoryID
+                        string brandID = null, categoryID = null;
+
+                        using (SQLiteCommand cmd = new SQLiteCommand("SELECT id FROM BrandTbl WHERE brand = @brand", connection))
+                        {
+                            cmd.Parameters.AddWithValue("@brand", comboBox1.Text);
+                            using (SQLiteDataReader dr = cmd.ExecuteReader())
+                            {
+                                if (dr.Read()) brandID = dr[0].ToString();
+                            }
+                        }
+
+                        using (SQLiteCommand cmd = new SQLiteCommand("SELECT id FROM TblCategory WHERE category = @category", connection))
+                        {
+                            cmd.Parameters.AddWithValue("@category", comboBox2.Text);
+                            using (SQLiteDataReader dr = cmd.ExecuteReader())
+                            {
+                                if (dr.Read()) categoryID = dr[0].ToString();
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(brandID) || string.IsNullOrEmpty(categoryID))
+                        {
+                            MessageBox.Show("Invalid Brand or Category selection.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        // Insert product
+                        using (SQLiteCommand cmd = new SQLiteCommand(
+                            @"INSERT INTO TblProduct1 (pcode, barcode, pdesc, bid, cid, price, reorder) 
+                              VALUES (@pcode, @barcode, @pdesc, @bid, @cid, @price, @reorder)", connection))
+                        {
+                            cmd.Parameters.AddWithValue("@pcode", TxtPcode.Text);
+                            cmd.Parameters.AddWithValue("@barcode", txtBarcode.Text);
+                            cmd.Parameters.AddWithValue("@pdesc", txtPdesc.Text);
+                            cmd.Parameters.AddWithValue("@bid", brandID);
+                            cmd.Parameters.AddWithValue("@cid", categoryID);
+                            cmd.Parameters.AddWithValue("@price", price);
+                            cmd.Parameters.AddWithValue("@reorder", reorder);
+                            cmd.ExecuteNonQuery();
+                        }
                     }
 
-                    string bid = ""; string cid = "";
-
-                    cn.Open();
-                    cm = new SqlCommand("SELECT id FROM BrandTbl WHERE brand = @brand", cn);
-                    cm.Parameters.AddWithValue("@brand", comboBox1.Text);
-                    dr = cm.ExecuteReader();
-                    if (dr.Read()) { bid = dr[0].ToString(); }
-                    dr.Close();
-                    cn.Close();
-
-                    cn.Open();
-                    cm = new SqlCommand("SELECT id FROM TblCatecory WHERE category = @category", cn);
-                    cm.Parameters.AddWithValue("@category", comboBox2.Text);
-                    dr = cm.ExecuteReader();
-                    if (dr.Read()) { cid = dr[0].ToString(); }
-                    dr.Close();
-                    cn.Close();
-
-                    cn.Open();
-                    cm = new SqlCommand("INSERT INTO TblProduct1 (pcode,barcode,pdesc,bid,cid,price,reorder) VALUES(@pcode,@barcode,@pdesc,@bid,@cid,@price,@reorder)", cn);
-                    cm.Parameters.AddWithValue("@pcode", TxtPcode.Text);
-                    cm.Parameters.AddWithValue("@barcode", txtBarcode.Text);
-                    cm.Parameters.AddWithValue("@pdesc", txtPdesc.Text);
-                    cm.Parameters.AddWithValue("@bid", bid);
-                    cm.Parameters.AddWithValue("@cid", cid);
-                    cm.Parameters.AddWithValue("@price", double.Parse(txtPrice.Text));
-                    cm.Parameters.AddWithValue("@reorder", int.Parse(txtReOrder.Text));
-                    cm.ExecuteNonQuery();
-                    cn.Close();
-
-                    MessageBox.Show("Product has been successfully saved");
+                    MessageBox.Show("Product saved successfully!");
                     Clear();
                     flist.LoadRecords();
                 }
             }
             catch (Exception ex)
             {
-                cn.Close();
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("Error: " + ex.Message);
             }
         }
 
@@ -160,49 +197,81 @@ namespace PosSystem
             {
                 if (MessageBox.Show("Are you sure you want to update this product?", "Update product", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
-                    // Check for duplicate Barcode (excluding the current pcode)
-                    cn.Open();
-                    cm = new SqlCommand("SELECT COUNT(*) FROM TblProduct1 WHERE barcode = @barcode AND pcode != @pcode", cn);
-                    cm.Parameters.AddWithValue("@barcode", txtBarcode.Text);
-                    cm.Parameters.AddWithValue("@pcode", TxtPcode.Text);
-                    int count = Convert.ToInt32(cm.ExecuteScalar());
-                    cn.Close();
-
-                    if (count > 0)
+                    if (!double.TryParse(txtPrice.Text, out double price))
                     {
-                        MessageBox.Show("Barcode already assigned to another product!", "Duplicate Barcode", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show("Invalid Price value.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtPrice.Focus();
                         return;
                     }
 
-                    string bid = ""; string cid = "";
+                    if (!int.TryParse(txtReOrder.Text, out int reorder))
+                    {
+                        MessageBox.Show("Invalid Reorder value.", "Input Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        txtReOrder.Focus();
+                        return;
+                    }
 
-                    cn.Open();
-                    cm = new SqlCommand("SELECT id FROM BrandTbl WHERE brand = @brand", cn);
-                    cm.Parameters.AddWithValue("@brand", comboBox1.Text);
-                    dr = cm.ExecuteReader();
-                    if (dr.Read()) { bid = dr[0].ToString(); }
-                    dr.Close();
-                    cn.Close();
+                    using (SQLiteConnection connection = new SQLiteConnection(DBConnection.MyConnection()))
+                    {
+                        connection.Open();
 
-                    cn.Open();
-                    cm = new SqlCommand("SELECT id FROM TblCatecory WHERE category = @category", cn);
-                    cm.Parameters.AddWithValue("@category", comboBox2.Text);
-                    dr = cm.ExecuteReader();
-                    if (dr.Read()) { cid = dr[0].ToString(); }
-                    dr.Close();
-                    cn.Close();
+                        // Check for duplicate Barcode (excluding current product)
+                        using (SQLiteCommand cmdCheck = new SQLiteCommand(
+                            "SELECT COUNT(*) FROM TblProduct1 WHERE barcode = @barcode AND pcode != @pcode", connection))
+                        {
+                            cmdCheck.Parameters.AddWithValue("@barcode", txtBarcode.Text);
+                            cmdCheck.Parameters.AddWithValue("@pcode", TxtPcode.Text);
+                            int count = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                            if (count > 0)
+                            {
+                                MessageBox.Show("Barcode already assigned to another product!", "Duplicate Barcode", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
 
-                    cn.Open();
-                    cm = new SqlCommand("UPDATE TblProduct1 SET barcode = @barcode, pdesc=@pdesc, bid=@bid, cid=@cid, price=@price, reorder=@reorder WHERE pcode = @pcode", cn);
-                    cm.Parameters.AddWithValue("@pcode", TxtPcode.Text);
-                    cm.Parameters.AddWithValue("@barcode", txtBarcode.Text);
-                    cm.Parameters.AddWithValue("@pdesc", txtPdesc.Text);
-                    cm.Parameters.AddWithValue("@bid", bid);
-                    cm.Parameters.AddWithValue("@cid", cid);
-                    cm.Parameters.AddWithValue("@price", double.Parse(txtPrice.Text));
-                    cm.Parameters.AddWithValue("@reorder", int.Parse(txtReOrder.Text));
-                    cm.ExecuteNonQuery();
-                    cn.Close();
+                        // Get BrandID and CategoryID
+                        string brandID = null, categoryID = null;
+
+                        using (SQLiteCommand cmd = new SQLiteCommand("SELECT id FROM BrandTbl WHERE brand = @brand", connection))
+                        {
+                            cmd.Parameters.AddWithValue("@brand", comboBox1.Text);
+                            using (SQLiteDataReader dr = cmd.ExecuteReader())
+                            {
+                                if (dr.Read()) brandID = dr[0].ToString();
+                            }
+                        }
+
+                        using (SQLiteCommand cmd = new SQLiteCommand("SELECT id FROM TblCategory WHERE category = @category", connection))
+                        {
+                            cmd.Parameters.AddWithValue("@category", comboBox2.Text);
+                            using (SQLiteDataReader dr = cmd.ExecuteReader())
+                            {
+                                if (dr.Read()) categoryID = dr[0].ToString();
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(brandID) || string.IsNullOrEmpty(categoryID))
+                        {
+                            MessageBox.Show("Invalid Brand or Category selection.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        // Update product
+                        using (SQLiteCommand cmd = new SQLiteCommand(
+                            @"UPDATE TblProduct1 
+                              SET barcode=@barcode, pdesc=@pdesc, bid=@bid, cid=@cid, price=@price, reorder=@reorder 
+                              WHERE pcode=@pcode", connection))
+                        {
+                            cmd.Parameters.AddWithValue("@pcode", TxtPcode.Text);
+                            cmd.Parameters.AddWithValue("@barcode", txtBarcode.Text);
+                            cmd.Parameters.AddWithValue("@pdesc", txtPdesc.Text);
+                            cmd.Parameters.AddWithValue("@bid", brandID);
+                            cmd.Parameters.AddWithValue("@cid", categoryID);
+                            cmd.Parameters.AddWithValue("@price", price);
+                            cmd.Parameters.AddWithValue("@reorder", reorder);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
 
                     MessageBox.Show("Product has been successfully updated.");
                     Clear1();
@@ -212,8 +281,7 @@ namespace PosSystem
             }
             catch (Exception ex)
             {
-                cn.Close();
-                MessageBox.Show(ex.Message);
+                MessageBox.Show("Error: " + ex.Message);
             }
         }
 
@@ -225,14 +293,10 @@ namespace PosSystem
         private void txtPrice_KeyPress(object sender, KeyPressEventArgs e)
         {
             if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar) && (e.KeyChar != '.'))
-            {
                 e.Handled = true;
-            }
 
             if ((e.KeyChar == '.') && ((sender as TextBox).Text.IndexOf('.') > -1))
-            {
                 e.Handled = true;
-            }
         }
 
         private void button1_Click(object sender, EventArgs e)

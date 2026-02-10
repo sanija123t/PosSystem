@@ -126,7 +126,7 @@ namespace PosSystem
             // pictureBox1
             // 
             this.pictureBox1.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox1.Image")));
-            this.pictureBox1.Location = new System.Drawing.Point(986, 5);
+            this.pictureBox1.Location = new System.Drawing.Point(1034, 5);
             this.pictureBox1.Margin = new System.Windows.Forms.Padding(4);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(24, 24);
@@ -226,7 +226,7 @@ namespace PosSystem
             this.dataGridView2.RowHeadersVisible = false;
             this.dataGridView2.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.AutoSizeToAllHeaders;
             this.dataGridView2.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dataGridView2.Size = new System.Drawing.Size(994, 285);
+            this.dataGridView2.Size = new System.Drawing.Size(1055, 285);
             this.dataGridView2.TabIndex = 18;
             this.dataGridView2.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView2_CellContentClick);
             // 
@@ -314,7 +314,7 @@ namespace PosSystem
             this.tabControl1.Location = new System.Drawing.Point(1, 45);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(1013, 521);
+            this.tabControl1.Size = new System.Drawing.Size(1065, 523);
             this.tabControl1.TabIndex = 19;
             // 
             // tabPage1
@@ -325,7 +325,7 @@ namespace PosSystem
             this.tabPage1.Location = new System.Drawing.Point(4, 29);
             this.tabPage1.Name = "tabPage1";
             this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage1.Size = new System.Drawing.Size(1005, 488);
+            this.tabPage1.Size = new System.Drawing.Size(1057, 490);
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Stock Entry";
             this.tabPage1.UseVisualStyleBackColor = true;
@@ -335,7 +335,7 @@ namespace PosSystem
             this.panel4.Controls.Add(this.dataGridView2);
             this.panel4.Location = new System.Drawing.Point(3, 157);
             this.panel4.Name = "panel4";
-            this.panel4.Size = new System.Drawing.Size(994, 285);
+            this.panel4.Size = new System.Drawing.Size(1055, 285);
             this.panel4.TabIndex = 20;
             // 
             // panel3
@@ -343,7 +343,7 @@ namespace PosSystem
             this.panel3.Controls.Add(this.btnSave);
             this.panel3.Location = new System.Drawing.Point(0, 448);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(1002, 36);
+            this.panel3.Size = new System.Drawing.Size(1061, 36);
             this.panel3.TabIndex = 19;
             // 
             // btnSave
@@ -353,7 +353,7 @@ namespace PosSystem
             this.btnSave.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSave.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btnSave.ForeColor = System.Drawing.Color.White;
-            this.btnSave.Location = new System.Drawing.Point(920, 3);
+            this.btnSave.Location = new System.Drawing.Point(964, 4);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(75, 30);
             this.btnSave.TabIndex = 15;
@@ -381,7 +381,7 @@ namespace PosSystem
             this.panel2.Dock = System.Windows.Forms.DockStyle.Top;
             this.panel2.Location = new System.Drawing.Point(3, 3);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(999, 148);
+            this.panel2.Size = new System.Drawing.Size(1051, 148);
             this.panel2.TabIndex = 0;
             this.panel2.Paint += new System.Windows.Forms.PaintEventHandler(this.panel2_Paint);
             // 
@@ -669,7 +669,7 @@ namespace PosSystem
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(1014, 578);
+            this.ClientSize = new System.Drawing.Size(1070, 580);
             this.ControlBox = false;
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.panel1);

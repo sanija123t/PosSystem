@@ -587,7 +587,9 @@
     <EmbeddedResource Include="Report2.rdlc" />
     <EmbeddedResource Include="Report3.rdlc" />
     <EmbeddedResource Include="ReportCancel.rdlc" />
-    <EmbeddedResource Include="ReportBarcode.rdlc" />
+    <EmbeddedResource Include="ReportBarcode.rdlc">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
     <EmbeddedResource Include="ReportStock.rdlc" />
     <EmbeddedResource Include="ReportSold.rdlc" />
     <EmbeddedResource Include="ReportTop.rdlc" />
