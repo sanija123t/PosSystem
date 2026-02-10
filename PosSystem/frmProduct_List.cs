@@ -1,62 +1,67 @@
 ﻿using System;
 using System.Data;
 using System.Data.SQLite;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Tulpep.NotificationWindow;
+using System.Drawing;
+using System.Drawing.Printing;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace PosSystem
 {
     public partial class frmProduct_List : Form
     {
+        private CancellationTokenSource searchCts; // For debounce
+
         public frmProduct_List()
         {
             InitializeComponent();
+
+            // 💎 UX Elite: Smooth scrolling & live search flicker-free
+            dataGridView1.DoubleBuffered(true);
         }
 
-        private void pictureBox2_Click(object sender, EventArgs e)
-        {
-            frmProduct frm = new frmProduct(this);
-            frm.btnSave.Enabled = true;
-            frm.btnUpdate.Enabled = false;
-            frm.LocalBrand();
-            frm.LocalCategory();
-            frm.ShowDialog();
-        }
+        #region Product CRUD & Load Logic
 
-        public void LoadRecords()
+        public async Task LoadRecordsAsync()
         {
+            dataGridView1.Rows.Clear();
+            int i = 0;
+
             try
             {
-                int i = 0;
-                dataGridView1.Rows.Clear();
-
-                using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    cn.Open();
-                    string query = @"
-                        SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.reorder 
-                        FROM TblProduct1 AS p 
-                        INNER JOIN BrandTbl AS b ON b.id = p.bid 
-                        INNER JOIN TblCategory AS c ON c.id = p.cid 
-                        WHERE p.pdesc LIKE @search";
+                    await cn.OpenAsync();
 
-                    using (SQLiteCommand cm = new SQLiteCommand(query, cn))
+                    string query =
+                        @"SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.reorder
+                          FROM TblProduct1 AS p
+                          INNER JOIN BrandTbl AS b ON b.id = p.bid
+                          INNER JOIN TblCategory AS c ON c.id = p.cid
+                          WHERE p.pdesc LIKE @search OR p.barcode LIKE @search";
+
+                    using (var cmd = new SQLiteCommand(query, cn))
                     {
-                        cm.Parameters.AddWithValue("@search", txtSearch.Text + "%");
+                        cmd.Parameters.AddWithValue("@search", "%" + txtSearch.Text + "%");
 
-                        using (SQLiteDataReader dr = cm.ExecuteReader())
+                        using (var reader = await cmd.ExecuteReaderAsync())
                         {
-                            while (dr.Read())
+                            while (await reader.ReadAsync())
                             {
                                 i++;
                                 dataGridView1.Rows.Add(
                                     i,
-                                    dr["pcode"].ToString(),
-                                    dr["barcode"].ToString(),
-                                    dr["pdesc"].ToString(),
-                                    dr["brand"].ToString(),
-                                    dr["category"].ToString(),
-                                    dr["price"].ToString(),
-                                    dr["reorder"].ToString()
+                                    reader["pcode"].ToString(),
+                                    reader["barcode"].ToString(),
+                                    reader["pdesc"].ToString(),
+                                    reader["brand"].ToString(),
+                                    reader["category"].ToString(),
+                                    reader["price"].ToString(),
+                                    reader["reorder"].ToString()
                                 );
                             }
                         }
@@ -65,73 +70,132 @@ namespace PosSystem
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(ex.Message, "Load Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+        }
+
+        // ✅ Synchronous wrapper to fix CS1061
+        public void LoadRecords()
+        {
+            LoadRecordsAsync().Wait();
+        }
+
+        #endregion
+
+        #region Events
+
+        private async void txtSearch_TextChanged(object sender, EventArgs e)
+        {
+            // ✅ Debounce: cancel previous search if user is still typing
+            searchCts?.Cancel();
+            searchCts = new CancellationTokenSource();
+            var token = searchCts.Token;
+
+            try
+            {
+                await Task.Delay(200, token); // 200ms delay
+
+                if (!token.IsCancellationRequested)
+                    await LoadRecordsAsync();
+            }
+            catch (TaskCanceledException)
+            {
+                // Ignore, user is still typing
+            }
+        }
+
+        private void pictureBox2_Click(object sender, EventArgs e)
+        {
+            frmProduct frm = new frmProduct(this)
+            {
+                btnSave = { Enabled = true },
+                btnUpdate = { Enabled = false }
+            };
+            frm.LocalBrand();
+            frm.LocalCategory();
+            frm.ShowDialog();
         }
 
         private void pictureBox1_Click(object sender, EventArgs e)
         {
-            this.Dispose();
+            Dispose();
         }
 
-        private void txtSearch_TextChanged(object sender, EventArgs e)
-        {
-            LoadRecords();
-        }
-
-        private void panel1_Paint_1(object sender, PaintEventArgs e)
-        {
-            // If you don’t need any custom painting, just leave it empty
-        }
-        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        private async void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
 
-            try
+            string colName = dataGridView1.Columns[e.ColumnIndex].Name;
+            string pcode = dataGridView1.Rows[e.RowIndex].Cells["pcode"].Value.ToString();
+
+            if (colName == "Edit")
             {
-                string colName = dataGridView1.Columns[e.ColumnIndex].Name;
-                string pcode = dataGridView1.Rows[e.RowIndex].Cells["pcode"].Value.ToString();
-
-                if (colName == "Edit")
+                frmProduct frm = new frmProduct(this)
                 {
-                    frmProduct frm = new frmProduct(this);
-                    frm.btnSave.Enabled = false;
-                    frm.btnUpdate.Enabled = true;
+                    btnSave = { Enabled = false },
+                    btnUpdate = { Enabled = true },
+                    TxtPcode = { Text = pcode },
+                    txtBarcode = { Text = dataGridView1.Rows[e.RowIndex].Cells["barcode"].Value.ToString() },
+                    txtPdesc = { Text = dataGridView1.Rows[e.RowIndex].Cells["pdesc"].Value.ToString() },
+                    comboBox1 = { Text = dataGridView1.Rows[e.RowIndex].Cells["brand"].Value.ToString() },
+                    comboBox2 = { Text = dataGridView1.Rows[e.RowIndex].Cells["category"].Value.ToString() },
+                    txtPrice = { Text = dataGridView1.Rows[e.RowIndex].Cells["price"].Value.ToString() },
+                    txtReOrder = { Text = dataGridView1.Rows[e.RowIndex].Cells["reorder"].Value.ToString() }
+                };
 
-                    // Map DataGridView cells to Product form
-                    frm.TxtPcode.Text = pcode;
-                    frm.txtBarcode.Text = dataGridView1.Rows[e.RowIndex].Cells["barcode"].Value.ToString();
-                    frm.txtPdesc.Text = dataGridView1.Rows[e.RowIndex].Cells["pdesc"].Value.ToString();
-                    frm.comboBox1.Text = dataGridView1.Rows[e.RowIndex].Cells["brand"].Value.ToString();
-                    frm.comboBox2.Text = dataGridView1.Rows[e.RowIndex].Cells["category"].Value.ToString();
-                    frm.txtPrice.Text = dataGridView1.Rows[e.RowIndex].Cells["price"].Value.ToString();
-                    frm.txtReOrder.Text = dataGridView1.Rows[e.RowIndex].Cells["reorder"].Value.ToString();
-
-                    frm.ShowDialog();
-                }
-                else if (colName == "Delete")
+                frm.ShowDialog();
+            }
+            else if (colName == "Delete")
+            {
+                if (MessageBox.Show("Are you sure you want to delete this product?", "Delete Product",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
-                    if (MessageBox.Show("Are you sure you want to delete this product?", "Delete Product", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    try
                     {
-                        using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
+                        using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                         {
-                            cn.Open();
-                            using (SQLiteCommand cm = new SQLiteCommand("DELETE FROM TblProduct1 WHERE pcode = @pcode", cn))
+                            await cn.OpenAsync();
+                            using (var cmd = new SQLiteCommand("DELETE FROM TblProduct1 WHERE pcode = @pcode", cn))
                             {
-                                cm.Parameters.AddWithValue("@pcode", pcode);
-                                cm.ExecuteNonQuery();
+                                cmd.Parameters.AddWithValue("@pcode", pcode);
+                                await cmd.ExecuteNonQueryAsync();
                             }
                         }
 
                         MessageBox.Show("Item Removed Successfully", "Done", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        LoadRecords();
+                        await LoadRecordsAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, "Delete Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+        }
+
+        // ✅ Fixed panel paint CS1061
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+            // intentionally left empty
+        }
+
+        #endregion
+    }
+
+    #region DataGridView Helper
+
+    public static class DataGridViewExtensions
+    {
+        public static void DoubleBuffered(this DataGridView dgv, bool setting)
+        {
+            typeof(DataGridView).InvokeMember(
+                "DoubleBuffered",
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.SetProperty,
+                null, dgv, new object[] { setting });
         }
     }
+
+    #endregion
 }

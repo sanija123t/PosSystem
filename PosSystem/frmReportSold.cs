@@ -1,79 +1,109 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
+using System.Data.SQLite;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Data.SqlClient;
 using Microsoft.Reporting.WinForms;
-using System.IO;
 
 namespace PosSystem
 {
     public partial class frmReportSold : Form
     {
-        SqlConnection cn = new SqlConnection();
-        SqlCommand cm = new SqlCommand();
-
-        // Error Fixed: Removed "DBConnection dbcon = new DBConnection();"
-        frmSoldItems f;
+        private readonly frmSoldItems f;
+        private const string STATUS_SOLD = "sold";
 
         public frmReportSold(frmSoldItems frm)
         {
             InitializeComponent();
-            // Error Fixed: Call the static method directly using the Class Name
-            cn = new SqlConnection(DBConnection.MyConnection());
             f = frm;
+        }
+
+        #region Form Events
+
+        private void frmReportSold_Load(object sender, EventArgs e)
+        {
+            // Optionally, load report on form load
+            // LoadReportAsync(); // can uncomment if needed
         }
 
         private void pictureBox2_Click(object sender, EventArgs e)
         {
-            this.Dispose();
+            Dispose();
         }
 
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+            // required by Designer
+        }
+
+        // Fix for CS1061: Added missing event handler referenced in Designer
+        private void reportViewer1_Load_1(object sender, EventArgs e)
+        {
+        }
+
+        #endregion
+
+        #region Report Generation
+
+        // Fix for CS1061: Added LoadReport wrapper to satisfy external calls from frmSoldItems.cs
         public void LoadReport()
+        {
+            _ = LoadReportAsync();
+        }
+
+        public async Task LoadReportAsync()
         {
             try
             {
+                DataSet1 ds = new DataSet1();
                 ReportDataSource rptDS;
 
-                // Robust path handling for Installer
                 string reportPath = Path.Combine(Application.StartupPath, "Bill", "Report2.rdlc");
-                this.reportViewer1.LocalReport.ReportPath = reportPath;
-                this.reportViewer1.LocalReport.DataSources.Clear();
-
-                DataSet1 ds = new DataSet1();
-                SqlDataAdapter da = new SqlDataAdapter();
-
-                cn.Open();
-
-                string sql;
-                if (f.cbCashier.Text == "All Cashier")
+                if (!File.Exists(reportPath))
                 {
-                    sql = "SELECT c.id, c.transno, c.pcode, p.pdesc, c.price, c.qty, c.disc as discount, total FROM tblCart1 as c INNER JOIN TblProduct1 as p ON c.pcode = p.pcode WHERE status LIKE 'sold' AND sdate BETWEEN @dateFrom AND @dateTo";
-                    da.SelectCommand = new SqlCommand(sql, cn);
-                }
-                else
-                {
-                    sql = "SELECT c.id, c.transno, c.pcode, p.pdesc, c.price, c.qty, c.disc as discount, total FROM tblCart1 as c INNER JOIN TblProduct1 as p ON c.pcode = p.pcode WHERE status LIKE 'sold' AND sdate BETWEEN @dateFrom AND @dateTo AND cashier LIKE @cashier";
-                    da.SelectCommand = new SqlCommand(sql, cn);
-                    da.SelectCommand.Parameters.AddWithValue("@cashier", f.cbCashier.Text);
+                    MessageBox.Show($"Report file not found:\n{reportPath}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
 
-                // Use Parameters for dates to avoid regional format errors
-                da.SelectCommand.Parameters.AddWithValue("@dateFrom", f.dateTimePicker1.Value);
-                da.SelectCommand.Parameters.AddWithValue("@dateTo", f.dateTimePicker2.Value);
+                reportViewer1.LocalReport.ReportPath = reportPath;
+                reportViewer1.LocalReport.DataSources.Clear();
 
-                da.Fill(ds.Tables["dtSoldReport"]);
-                cn.Close();
+                // ✅ Using statement ensures connection closes automatically
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
+                {
+                    await cn.OpenAsync();
 
-                // Parameters for the Report Designer
-                ReportParameter pDate = new ReportParameter("pDate", "Date From: " + f.dateTimePicker1.Value.ToShortDateString() + " To " + f.dateTimePicker2.Value.ToShortDateString());
-                ReportParameter pCashier = new ReportParameter("pCashier", "Cashier: " + f.cbCashier.Text);
-                ReportParameter pHeader = new ReportParameter("pHeader", "SALES REPORT");
+                    string sql =
+                        @"SELECT c.id, c.transno, c.pcode, p.pdesc, c.price, c.qty, c.disc AS discount,
+                                  (c.price * c.qty) - c.disc AS total
+                           FROM tblCart1 AS c
+                           INNER JOIN TblProduct1 AS p ON c.pcode = p.pcode
+                           WHERE c.status = @status
+                             AND c.sdate BETWEEN @dateFrom AND @dateTo
+                             AND (@cashier IS NULL OR c.cashier = @cashier)"; // ✅ SQL simplification
+
+                    using (var cmd = new SQLiteCommand(sql, cn))
+                    {
+                        cmd.Parameters.AddWithValue("@status", STATUS_SOLD);
+                        cmd.Parameters.AddWithValue("@dateFrom", f.dateTimePicker1.Value.Date);
+                        cmd.Parameters.AddWithValue("@dateTo", f.dateTimePicker2.Value.Date.AddDays(1).AddSeconds(-1));
+
+                        // Pass null if "All Cashier" is selected
+                        cmd.Parameters.AddWithValue("@cashier", f.cbCashier.Text == "All Cashier" ? DBNull.Value : f.cbCashier.Text);
+
+                        using (var da = new SQLiteDataAdapter(cmd))
+                        {
+                            // ✅ Async fill using Task.Run to prevent UI freezing
+                            await Task.Run(() => da.Fill(ds.Tables["dtSoldReport"]));
+                        }
+                    }
+                }
+
+                // Report parameters
+                var pDate = new ReportParameter("pDate", $"Date From: {f.dateTimePicker1.Value:dd/MM/yyyy} To {f.dateTimePicker2.Value:dd/MM/yyyy}");
+                var pCashier = new ReportParameter("pCashier", $"Cashier: {f.cbCashier.Text}");
+                var pHeader = new ReportParameter("pHeader", "SALES REPORT");
 
                 reportViewer1.LocalReport.SetParameters(new ReportParameter[] { pDate, pCashier, pHeader });
 
@@ -87,17 +117,10 @@ namespace PosSystem
             }
             catch (Exception ex)
             {
-                if (cn.State == ConnectionState.Open) cn.Close();
                 MessageBox.Show(ex.Message, "Report Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void frmReportSold_Load(object sender, EventArgs e)
-        {
-        }
-
-        private void reportViewer1_Load(object sender, EventArgs e) { }
-        private void panel1_Paint(object sender, PaintEventArgs e) { }
-        private void reportViewer1_Load_1(object sender, EventArgs e) { }
+        #endregion
     }
 }
