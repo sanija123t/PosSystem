@@ -370,7 +370,9 @@
     <Compile Include="frmLookUp.Designer.cs">
       <DependentUpon>frmLookUp.cs</DependentUpon>
     </Compile>
-    <Compile Include="frmPOS.cs" />
+    <Compile Include="frmPOS.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="frmPOS.Designer.cs">
       <DependentUpon>frmPOS.cs</DependentUpon>
     </Compile>
