@@ -1,97 +1,164 @@
 ﻿using System;
 using System.Data;
-using System.Windows.Forms;
 using System.Data.SQLite;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace PosSystem
 {
     public partial class frmVendor : Form
     {
-        frm_VendorList f;
-        SQLiteConnection cn;
-        SQLiteCommand cm;
+        private readonly frm_VendorList f;
 
         public frmVendor(frm_VendorList f)
         {
             InitializeComponent();
-            cn = new SQLiteConnection(DBConnection.MyConnection());
             this.f = f;
         }
 
-        // Renamed from btnSave_Click to button1_Click to fix Designer Error CS1061
-        private void button1_Click(object sender, EventArgs e)
+        // SAVE (ASYNC + SAFE)
+        private async void button1_Click(object sender, EventArgs e)
         {
+            // ✅ UX VALIDATION (added only)
+            if (string.IsNullOrWhiteSpace(txtVendor.Text))
+            {
+                MessageBox.Show("Vendor Name is required!",
+                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(txtEmail.Text) && !txtEmail.Text.Contains("@"))
+            {
+                MessageBox.Show("Please enter a valid email address!",
+                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            // ✅ END UX VALIDATION
+
+            if (!ConfirmAction("Save this record?")) return;
+
+            ToggleButtons(false);
+
             try
             {
-                if (MessageBox.Show("Save this record? click yes to Confirm", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    cn.Open();
-                    cm = new SQLiteCommand("INSERT INTO tblVendor(vendor,address,contactperson,telephone,email,fax) values (@vendor,@address,@contactperson,@telephone,@email,@fax)", cn);
-                    cm.Parameters.AddWithValue("@vendor", txtVendor.Text);
-                    cm.Parameters.AddWithValue("@address", txtAddress.Text);
-                    cm.Parameters.AddWithValue("@contactperson", txtContactPreson.Text);
-                    cm.Parameters.AddWithValue("@telephone", txtTelephone.Text);
-                    cm.Parameters.AddWithValue("@email", txtEmail.Text);
-                    cm.Parameters.AddWithValue("@fax", txtFax.Text);
-                    cm.ExecuteNonQuery();
-                    cn.Close();
+                    await cn.OpenAsync();
 
-                    MessageBox.Show("Record has been successfully saved.", "POS System", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    Clear();
-                    f.LoadRecords();
+                    using (SQLiteCommand cm = new SQLiteCommand(
+                        @"INSERT INTO tblVendor
+                          (vendor, address, contactperson, telephone, email, fax)
+                          VALUES
+                          (@vendor, @address, @contactperson, @telephone, @email, @fax)", cn))
+                    {
+                        BindParameters(cm);
+                        await cm.ExecuteNonQueryAsync();
+                    }
                 }
+
+                MessageBox.Show("Record has been successfully saved.",
+                    "POS System", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                Clear();
+                f.LoadRecords(); // backward-compatible
             }
             catch (Exception ex)
             {
-                if (cn.State == ConnectionState.Open) cn.Close();
-                MessageBox.Show(ex.Message, "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(ex.Message, "Warning",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                ToggleButtons(true);
             }
         }
 
-        private void btnUpdate_Click(object sender, EventArgs e)
+        // UPDATE (ASYNC + SAFE)
+        private async void btnUpdate_Click(object sender, EventArgs e)
         {
+            if (!ConfirmAction("Update this record?")) return;
+
+            ToggleButtons(false);
+
             try
             {
-                if (MessageBox.Show("Update this record? Click yes to Confirm", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    cn.Open();
-                    cm = new SQLiteCommand("UPDATE tblVendor SET vendor = @vendor, address = @address, contactperson = @contactperson, telephone = @telephone, email= @email, fax= @fax WHERE id = @id", cn);
-                    cm.Parameters.AddWithValue("@vendor", txtVendor.Text);
-                    cm.Parameters.AddWithValue("@address", txtAddress.Text);
-                    cm.Parameters.AddWithValue("@contactperson", txtContactPreson.Text);
-                    cm.Parameters.AddWithValue("@telephone", txtTelephone.Text);
-                    cm.Parameters.AddWithValue("@email", txtEmail.Text);
-                    cm.Parameters.AddWithValue("@fax", txtFax.Text);
-                    cm.Parameters.AddWithValue("@id", lblD.Text);
-                    cm.ExecuteNonQuery();
-                    cn.Close();
+                    await cn.OpenAsync();
 
-                    MessageBox.Show("Record has been successfully updated.", "POS System", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    Clear();
-                    f.LoadRecords();
-                    this.Dispose();
+                    using (SQLiteCommand cm = new SQLiteCommand(
+                        @"UPDATE tblVendor SET
+                          vendor = @vendor,
+                          address = @address,
+                          contactperson = @contactperson,
+                          telephone = @telephone,
+                          email = @email,
+                          fax = @fax
+                          WHERE id = @id", cn))
+                    {
+                        BindParameters(cm);
+                        cm.Parameters.AddWithValue("@id", lblD.Text);
+
+                        await cm.ExecuteNonQueryAsync();
+                    }
                 }
+
+                MessageBox.Show("Record has been successfully updated.",
+                    "POS System", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                Clear();
+                f.LoadRecords();
+                this.Dispose();
             }
             catch (Exception ex)
             {
-                if (cn.State == ConnectionState.Open) cn.Close();
-                MessageBox.Show(ex.Message, "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(ex.Message, "Warning",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                ToggleButtons(true);
             }
         }
 
-        // Added missing Load event to fix Designer Error CS1061
+        // DESIGNER SAFE
         private void frmVendor_Load(object sender, EventArgs e)
         {
         }
 
+        // 🔐 Shared helpers (elite pattern, no redesign)
+
+        private void BindParameters(SQLiteCommand cm)
+        {
+            cm.Parameters.AddWithValue("@vendor", txtVendor.Text.Trim());
+            cm.Parameters.AddWithValue("@address", txtAddress.Text.Trim());
+            cm.Parameters.AddWithValue("@contactperson", txtContactPreson.Text.Trim());
+            cm.Parameters.AddWithValue("@telephone", txtTelephone.Text.Trim());
+            cm.Parameters.AddWithValue("@email", txtEmail.Text.Trim());
+            cm.Parameters.AddWithValue("@fax", txtFax.Text.Trim());
+        }
+
+        private bool ConfirmAction(string message)
+        {
+            return MessageBox.Show(message, "Confirm",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+        }
+
+        private void ToggleButtons(bool enabled)
+        {
+            btnSave.Enabled = enabled;
+            btnUpdate.Enabled = enabled;
+        }
+
         public void Clear()
         {
+            txtVendor.Clear();
             txtAddress.Clear();
-            txtEmail.Clear();
-            txtFax.Clear();
             txtContactPreson.Clear();
             txtTelephone.Clear();
-            txtVendor.Clear();
+            txtEmail.Clear();
+            txtFax.Clear();
+
             txtVendor.Focus();
             btnSave.Enabled = true;
             btnUpdate.Enabled = false;

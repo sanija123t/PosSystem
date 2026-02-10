@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using System.Data.SQLite;
@@ -8,65 +9,91 @@ namespace PosSystem
 {
     public partial class frmCharts : Form
     {
-        SQLiteConnection cn;
-
         public frmCharts()
         {
             InitializeComponent();
-            cn = new SQLiteConnection(DBConnection.MyConnection());
+            KeyPreview = true;
         }
 
         private void pictureBox2_Click(object sender, EventArgs e)
         {
-            this.Dispose();
+            Dispose();
         }
 
-        public void LoadCardSold(string sql)
+        // =========================
+        // 🔹 ELITE-LEVEL ASYNC CHART LOAD
+        // =========================
+        public async Task LoadCardSoldAsync(string sql)
         {
+            chart1.Series.Clear();
+            chart1.Titles.Clear();
+
             try
             {
-                chart1.Series.Clear();
-                chart1.Titles.Clear();
-                chart1.Titles.Add("Top Selling Items (Revenue)");
-
-                Series series = new Series("Sold Items");
-                chart1.Series.Add(series);
-
-                using (SQLiteDataAdapter da = new SQLiteDataAdapter(sql, cn))
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
+                    await cn.OpenAsync();
 
-                    if (dt.Rows.Count > 0)
+                    using (var da = new SQLiteDataAdapter(sql, cn))
                     {
-                        chart1.DataSource = dt;
+                        DataTable dt = new DataTable();
+                        await Task.Run(() => da.Fill(dt));
 
-                        series.ChartType = SeriesChartType.Pie;
-                        series.XValueMember = "pdesc";
-                        series.YValueMembers = "total";
+                        Series series = new Series("Sold Items")
+                        {
+                            ChartType = SeriesChartType.Pie,
+                            IsValueShownAsLabel = true,
+                            LabelFormat = "C2", // ✅ Local currency format
+                            ["PieLabelStyle"] = "Outside",
+                            BorderColor = System.Drawing.Color.White,
+                            BorderWidth = 1
+                        };
 
-                        chart1.Series[0].IsValueShownAsLabel = true;
-                        chart1.Series[0].LabelFormat = "#,##0.00";
-                        chart1.Series[0]["PieLabelStyle"] = "Outside";
-                        chart1.Series[0].BorderColor = System.Drawing.Color.White;
-                        chart1.Series[0].BorderWidth = 1;
+                        chart1.Series.Add(series);
+
+                        if (dt.Rows.Count > 0)
+                        {
+                            chart1.DataSource = dt;
+                            series.XValueMember = "pdesc";
+                            series.YValueMembers = "total";
+
+                            // Highlight top-selling item (fixed Exploded property)
+                            decimal maxValue = 0;
+                            int maxIndex = -1;
+                            for (int i = 0; i < dt.Rows.Count; i++)
+                            {
+                                if (decimal.TryParse(dt.Rows[i]["total"].ToString(), out decimal val))
+                                {
+                                    if (val > maxValue)
+                                    {
+                                        maxValue = val;
+                                        maxIndex = i;
+                                    }
+                                }
+                            }
+
+                            if (maxIndex >= 0)
+                                series.Points[maxIndex]["Exploded"] = "true"; // ✅ Correct way
+
+                            chart1.Titles.Add("Top Selling Items (Revenue)");
+                        }
+                        else
+                        {
+                            // No data → show dummy point
+                            dt.Rows.Add("No Data", 0);
+                            chart1.DataSource = dt;
+                            series.XValueMember = "pdesc";
+                            series.YValueMembers = "total";
+                            chart1.Titles.Add("No Data Available for Selected Range");
+                        }
 
                         chart1.DataBind();
-                    }
-                    else
-                    {
-                        chart1.Titles.Clear();
-                        chart1.Titles.Add("No Data Available for Selected Range");
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Chart Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                if (cn.State == ConnectionState.Open) cn.Close();
+                MessageBox.Show("Chart Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

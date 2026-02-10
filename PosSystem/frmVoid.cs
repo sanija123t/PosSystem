@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Data.SQLite; // Ensure this matches your project (SQLite or SqlClient)
+using System.Data.SQLite;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -7,123 +7,144 @@ namespace PosSystem
 {
     public partial class frmVoid : Form
     {
-        // Use SQLiteConnection if your DB is SQLite, otherwise SqlConnection
-        SQLiteConnection cn;
-        SQLiteCommand cm;
-        SQLiteDataReader dr;
-        frmCancelDetails f;
+        // ===== Public properties to be set by frmCancelDetails =====
+        public string CancelAction { get; set; }      // "Yes" or "No"
+        public int CancelQty { get; set; }            // number of items to cancel
+        public string CancelReason { get; set; }      // reason for cancellation
+        public string ProductCode { get; set; }       // product code
+        public string CartId { get; set; }            // cart ID
+        public decimal Price { get; set; }            // unit price
+        public string CancelledBy { get; set; }       // name of person who cancelled
+        public frmSoldItems SoldItemForm { get; set; } // optional link to refresh sold items
 
-        public frmVoid(frmCancelDetails frm)
+        public frmVoid()
         {
             InitializeComponent();
-            cn = new SQLiteConnection(DBConnection.MyConnection());
-            f = frm;
         }
 
+        private void frmVoid_Load(object sender, EventArgs e)
+        {
+            // Optional: initialization code
+        }
         private void pictureBox2_Click(object sender, EventArgs e)
         {
             this.Dispose();
         }
 
-        // Added 'async' so we can 'await' the refresh list
         private async void btnSave_Click(object sender, EventArgs e)
         {
-            try
+            if (string.IsNullOrWhiteSpace(txtUser.Text) || string.IsNullOrWhiteSpace(txtPass.Text))
+                return;
+
+            using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
             {
-                if (!string.IsNullOrEmpty(txtPass.Text))
+                cn.Open();
+                SQLiteTransaction tx = cn.BeginTransaction();
+
+                try
                 {
-                    string user;
-                    cn.Open();
-                    // Parameterized login check
-                    cm = new SQLiteCommand("SELECT * FROM tblUser WHERE username = @username AND password = @password", cn);
-                    cm.Parameters.AddWithValue("@username", txtUser.Text);
-                    cm.Parameters.AddWithValue("@password", txtPass.Text);
-
-                    dr = cm.ExecuteReader();
-                    bool hasRows = dr.Read();
-
-                    if (hasRows)
+                    string user = AuthenticateUser(cn, tx);
+                    if (user == null)
                     {
-                        user = dr["username"].ToString();
-                        dr.Close();
-                        cn.Close();
-
-                        // 1. Record the cancellation
-                        SaveCancelOrder(user);
-
-                        // 2. Update Product Inventory if action is 'Yes'
-                        if (f.cbAction.Text == "Yes")
-                        {
-                            UpdateProductQty(f.txtPcode.Text, int.Parse(f.txtCancelQty.Text));
-                        }
-
-                        // 3. Update Cart Quantity
-                        UpdateCartQty(f.txtID.Text, int.Parse(f.txtCancelQty.Text));
-
-                        MessageBox.Show("Order transaction successfully cancelled!", "Cancel Order", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                        // 4. Await the refresh of the parent grid
-                        await f.RefreshList();
-
-                        // 5. Close this form
-                        this.Dispose();
+                        tx.Rollback();
+                        MessageBox.Show("Invalid password!", "Warning",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
                     }
-                    else
+
+                    // 1️⃣ Record cancellation
+                    SaveCancelOrder(cn, tx, user);
+
+                    // 2️⃣ Restore product stock if action is "Yes"
+                    if (CancelAction == "Yes")
                     {
-                        dr.Close();
-                        cn.Close();
-                        MessageBox.Show("Invalid password!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        UpdateProductQty(cn, tx, ProductCode, CancelQty);
                     }
+
+                    // 3️⃣ Reduce cart quantity
+                    UpdateCartQty(cn, tx, CartId, CancelQty);
+
+                    // ✅ Commit transaction
+                    tx.Commit();
+
+                    MessageBox.Show("Order transaction successfully cancelled!",
+                        "Cancel Order", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    // Refresh parent sold items form
+                    if (SoldItemForm != null)
+                        await SoldItemForm.LoadSoldItemsAsync();
+
+                    this.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    tx.Rollback();
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-            catch (Exception ex)
+        }
+
+        // 🔐 Authenticate the user for void
+        private string AuthenticateUser(SQLiteConnection cn, SQLiteTransaction tx)
+        {
+            using (SQLiteCommand cm = new SQLiteCommand(
+                "SELECT username FROM tblUser WHERE username=@u AND password=@p",
+                cn, tx))
             {
-                if (cn.State == System.Data.ConnectionState.Open) cn.Close();
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cm.Parameters.AddWithValue("@u", txtUser.Text);
+                cm.Parameters.AddWithValue("@p", txtPass.Text);
+                object result = cm.ExecuteScalar();
+                return result?.ToString();
             }
         }
 
-        public void SaveCancelOrder(string user)
+        // 🔹 Save cancellation to tblCancel
+        private void SaveCancelOrder(SQLiteConnection cn, SQLiteTransaction tx, string user)
         {
-            cn.Open();
-            cm = new SQLiteCommand("INSERT INTO tblCancel (transno, pcode, price, qty, sdate, voidby, cancelledby, reason, action) " +
-                                   "VALUES (@transno, @pcode, @price, @qty, @sdate, @voidby, @cancelledby, @reason, @action)", cn);
-            cm.Parameters.AddWithValue("@transno", f.txtTransno.Text);
-            cm.Parameters.AddWithValue("@pcode", f.txtPcode.Text);
-            cm.Parameters.AddWithValue("@price", double.Parse(f.txtPrice.Text));
-            cm.Parameters.AddWithValue("@qty", int.Parse(f.txtCancelQty.Text));
-            cm.Parameters.AddWithValue("@sdate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-            cm.Parameters.AddWithValue("@voidby", user);
-            cm.Parameters.AddWithValue("@cancelledby", f.txtCancelled.Text);
-            cm.Parameters.AddWithValue("@reason", f.txtReason.Text);
-            cm.Parameters.AddWithValue("@action", f.cbAction.Text);
-            cm.ExecuteNonQuery();
-            cn.Close();
+            using (SQLiteCommand cm = new SQLiteCommand(
+                @"INSERT INTO tblCancel
+                  (transno, pcode, price, qty, sdate, voidby, cancelledby, reason, action)
+                  VALUES
+                  (@transno, @pcode, @price, @qty, @sdate, @voidby, @cancelledby, @reason, @action)",
+                cn, tx))
+            {
+                cm.Parameters.AddWithValue("@transno", CartId);   // use CartId as transaction reference
+                cm.Parameters.AddWithValue("@pcode", ProductCode);
+                cm.Parameters.AddWithValue("@price", Price);
+                cm.Parameters.AddWithValue("@qty", CancelQty);
+                cm.Parameters.AddWithValue("@sdate", DateTime.Now);
+                cm.Parameters.AddWithValue("@voidby", user);
+                cm.Parameters.AddWithValue("@cancelledby", CancelledBy);
+                cm.Parameters.AddWithValue("@reason", CancelReason);
+                cm.Parameters.AddWithValue("@action", CancelAction);
+                cm.ExecuteNonQuery();
+            }
         }
 
-        // ENTERPRISE IMPROVEMENT: Specialized methods with parameters to prevent SQL Injection
-        public void UpdateProductQty(string pcode, int qty)
+        // 🔹 Restore product stock
+        private void UpdateProductQty(SQLiteConnection cn, SQLiteTransaction tx, string pcode, int qty)
         {
-            cn.Open();
-            cm = new SQLiteCommand("UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode = @pcode", cn);
-            cm.Parameters.AddWithValue("@qty", qty);
-            cm.Parameters.AddWithValue("@pcode", pcode);
-            cm.ExecuteNonQuery();
-            cn.Close();
+            using (SQLiteCommand cm = new SQLiteCommand(
+                "UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode = @pcode",
+                cn, tx))
+            {
+                cm.Parameters.AddWithValue("@qty", qty);
+                cm.Parameters.AddWithValue("@pcode", pcode);
+                cm.ExecuteNonQuery();
+            }
         }
 
-        public void UpdateCartQty(string cartId, int qty)
+        // 🔹 Reduce cart quantity
+        private void UpdateCartQty(SQLiteConnection cn, SQLiteTransaction tx, string cartId, int qty)
         {
-            cn.Open();
-            cm = new SQLiteCommand("UPDATE tblCart1 SET qty = qty - @qty WHERE id = @id", cn);
-            cm.Parameters.AddWithValue("@qty", qty);
-            cm.Parameters.AddWithValue("@id", cartId);
-            cm.ExecuteNonQuery();
-            cn.Close();
-        }
-
-        private void frmVoid_Load(object sender, EventArgs e)
-        {
+            using (SQLiteCommand cm = new SQLiteCommand(
+                "UPDATE tblCart1 SET qty = qty - @qty WHERE id = @id",
+                cn, tx))
+            {
+                cm.Parameters.AddWithValue("@qty", qty);
+                cm.Parameters.AddWithValue("@id", cartId);
+                cm.ExecuteNonQuery();
+            }
         }
     }
 }

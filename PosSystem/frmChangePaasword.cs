@@ -1,89 +1,108 @@
 ﻿using System;
 using System.Data.SQLite;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PosSystem
 {
     public partial class frmChangePaasword : Form
     {
-        private SQLiteConnection cn;
-        private SQLiteCommand cm;
-        // Reference to Form1 (which seems to be your POS form)
         private readonly Form1 f;
+        private readonly string stitle = "POS System";
 
         public frmChangePaasword(Form1 frm)
         {
             InitializeComponent();
-            // Use the class name DBConnection directly because it is static
-            cn = new SQLiteConnection(DBConnection.MyConnection());
             f = frm;
+            KeyPreview = true;
         }
 
         private void frmChangePaasword_Load(object sender, EventArgs e)
         {
-            // You can leave this empty or add initialization logic here
+            txtOld.Focus();
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
+        // =========================
+        // 🔹 SAVE PASSWORD ASYNC
+        // =========================
+        private async void btnSave_Click(object sender, EventArgs e)
         {
+            string oldPass = txtOld.Text.Trim();
+            string newPass = txtNew.Text.Trim();
+            string confirmPass = txtConfirm.Text.Trim();
+
+            // Defensive validation
+            if (string.IsNullOrWhiteSpace(oldPass) || string.IsNullOrWhiteSpace(newPass) || string.IsNullOrWhiteSpace(confirmPass))
+            {
+                MessageBox.Show("Please fill in all fields.", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (newPass != confirmPass)
+            {
+                MessageBox.Show("Confirm new password did not match!", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            btnSave.Enabled = false;
+
             try
             {
-                if (string.IsNullOrWhiteSpace(txtOld.Text) || string.IsNullOrWhiteSpace(txtNew.Text))
-                {
-                    MessageBox.Show("Please fill in all fields.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                string hashedOldInput = DBConnection.GetHash(txtOld.Text);
+                string hashedOldInput = DBConnection.GetHash(oldPass);
+                string username = f.lblUserName.Text;
                 bool oldPasswordCorrect = false;
 
-                cn.Open();
-                // We use f.lblUser.Text to find the right person
-                string checkQuery = "SELECT password FROM tblUser WHERE username = @username";
-                using (SQLiteCommand checkCmd = new SQLiteCommand(checkQuery, cn))
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    checkCmd.Parameters.AddWithValue("@username", f.lblUserName.Text);
-                    object result = checkCmd.ExecuteScalar();
+                    await cn.OpenAsync();
 
-                    if (result != null && result.ToString() == hashedOldInput)
+                    // Check old password
+                    using (var checkCmd = new SQLiteCommand("SELECT password FROM tblUser WHERE username = @username", cn))
                     {
-                        oldPasswordCorrect = true;
+                        checkCmd.Parameters.AddWithValue("@username", username);
+                        var result = await checkCmd.ExecuteScalarAsync();
+
+                        if (result != null && result.ToString() == hashedOldInput)
+                            oldPasswordCorrect = true;
                     }
-                }
-                cn.Close();
 
-                if (!oldPasswordCorrect)
-                {
-                    MessageBox.Show("Old password did not match!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+                    if (!oldPasswordCorrect)
+                    {
+                        MessageBox.Show("Old password did not match!", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
 
-                if (txtNew.Text != txtConfirm.Text)
-                {
-                    MessageBox.Show("Confirm new password did not match!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+                    // Update new password
+                    if (MessageBox.Show("Change Password?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                    {
+                        using (var updateCmd = new SQLiteCommand("UPDATE tblUser SET password = @password WHERE username = @username", cn))
+                        {
+                            updateCmd.Parameters.AddWithValue("@password", DBConnection.GetHash(newPass));
+                            updateCmd.Parameters.AddWithValue("@username", username);
+                            await updateCmd.ExecuteNonQueryAsync();
+                        }
 
-                if (MessageBox.Show("Change Password?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                {
-                    cn.Open();
-                    cm = new SQLiteCommand("UPDATE tblUser SET password = @password WHERE username = @username", cn);
-                    cm.Parameters.AddWithValue("@password", DBConnection.GetHash(txtNew.Text));
-                    cm.Parameters.AddWithValue("@username", f.lblUserName.Text);
-                    cm.ExecuteNonQuery();
-                    cn.Close();
-
-                    MessageBox.Show("Password updated!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    this.Dispose();
+                        MessageBox.Show("Password updated successfully!", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        Dispose();
+                    }
                 }
             }
             catch (Exception ex)
             {
-                if (cn.State == System.Data.ConnectionState.Open) cn.Close();
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnSave.Enabled = true;
             }
         }
 
-        private void pictureBox1_Click(object sender, EventArgs e) => this.Dispose();
+        private void pictureBox1_Click(object sender, EventArgs e) => Dispose();
+
+        private void frmChangePaasword_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Escape) Dispose();
+            else if (e.KeyCode == Keys.Enter) btnSave_Click(sender, e);
+        }
     }
 }

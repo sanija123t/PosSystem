@@ -1,105 +1,134 @@
 ﻿using System;
-using System.Data;
 using System.Data.SQLite;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PosSystem
 {
     public partial class frmDiscount : Form
     {
-        private SQLiteConnection cn;
-        private string stitle = "Pos System";
-        private Form1 f;
-        private frmPOS fPOS;
+        private readonly string stitle = "POS System";
+        private readonly Form1 f;
+        private readonly frmPOS fPOS;
 
         public frmDiscount(Form1 frm)
         {
             InitializeComponent();
             f = frm;
-            cn = new SQLiteConnection(DBConnection.MyConnection());
-            this.KeyPreview = true;
+            KeyPreview = true;
         }
 
         public frmDiscount(frmPOS frm)
         {
             InitializeComponent();
             fPOS = frm;
-            cn = new SQLiteConnection(DBConnection.MyConnection());
-            this.KeyPreview = true;
+            KeyPreview = true;
         }
 
         private void pictureBox2_Click(object sender, EventArgs e)
         {
-            this.Dispose();
+            Dispose();
         }
 
+        // =========================
+        // 🔹 CALCULATION LOGIC
+        // =========================
         private void txtDiscount_TextChanged(object sender, EventArgs e)
         {
-            try
-            {
-                double price = string.IsNullOrEmpty(txtPrice.Text) ? 0 : double.Parse(txtPrice.Text);
-                double discountPercent = string.IsNullOrEmpty(txtDiscount.Text) ? 0 : double.Parse(txtDiscount.Text);
-
-                double discount = price * (discountPercent / 100.0);
-                txtAmount.Text = discount.ToString("#,##0.00");
-            }
-            catch
-            {
-                txtAmount.Text = "0.00";
-            }
-        }
-
-        private void btnConfirm_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (MessageBox.Show("Add Discount? Click yes to confirm.", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                {
-                    cn.Open();
-                    using (SQLiteCommand cm = new SQLiteCommand("UPDATE tblCart1 SET disc = @disc, disc_precent = @disc_precent WHERE id = @id", cn))
-                    {
-                        double discAmount = string.IsNullOrEmpty(txtAmount.Text) ? 0 : double.Parse(txtAmount.Text);
-                        double discPercent = string.IsNullOrEmpty(txtDiscount.Text) ? 0 : double.Parse(txtDiscount.Text);
-
-                        cm.Parameters.AddWithValue("@disc", discAmount);
-                        cm.Parameters.AddWithValue("@disc_precent", discPercent);
-                        cm.Parameters.AddWithValue("@id", int.Parse(lblID.Text));
-
-                        cm.ExecuteNonQuery();
-                    }
-                    cn.Close();
-
-                    // FIX: Only call LoadCart if fPOS is the active parent
-                    if (fPOS != null)
-                    {
-                        fPOS.LoadCart();
-                    }
-
-                    this.Dispose();
-                }
-            }
-            catch (Exception ex)
-            {
-                if (cn.State == ConnectionState.Open) cn.Close();
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+            CalculateDiscount();
         }
 
         private void txtPrice_TextChanged(object sender, EventArgs e)
         {
-            // You can leave this empty or add logic here
+            CalculateDiscount();
         }
 
+        private void CalculateDiscount()
+        {
+            if (!double.TryParse(txtPrice.Text, out double price))
+                price = 0;
+
+            if (!double.TryParse(txtDiscount.Text, out double percent))
+                percent = 0;
+
+            // Ensure discount % is within logical range
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+
+            double discount = price * (percent / 100.0);
+            txtAmount.Text = discount.ToString("#,##0.00");
+        }
+
+        // =========================
+        // 🔹 CONFIRM DISCOUNT (ASYNC + VALIDATION)
+        // =========================
+        private async void btnConfirm_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Add Discount? Click Yes to confirm.", stitle,
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            btnConfirm.Enabled = false;
+
+            try
+            {
+                if (!int.TryParse(lblID.Text, out int cartId))
+                    throw new Exception("Invalid cart item ID.");
+
+                if (!double.TryParse(txtDiscount.Text, out double discPercent))
+                    discPercent = 0;
+
+                if (!double.TryParse(txtAmount.Text, out double discAmount))
+                    discAmount = 0;
+
+                // 🔹 LOGICAL VALIDATION
+                if (discPercent < 0 || discPercent > 100)
+                {
+                    MessageBox.Show("Discount must be between 0% and 100%.", stitle,
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtDiscount.Focus();
+                    return;
+                }
+
+                string sql = @"UPDATE tblCart1 
+                               SET disc = @disc, disc_precent = @disc_precent 
+                               WHERE id = @id";
+
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
+                using (var cm = new SQLiteCommand(sql, cn))
+                {
+                    cm.Parameters.AddWithValue("@disc", discAmount);
+                    cm.Parameters.AddWithValue("@disc_precent", discPercent);
+                    cm.Parameters.AddWithValue("@id", cartId);
+
+                    await cn.OpenAsync();
+                    await cm.ExecuteNonQueryAsync();
+                }
+
+                // Refresh cart if POS form is active
+                fPOS?.LoadCart();
+
+                Dispose();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                btnConfirm.Enabled = true;
+            }
+        }
+
+        // =========================
+        // 🔹 SHORTCUTS & UX
+        // =========================
         private void frmDiscount_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Escape)
-            {
-                this.Dispose();
-            }
+                Dispose();
             else if (e.KeyCode == Keys.Enter)
-            {
                 btnConfirm_Click(sender, e);
-            }
         }
 
         private void frmDiscount_Load(object sender, EventArgs e)

@@ -19,7 +19,6 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmChangePaasword));
             this.panel1 = new System.Windows.Forms.Panel();
-            this.lblPass = new System.Windows.Forms.Label();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.label1 = new System.Windows.Forms.Label();
             this.btnSave = new System.Windows.Forms.Button();
@@ -33,23 +32,12 @@
             // panel1
             // 
             this.panel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(158)))), ((int)(((byte)(132)))));
-            this.panel1.Controls.Add(this.lblPass);
             this.panel1.Controls.Add(this.pictureBox1);
             this.panel1.Controls.Add(this.label1);
             this.panel1.Location = new System.Drawing.Point(0, -1);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(340, 38);
             this.panel1.TabIndex = 1;
-            // 
-            // lblPass
-            // 
-            this.lblPass.AutoSize = true;
-            this.lblPass.Location = new System.Drawing.Point(212, 14);
-            this.lblPass.Name = "lblPass";
-            this.lblPass.Size = new System.Drawing.Size(50, 20);
-            this.lblPass.TabIndex = 2;
-            this.lblPass.Text = "label2";
-            this.lblPass.Visible = false;
             // 
             // pictureBox1
             // 
@@ -110,7 +98,7 @@
             this.txtOld.Multiline = true;
             this.txtOld.Name = "txtOld";
             this.txtOld.PasswordChar = '*';
-            //this.txtOld.PromptText = "Old Password";
+            this.txtOld.PromptText = "Old Password";
             this.txtOld.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.txtOld.SelectedText = "";
             this.txtOld.SelectionLength = 0;
@@ -145,7 +133,7 @@
             this.txtNew.Multiline = true;
             this.txtNew.Name = "txtNew";
             this.txtNew.PasswordChar = '*';
-            //this.txtNew.PromptText = "New Password";
+            this.txtNew.PromptText = "New Password";
             this.txtNew.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.txtNew.SelectedText = "";
             this.txtNew.SelectionLength = 0;
@@ -180,7 +168,7 @@
             this.txtConfirm.Multiline = true;
             this.txtConfirm.Name = "txtConfirm";
             this.txtConfirm.PasswordChar = '*';
-            //this.txtConfirm.PromptText = "Confirm Password";
+            this.txtConfirm.PromptText = "Confirm Password";
             this.txtConfirm.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.txtConfirm.SelectedText = "";
             this.txtConfirm.SelectionLength = 0;
@@ -226,6 +214,5 @@
         private MetroFramework.Controls.MetroTextBox txtOld;
         private MetroFramework.Controls.MetroTextBox txtNew;
         private MetroFramework.Controls.MetroTextBox txtConfirm;
-        private System.Windows.Forms.Label lblPass;
     }
 }

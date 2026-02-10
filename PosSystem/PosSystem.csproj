@@ -431,7 +431,9 @@
     <Compile Include="frmSoldItems.Designer.cs">
       <DependentUpon>frmSoldItems.cs</DependentUpon>
     </Compile>
-    <Compile Include="frmStockin.cs" />
+    <Compile Include="frmStockin.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="frmStockin.Designer.cs">
       <DependentUpon>frmStockin.cs</DependentUpon>
     </Compile>

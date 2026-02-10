@@ -8,13 +8,7 @@ using System.Windows.Forms;
 
 namespace PosSystem
 {
-    // Model class for Stock-In item
-    public class StockInModel
-    {
-        public string ID { get; set; }
-        public string PCode { get; set; }
-        public int Qty { get; set; }
-    }
+
 
     public partial class frmStockin : Form
     {
@@ -326,5 +320,13 @@ namespace PosSystem
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e) { }
         private void cbVendor_SelectedIndexChanged(object sender, EventArgs e) { }
         private void txtSearch_Click(object sender, EventArgs e) { }
+    }
+
+    // Model class for Stock-In item
+    public class StockInModel
+    {
+        public string ID { get; set; }
+        public string PCode { get; set; }
+        public int Qty { get; set; }
     }
 }

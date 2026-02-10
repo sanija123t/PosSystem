@@ -1,27 +1,28 @@
 ﻿using System;
-using System.Data.SQLite; // CHANGED: From SqlClient to SQLite
+using System.Data.SQLite;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PosSystem
 {
     public partial class frmCategory : Form
     {
-        SQLiteConnection cn;
-        SQLiteCommand cm;
-        frmCategoryList flist;
+        private readonly frmCategoryList flist;
 
         public frmCategory(frmCategoryList frm)
         {
             InitializeComponent();
-            cn = new SQLiteConnection(DBConnection.MyConnection());
             flist = frm;
         }
 
         private void pictureBox1_Click(object sender, EventArgs e)
         {
-            this.Dispose();
+            Dispose();
         }
 
+        // =========================
+        // 🔹 CLEAR FORM
+        // =========================
         public void Clear()
         {
             btnSave.Enabled = true;
@@ -30,66 +31,124 @@ namespace PosSystem
             txtcategory.Focus();
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
+        // =========================
+        // 🔹 SAVE CATEGORY
+        // =========================
+        private async void btnSave_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrWhiteSpace(txtcategory.Text))
+            {
+                MessageBox.Show("Please enter a category name.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            btnSave.Enabled = false;
+
             try
             {
-                if (string.IsNullOrWhiteSpace(txtcategory.Text))
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    MessageBox.Show("Please enter a category name.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
+                    await cn.OpenAsync();
+
+                    // Check for duplicate category
+                    string checkSql = "SELECT COUNT(*) FROM TblCategory WHERE category = @name";
+                    using (var cmdCheck = new SQLiteCommand(checkSql, cn))
+                    {
+                        cmdCheck.Parameters.AddWithValue("@name", txtcategory.Text.Trim());
+                        int count = Convert.ToInt32(await cmdCheck.ExecuteScalarAsync());
+                        if (count > 0)
+                        {
+                            MessageBox.Show("This category already exists.", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+
+                    // Confirm save
+                    if (MessageBox.Show("Are you sure you want to save this category?", "Saving Record",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                        return;
+
+                    // Save new category
+                    using (var cm = new SQLiteCommand("INSERT INTO TblCategory (category) VALUES (@category)", cn))
+                    {
+                        cm.Parameters.AddWithValue("@category", txtcategory.Text.Trim());
+                        await cm.ExecuteNonQueryAsync();
+                    }
                 }
 
-                if (MessageBox.Show("Are you sure you want to save this category?", "Saving Record", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                {
-                    cn.Open();
-                    // Note: Table name fixed to 'TblCategory' to match your DBConnection schema
-                    cm = new SQLiteCommand("INSERT INTO TblCategory (category) VALUES (@category)", cn);
-                    cm.Parameters.AddWithValue("@category", txtcategory.Text.Trim());
-                    cm.ExecuteNonQuery();
-                    cn.Close();
-
-                    MessageBox.Show("Category has been successfully saved.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    Clear();
-                    flist.LoadCategory();
-                }
+                MessageBox.Show("Category has been successfully saved.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Clear();
+                if (flist != null)
+                    await flist.LoadCategoryAsync(); // Refresh list
             }
             catch (Exception ex)
             {
-                if (cn.State == System.Data.ConnectionState.Open) cn.Close();
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnSave.Enabled = true;
             }
         }
 
-        private void btnUpdate_Click(object sender, EventArgs e)
+        // =========================
+        // 🔹 UPDATE CATEGORY
+        // =========================
+        private async void btnUpdate_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrWhiteSpace(txtcategory.Text))
+            {
+                MessageBox.Show("Category name cannot be empty.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            btnUpdate.Enabled = false;
+
             try
             {
-                if (string.IsNullOrWhiteSpace(txtcategory.Text))
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    MessageBox.Show("Category name cannot be empty.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
+                    await cn.OpenAsync();
+
+                    // Optional: Prevent duplicate on update (exclude current ID)
+                    string checkSql = "SELECT COUNT(*) FROM TblCategory WHERE category = @name AND id != @id";
+                    using (var cmdCheck = new SQLiteCommand(checkSql, cn))
+                    {
+                        cmdCheck.Parameters.AddWithValue("@name", txtcategory.Text.Trim());
+                        cmdCheck.Parameters.AddWithValue("@id", lblId.Text);
+                        int count = Convert.ToInt32(await cmdCheck.ExecuteScalarAsync());
+                        if (count > 0)
+                        {
+                            MessageBox.Show("Another category with this name already exists.", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+
+                    if (MessageBox.Show("Are you sure you want to update this category?", "Update Category",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                        return;
+
+                    using (var cm = new SQLiteCommand("UPDATE TblCategory SET category = @category WHERE id = @id", cn))
+                    {
+                        cm.Parameters.AddWithValue("@category", txtcategory.Text.Trim());
+                        cm.Parameters.AddWithValue("@id", lblId.Text);
+                        await cm.ExecuteNonQueryAsync();
+                    }
                 }
 
-                if (MessageBox.Show("Are you sure you want to update this category?", "Update Category", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                {
-                    cn.Open();
-                    // Using parameterized query for ID and fixed table name
-                    cm = new SQLiteCommand("UPDATE TblCategory SET category = @category WHERE id = @id", cn);
-                    cm.Parameters.AddWithValue("@category", txtcategory.Text.Trim());
-                    cm.Parameters.AddWithValue("@id", lblId.Text);
-                    cm.ExecuteNonQuery();
-                    cn.Close();
+                MessageBox.Show("Record has been successfully updated!", "Update", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (flist != null)
+                    await flist.LoadCategoryAsync(); // Refresh list
 
-                    MessageBox.Show("Record has been successfully updated!", "Update", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    flist.LoadCategory();
-                    this.Dispose();
-                }
+                Dispose();
             }
             catch (Exception ex)
             {
-                if (cn.State == System.Data.ConnectionState.Open) cn.Close();
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnUpdate.Enabled = true;
             }
         }
 
@@ -100,6 +159,7 @@ namespace PosSystem
 
         private void frmCategory_Load(object sender, EventArgs e)
         {
+            txtcategory.Focus();
         }
     }
 }

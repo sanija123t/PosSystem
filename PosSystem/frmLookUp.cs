@@ -1,127 +1,146 @@
 ﻿using System;
-using System.Data;
 using System.Data.SQLite;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PosSystem
 {
     public partial class frmLookUp : Form
     {
-        Form1 f;
-        frmPOS fPOS;
-        SQLiteConnection cn;
-        SQLiteCommand cm;
-        SQLiteDataReader dr;
+        private readonly Form1 f;
+        private readonly frmPOS fPOS;
+
+        // 🔥 Debounce controller
+        private CancellationTokenSource _searchCts;
 
         public frmLookUp(Form1 frm)
         {
             InitializeComponent();
-            cn = new SQLiteConnection(DBConnection.MyConnection());
             f = frm;
-            this.KeyPreview = true;
+            KeyPreview = true;
         }
 
         public frmLookUp(frmPOS frm)
         {
             InitializeComponent();
-            cn = new SQLiteConnection(DBConnection.MyConnection());
             fPOS = frm;
-            this.KeyPreview = true;
+            KeyPreview = true;
         }
 
         private void pictureBox2_Click(object sender, EventArgs e)
         {
-            this.Dispose();
+            Dispose();
         }
 
-        public void LoadRecords()
+        // 🔥 ASYNC + DEBOUNCED LOAD
+        private async Task LoadRecordsAsync(string search, CancellationToken token)
         {
             try
             {
-                int i = 0;
                 dataGridView1.Rows.Clear();
-                cn.Open();
 
-                string query = @"SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.qty 
-                                 FROM TblProduct1 AS p 
-                                 INNER JOIN BrandTbl AS b ON b.id = p.bid 
-                                 INNER JOIN TblCatecory AS c ON c.id = p.cid 
-                                 WHERE p.pdesc LIKE @search";
-
-                cm = new SQLiteCommand(query, cn);
-                cm.Parameters.AddWithValue("@search", txtSearch.Text + "%");
-                dr = cm.ExecuteReader();
-
-                while (dr.Read())
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    i++;
-                    dataGridView1.Rows.Add(i, dr["pcode"].ToString(), dr["barcode"].ToString(), dr["pdesc"].ToString(), dr["brand"].ToString(), dr["category"].ToString(), dr["price"].ToString(), dr["qty"].ToString());
+                    await cn.OpenAsync(token);
+
+                    string query = @"
+                        SELECT p.pcode, p.barcode, p.pdesc, 
+                               b.brand, c.category, p.price, p.qty
+                        FROM TblProduct1 p
+                        INNER JOIN BrandTbl b ON b.id = p.bid
+                        INNER JOIN TblCatecory c ON c.id = p.cid
+                        WHERE p.pdesc LIKE @search";
+
+                    using (var cm = new SQLiteCommand(query, cn))
+                    {
+                        cm.Parameters.AddWithValue("@search", search + "%");
+
+                        using (var dr = await cm.ExecuteReaderAsync(token))
+                        {
+                            int i = 0;
+                            while (await dr.ReadAsync(token))
+                            {
+                                i++;
+                                dataGridView1.Rows.Add(
+                                    i,
+                                    dr["pcode"].ToString(),
+                                    dr["barcode"].ToString(),
+                                    dr["pdesc"].ToString(),
+                                    dr["brand"].ToString(),
+                                    dr["category"].ToString(),
+                                    dr["price"].ToString(),
+                                    dr["qty"].ToString()
+                                );
+                            }
+                        }
+                    }
                 }
-                dr.Close();
-                cn.Close();
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when user keeps typing – ignore silently
             }
             catch (Exception ex)
             {
-                if (cn.State == ConnectionState.Open) cn.Close();
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
-        private void txtSearch_TextChanged(object sender, EventArgs e)
+        // 🔥 DEBOUNCED SEARCH
+        private async void txtSearch_TextChanged(object sender, EventArgs e)
         {
-            LoadRecords();
+            _searchCts?.Cancel();
+            _searchCts = new CancellationTokenSource();
+            var token = _searchCts.Token;
+
+            try
+            {
+                // Wait until user stops typing
+                await Task.Delay(300, token);
+
+                await LoadRecordsAsync(txtSearch.Text.Trim(), token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Typing continued → previous request cancelled
+            }
         }
 
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+
             try
             {
                 string colName = dataGridView1.Columns[e.ColumnIndex].Name;
-                if (colName == "Select")
-                {
-                    // FIX: Call the constructor based on which parent form is active
-                    frmQty frm;
-                    if (fPOS != null)
-                    {
-                        frm = new frmQty(fPOS);
-                    }
-                    else
-                    {
-                        frm = new frmQty(f);
-                    }
+                if (colName != "Select") return;
 
-                    string pcode = dataGridView1.Rows[e.RowIndex].Cells[1].Value.ToString();
-                    double price = Double.Parse(dataGridView1.Rows[e.RowIndex].Cells[6].Value.ToString());
-                    int qtyHand = int.Parse(dataGridView1.Rows[e.RowIndex].Cells[7].Value.ToString());
+                // Decide parent safely
+                frmQty frm = fPOS != null ? new frmQty(fPOS) : new frmQty(f);
 
-                    string transno = "";
-                    if (fPOS != null)
-                    {
-                        transno = fPOS.lblTransno.Text;
-                    }
-                    else if (f != null)
-                    {
-                        // Ensure lblTransno exists on Form1 or handle via fPOS
-                        // Since you moved it, this might need verification
-                        transno = "0000";
-                    }
+                string pcode = dataGridView1.Rows[e.RowIndex].Cells["pcode"].Value?.ToString();
 
-                    frm.ProductDetails(pcode, price, transno, qtyHand);
-                    frm.ShowDialog();
-                }
+                double.TryParse(dataGridView1.Rows[e.RowIndex].Cells["price"].Value?.ToString(), out double price);
+                int.TryParse(dataGridView1.Rows[e.RowIndex].Cells["qty"].Value?.ToString(), out int qtyHand);
+
+                string transno = fPOS != null ? fPOS.lblTransno.Text : "0000";
+
+                frm.ProductDetails(pcode, price, transno, qtyHand);
+                frm.ShowDialog();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Selection Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Selection Error: " + ex.Message,
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void frmLookUp_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Escape)
-            {
-                this.Dispose();
-            }
+                Dispose();
         }
 
         private void panel2_Paint(object sender, PaintEventArgs e) { }
