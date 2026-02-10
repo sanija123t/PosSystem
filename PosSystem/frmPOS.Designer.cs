@@ -452,9 +452,9 @@
             this.LblUser.ForeColor = System.Drawing.Color.White;
             this.LblUser.Location = new System.Drawing.Point(565, 29);
             this.LblUser.Name = "LblUser";
-            this.LblUser.Size = new System.Drawing.Size(73, 20);
+            this.LblUser.Size = new System.Drawing.Size(119, 20);
             this.LblUser.TabIndex = 3;
-            this.LblUser.Text = "Ds Studio";
+            this.LblUser.Text = "JAYAWI STORES";
             this.LblUser.Visible = false;
             this.LblUser.Click += new System.EventHandler(this.LblUser_Click);
             // 
