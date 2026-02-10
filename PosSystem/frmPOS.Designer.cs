@@ -46,9 +46,7 @@
             this.btnSearch = new System.Windows.Forms.Button();
             this.btnTrans = new System.Windows.Forms.Button();
             this.panel3 = new System.Windows.Forms.Panel();
-            this.txtQty = new MetroFramework.Controls.MetroTextBox();
             this.label16 = new System.Windows.Forms.Label();
-            this.txtSearch = new MetroFramework.Controls.MetroTextBox();
             this.lblDate = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.lblTransno = new System.Windows.Forms.Label();
@@ -256,9 +254,7 @@
             // panel3
             // 
             this.panel3.BackColor = System.Drawing.Color.White;
-            this.panel3.Controls.Add(this.txtQty);
             this.panel3.Controls.Add(this.label16);
-            this.panel3.Controls.Add(this.txtSearch);
             this.panel3.Controls.Add(this.lblDate);
             this.panel3.Controls.Add(this.label5);
             this.panel3.Controls.Add(this.lblTransno);
@@ -268,48 +264,6 @@
             this.panel3.Size = new System.Drawing.Size(934, 89);
             this.panel3.TabIndex = 1;
             // 
-            // txtQty
-            // 
-            this.txtQty.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            // 
-            // 
-            // 
-            this.txtQty.CustomButton.Image = null;
-            this.txtQty.CustomButton.Location = new System.Drawing.Point(37, 1);
-            this.txtQty.CustomButton.Margin = new System.Windows.Forms.Padding(4);
-            this.txtQty.CustomButton.Name = "";
-            this.txtQty.CustomButton.Size = new System.Drawing.Size(27, 27);
-            this.txtQty.CustomButton.Style = MetroFramework.MetroColorStyle.Blue;
-            this.txtQty.CustomButton.TabIndex = 1;
-            this.txtQty.CustomButton.Theme = MetroFramework.MetroThemeStyle.Light;
-            this.txtQty.CustomButton.UseSelectable = true;
-            this.txtQty.CustomButton.Visible = false;
-            this.txtQty.DisplayIcon = true;
-            this.txtQty.Enabled = false;
-            this.txtQty.FontSize = MetroFramework.MetroTextBoxSize.Medium;
-            this.txtQty.FontWeight = MetroFramework.MetroTextBoxWeight.Bold;
-            this.txtQty.Lines = new string[] {
-        "1"};
-            this.txtQty.Location = new System.Drawing.Point(537, 52);
-            this.txtQty.Margin = new System.Windows.Forms.Padding(4);
-            this.txtQty.MaxLength = 32767;
-            this.txtQty.Name = "txtQty";
-            this.txtQty.PasswordChar = '\0';
-            this.txtQty.WaterMark = "Qty";
-            this.txtQty.ScrollBars = System.Windows.Forms.ScrollBars.None;
-            this.txtQty.SelectedText = "";
-            this.txtQty.SelectionLength = 0;
-            this.txtQty.SelectionStart = 0;
-            this.txtQty.ShortcutsEnabled = true;
-            this.txtQty.Size = new System.Drawing.Size(65, 29);
-            this.txtQty.TabIndex = 16;
-            this.txtQty.Text = "1";
-            this.txtQty.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.txtQty.UseSelectable = true;
-            this.txtQty.WaterMark = "Qty";
-            this.txtQty.WaterMarkColor = System.Drawing.Color.DarkGray;
-            this.txtQty.WaterMarkFont = new System.Drawing.Font("Bahnschrift SemiBold", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            // 
             // label16
             // 
             this.label16.AutoSize = true;
@@ -318,41 +272,6 @@
             this.label16.Size = new System.Drawing.Size(95, 20);
             this.label16.TabIndex = 15;
             this.label16.Text = "[F8] Barcode";
-            // 
-            // txtSearch
-            // 
-            this.txtSearch.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            // 
-            // 
-            // 
-            this.txtSearch.CustomButton.Image = null;
-            this.txtSearch.CustomButton.Location = new System.Drawing.Point(372, 1);
-            this.txtSearch.CustomButton.Name = "";
-            this.txtSearch.CustomButton.Size = new System.Drawing.Size(27, 27);
-            this.txtSearch.CustomButton.Style = MetroFramework.MetroColorStyle.Blue;
-            this.txtSearch.CustomButton.TabIndex = 1;
-            this.txtSearch.CustomButton.Theme = MetroFramework.MetroThemeStyle.Light;
-            this.txtSearch.CustomButton.UseSelectable = true;
-            this.txtSearch.CustomButton.Visible = false;
-            this.txtSearch.DisplayIcon = true;
-            this.txtSearch.FontSize = MetroFramework.MetroTextBoxSize.Medium;
-            this.txtSearch.Lines = new string[0];
-            this.txtSearch.Location = new System.Drawing.Point(135, 52);
-            this.txtSearch.MaxLength = 32767;
-            this.txtSearch.Name = "txtSearch";
-            this.txtSearch.PasswordChar = '\0';
-            this.txtSearch.WaterMark = "Search Barcode here";
-            this.txtSearch.ScrollBars = System.Windows.Forms.ScrollBars.None;
-            this.txtSearch.SelectedText = "";
-            this.txtSearch.SelectionLength = 0;
-            this.txtSearch.SelectionStart = 0;
-            this.txtSearch.ShortcutsEnabled = true;
-            this.txtSearch.Size = new System.Drawing.Size(400, 29);
-            this.txtSearch.TabIndex = 14;
-            this.txtSearch.UseSelectable = true;
-            this.txtSearch.WaterMark = "Search Barcode here";
-            this.txtSearch.WaterMarkColor = System.Drawing.Color.FromArgb(((int)(((byte)(109)))), ((int)(((byte)(109)))), ((int)(((byte)(109)))));
-            this.txtSearch.WaterMarkFont = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Pixel);
             // 
             // lblDate
             // 
@@ -546,9 +465,9 @@
             this.lblName.ForeColor = System.Drawing.Color.White;
             this.lblName.Location = new System.Drawing.Point(120, 29);
             this.lblName.Name = "lblName";
-            this.lblName.Size = new System.Drawing.Size(73, 20);
+            this.lblName.Size = new System.Drawing.Size(119, 20);
             this.lblName.TabIndex = 2;
-            this.lblName.Text = "Ds Studio";
+            this.lblName.Text = "JAYAWI STORES";
             this.lblName.Click += new System.EventHandler(this.lblName_Click);
             // 
             // lblDisplayTotal

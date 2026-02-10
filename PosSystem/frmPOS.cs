@@ -380,4 +380,6 @@ namespace PosSystem
         public decimal VatAmount { get; set; }
     }
 
+
+
 }
