@@ -18,7 +18,14 @@ namespace PosSystem
 
         private void frmRecords_Load(object sender, EventArgs e)
         {
-            // Run all loading tasks in parallel
+            // Check top-selling dropdown on load
+            if (string.IsNullOrWhiteSpace(cdTopSelling.Text))
+            {
+                MessageBox.Show("Please select a criteria from the Top Selling dropdown before loading records.", stitle,
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             _ = LoadAllAsync();
         }
 
@@ -34,7 +41,7 @@ namespace PosSystem
                     LoadInventoryAsync(),
                     LoadCancelledOrdersAsync(),
                     LoadStockHistoryAsync()
-                );
+                ).ConfigureAwait(false);
             }
             finally
             {
@@ -45,22 +52,47 @@ namespace PosSystem
         private void SetDataGridViewFormats()
         {
             // Top Selling
-            dataGridView1.Columns[4].DefaultCellStyle.Format = "#,##0.00"; // total
+            if (dataGridView1.Columns.Count >= 5)
+                dataGridView1.Columns[4].DefaultCellStyle.Format = "#,##0.00";
+
             // Sold Summary
-            dataGridView2.Columns[3].DefaultCellStyle.Format = "#,##0.00"; // price
-            dataGridView2.Columns[6].DefaultCellStyle.Format = "#,##0.00"; // total
+            if (dataGridView2.Columns.Count >= 7)
+            {
+                dataGridView2.Columns[3].DefaultCellStyle.Format = "#,##0.00"; // price
+                dataGridView2.Columns[6].DefaultCellStyle.Format = "#,##0.00"; // total
+            }
+
             // Inventory
-            dataGridView4.Columns[5].DefaultCellStyle.Format = "#,##0.00"; // price
-            // You can add others similarly
+            if (dataGridView4.Columns.Count >= 8)
+            {
+                dataGridView4.Columns[5].DefaultCellStyle.Format = "#,##0.00"; // price
+                dataGridView4.Columns[7].DefaultCellStyle.Format = "#,##0";   // reorder
+                dataGridView4.Columns[6].DefaultCellStyle.Format = "#,##0";   // qty
+            }
+
+            // Critical Items
+            if (dataGridView3.Columns.Count >= 8)
+            {
+                dataGridView3.Columns[5].DefaultCellStyle.Format = "#,##0.00"; // price
+                dataGridView3.Columns[6].DefaultCellStyle.Format = "#,##0";   // qty
+                dataGridView3.Columns[7].DefaultCellStyle.Format = "#,##0";   // reorder
+            }
+
+            // Cancelled Orders
+            if (dataGridView5.Columns.Count >= 7)
+                dataGridView5.Columns[4].DefaultCellStyle.Format = "#,##0.00"; // price/total
+
+            // Stock History
+            if (dataGridView6.Columns.Count >= 5)
+                dataGridView6.Columns[3].DefaultCellStyle.Format = "#,##0"; // qty
         }
 
         #region Top Selling
         public async Task LoadTopSellingAsync()
         {
-            if (string.IsNullOrEmpty(cdTopSelling.Text))
+            if (string.IsNullOrWhiteSpace(cdTopSelling.Text))
             {
-                MessageBox.Show("Please select a criteria from dropdown.", stitle,
-                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show("Please select a Top Selling criteria from the dropdown.", stitle, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
 
@@ -73,43 +105,38 @@ namespace PosSystem
             try
             {
                 using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
+                await cn.OpenAsync().ConfigureAwait(false);
 
-                string query = cdTopSelling.Text switch
-                {
-                    "Short by Qty" => @"
-                        SELECT pcode, pdesc, IFNULL(SUM(qty),0) AS qty, IFNULL(SUM(total),0) AS total
-                        FROM vwSoldItems
-                        WHERE sdate BETWEEN @d1 AND @d2 AND status = 'sold'
-                        GROUP BY pcode, pdesc
-                        ORDER BY qty DESC
-                        LIMIT 10",
-                    "Short by Total Amount" => @"
-                        SELECT pcode, pdesc, IFNULL(SUM(qty),0) AS qty, IFNULL(SUM(total),0) AS total
-                        FROM vwSoldItems
-                        WHERE sdate BETWEEN @d1 AND @d2 AND status = 'sold'
-                        GROUP BY pcode, pdesc
-                        ORDER BY total DESC
-                        LIMIT 10",
-                    _ => ""
-                };
+                string orderBy = cdTopSelling.Text.Contains("Qty") ? "total_qty" : "total_amount";
+
+                string query = $@"
+                    SELECT c.pcode, p.pdesc,
+                           SUM(c.qty) AS total_qty,
+                           SUM(c.total) AS total_amount
+                    FROM tblCart1 c
+                    INNER JOIN TblProduct1 p ON c.pcode = p.pcode
+                    WHERE c.status='Sold' AND sdate BETWEEN @d1 AND @d2
+                    GROUP BY c.pcode, p.pdesc
+                    ORDER BY {orderBy} DESC
+                    LIMIT 10";
 
                 using var cmd = new SQLiteCommand(query, cn);
                 cmd.Parameters.AddWithValue("@d1", startDate);
                 cmd.Parameters.AddWithValue("@d2", endDate);
 
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     i++;
-                    double total = reader["total"] != DBNull.Value ? Convert.ToDouble(reader["total"]) : 0;
+                    double total = reader["total_amount"] != DBNull.Value ? Convert.ToDouble(reader["total_amount"]) : 0;
+                    int qty = reader["total_qty"] != DBNull.Value ? Convert.ToInt32(reader["total_qty"]) : 0;
 
-                    dataGridView1.Rows.Add(i, reader["pcode"], reader["pdesc"], reader["qty"], total);
+                    dataGridView1.Rows.Add(i, reader["pcode"], reader["pdesc"], qty, total);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Top Selling Load Error: " + ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         #endregion
@@ -127,39 +154,41 @@ namespace PosSystem
             try
             {
                 using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
+                await cn.OpenAsync().ConfigureAwait(false);
 
                 string query = @"
                     SELECT c.pcode, p.pdesc, c.price,
                            SUM(c.qty) AS tot_qty,
                            SUM(c.disc) AS tot_disc,
                            SUM(c.total) AS total
-                    FROM tblCart1 AS c
-                    INNER JOIN TblProduct1 AS p ON c.pcode = p.pcode
-                    WHERE status = 'Sold' AND sdate BETWEEN @d1 AND @d2
+                    FROM tblCart1 c
+                    INNER JOIN TblProduct1 p ON c.pcode = p.pcode
+                    WHERE c.status='Sold' AND sdate BETWEEN @d1 AND @d2
                     GROUP BY c.pcode, p.pdesc, c.price";
 
                 using var cmd = new SQLiteCommand(query, cn);
                 cmd.Parameters.AddWithValue("@d1", startDate);
                 cmd.Parameters.AddWithValue("@d2", endDate);
 
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     i++;
                     double total = reader["total"] != DBNull.Value ? Convert.ToDouble(reader["total"]) : 0;
+                    double price = reader["price"] != DBNull.Value ? Convert.ToDouble(reader["price"]) : 0;
+                    double qty = reader["tot_qty"] != DBNull.Value ? Convert.ToDouble(reader["tot_qty"]) : 0;
+                    double disc = reader["tot_disc"] != DBNull.Value ? Convert.ToDouble(reader["tot_disc"]) : 0;
+
                     totalAmount += total;
 
-                    dataGridView2.Rows.Add(i, reader["pcode"], reader["pdesc"],
-                        Convert.ToDouble(reader["price"]),
-                        reader["tot_qty"], reader["tot_disc"], total);
+                    dataGridView2.Rows.Add(i, reader["pcode"], reader["pdesc"], price, qty, disc, total);
                 }
 
                 lblTotal.Text = totalAmount.ToString("#,##0.00");
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Sold Summary Load Error: " + ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
         #endregion
@@ -173,20 +202,31 @@ namespace PosSystem
             try
             {
                 using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
+                await cn.OpenAsync().ConfigureAwait(false);
 
-                using var cmd = new SQLiteCommand("SELECT * FROM vwCriticalItems", cn);
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
+                string query = @"
+                    SELECT p.pcode, p.pdesc, b.brand, c.category, p.price, p.qty, p.reorder,
+                           CASE WHEN p.qty <= p.reorder THEN 'Critical' ELSE 'OK' END AS status
+                    FROM TblProduct1 p
+                    LEFT JOIN BrandTbl b ON p.bid = b.id
+                    LEFT JOIN TblCategory c ON p.cid = c.id
+                    ORDER BY status DESC, p.pdesc";
+
+                using var cmd = new SQLiteCommand(query, cn);
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     i++;
-                    dataGridView3.Rows.Add(i, reader[0], reader[1], reader[2], reader[3],
-                        reader[4], reader[5], reader[6], reader[7]);
+                    double price = reader["price"] != DBNull.Value ? Convert.ToDouble(reader["price"]) : 0;
+                    int qty = reader["qty"] != DBNull.Value ? Convert.ToInt32(reader["qty"]) : 0;
+                    int reorder = reader["reorder"] != DBNull.Value ? Convert.ToInt32(reader["reorder"]) : 0;
+
+                    dataGridView3.Rows.Add(i, reader["pcode"], reader["pdesc"], reader["brand"], reader["category"], price, qty, reorder, reader["status"]);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Critical Items Load Error: " + ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
         #endregion
@@ -200,26 +240,30 @@ namespace PosSystem
             try
             {
                 using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
+                await cn.OpenAsync().ConfigureAwait(false);
 
                 string query = @"
                     SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.qty, p.reorder
-                    FROM TblProduct1 AS p
-                    INNER JOIN BrandTbl AS b ON p.bid = b.id
-                    INNER JOIN TblCategory AS c ON p.cid = c.id";
+                    FROM TblProduct1 p
+                    LEFT JOIN BrandTbl b ON p.bid = b.id
+                    LEFT JOIN TblCategory c ON p.cid = c.id
+                    ORDER BY p.pdesc";
 
                 using var cmd = new SQLiteCommand(query, cn);
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     i++;
-                    dataGridView4.Rows.Add(i, reader["pcode"], reader["barcode"], reader["pdesc"],
-                        reader["brand"], reader["category"], reader["price"], reader["reorder"], reader["qty"]);
+                    double price = reader["price"] != DBNull.Value ? Convert.ToDouble(reader["price"]) : 0;
+                    int qty = reader["qty"] != DBNull.Value ? Convert.ToInt32(reader["qty"]) : 0;
+                    int reorder = reader["reorder"] != DBNull.Value ? Convert.ToInt32(reader["reorder"]) : 0;
+
+                    dataGridView4.Rows.Add(i, reader["pcode"], reader["barcode"], reader["pdesc"], reader["brand"], reader["category"], price, reorder, qty);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Inventory Load Error: " + ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         #endregion
@@ -236,26 +280,34 @@ namespace PosSystem
             try
             {
                 using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
+                await cn.OpenAsync().ConfigureAwait(false);
 
-                string query = @"SELECT * FROM vwCancelledOrder WHERE sdate BETWEEN @d1 AND @d2";
+                string query = @"
+                    SELECT transno, pcode, pdesc, price, qty, total, sdate,
+                           voidby, cancelledby, reason, action
+                    FROM tblCancel
+                    WHERE sdate BETWEEN @d1 AND @d2
+                    ORDER BY sdate DESC";
 
                 using var cmd = new SQLiteCommand(query, cn);
                 cmd.Parameters.AddWithValue("@d1", startDate);
                 cmd.Parameters.AddWithValue("@d2", endDate);
 
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     i++;
-                    dataGridView5.Rows.Add(i, reader["transno"], reader["pcode"], reader["pdesc"],
-                        reader["price"], reader["qty"], reader["total"], reader["sdate"],
-                        reader["voidby"], reader["cancelledby"], reader["reason"], reader["action"]);
+                    double price = reader["price"] != DBNull.Value ? Convert.ToDouble(reader["price"]) : 0;
+                    double total = reader["total"] != DBNull.Value ? Convert.ToDouble(reader["total"]) : 0;
+                    int qty = reader["qty"] != DBNull.Value ? Convert.ToInt32(reader["qty"]) : 0;
+
+                    dataGridView5.Rows.Add(i, reader["transno"], reader["pcode"], reader["pdesc"], price, qty, total,
+                        reader["sdate"], reader["voidby"], reader["cancelledby"], reader["reason"], reader["action"]);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Cancelled Orders Load Error: " + ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         #endregion
@@ -272,25 +324,30 @@ namespace PosSystem
             try
             {
                 using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
+                await cn.OpenAsync().ConfigureAwait(false);
 
-                string query = @"SELECT * FROM tblStockIn WHERE sdate BETWEEN @d1 AND @d2 AND status = 'Done'";
+                string query = @"
+                    SELECT refno AS transno, pcode, pdesc, qty, action, sdate, [user]
+                    FROM tblStockIn
+                    WHERE sdate BETWEEN @d1 AND @d2 AND status='Done'
+                    ORDER BY sdate DESC";
 
                 using var cmd = new SQLiteCommand(query, cn);
                 cmd.Parameters.AddWithValue("@d1", startDate);
                 cmd.Parameters.AddWithValue("@d2", endDate);
 
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
+                using var reader = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     i++;
-                    dataGridView6.Rows.Add(i, reader[0], reader[1], reader[2],
-                        reader[3], reader[4], reader[5], reader[6]);
+                    int qty = reader["qty"] != DBNull.Value ? Convert.ToInt32(reader["qty"]) : 0;
+                    dataGridView6.Rows.Add(i, reader["transno"], reader["pcode"], reader["pdesc"], qty,
+                        reader["action"], reader["sdate"], reader["user"]);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Stock History Load Error: " + ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         #endregion
@@ -299,6 +356,5 @@ namespace PosSystem
         {
             Dispose();
         }
-
     }
 }

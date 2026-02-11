@@ -9,11 +9,10 @@ using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace PosSystem
 {
-
-
     public partial class frmPOS : Form
     {
         string stitle = "POS System v1.0";
@@ -30,13 +29,11 @@ namespace PosSystem
             "pos_error.log"
         );
 
-        // ✅ REQUIRED FOR DESIGNER
         public frmPOS()
         {
             InitializeComponent();
         }
 
-        // ✅ YOUR ORIGINAL CONSTRUCTOR (UNCHANGED)
         public frmPOS(frmUserLogin frm)
         {
             InitializeComponent();
@@ -77,7 +74,12 @@ namespace PosSystem
                         {
                             while (dr.Read())
                             {
-                                total += Convert.ToDecimal(dr["total"]);
+                                decimal rowTotal = 0;
+                                if (!decimal.TryParse(dr["total"]?.ToString(), out rowTotal))
+                                    rowTotal = 0;
+
+                                total += rowTotal;
+
                                 dataGridView1.Rows.Add(
                                     dr["id"], dr["transno"], dr["pcode"], dr["pdesc"],
                                     dr["price"], dr["qty"], dr["discount"], dr["total"]
@@ -87,6 +89,9 @@ namespace PosSystem
                     }
                 }
                 UpdateTotals(total);
+                // Auto-scroll to last item for better UX
+                if (dataGridView1.Rows.Count > 0)
+                    dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.Rows.Count - 1;
             }
             catch (Exception ex) { LogError("LoadCart", ex); }
         }
@@ -107,133 +112,140 @@ namespace PosSystem
 
         public async void SettlePayment()
         {
-            if (dataGridView1.Rows.Count == 0 ||
-                (dataGridView1.Rows.Count == 1 && dataGridView1.Rows[0].IsNewRow))
+            if (dataGridView1.Rows.Count == 0 || (dataGridView1.Rows.Count == 1 && dataGridView1.Rows[0].IsNewRow))
                 return;
 
             btnSattle.Enabled = false;
             bool success = false;
 
-            try
+            // Collect items safely
+            printItems = new List<ReceiptItem>();
+            foreach (DataGridViewRow r in dataGridView1.Rows)
             {
-                // Safely collect items
-                printItems = new List<ReceiptItem>();
-                foreach (DataGridViewRow r in dataGridView1.Rows)
+                if (r.IsNewRow || r.Cells[2].Value == null) continue;
+
+                decimal rowTotal = 0m;
+                int rowQty = 1;
+
+                if (!decimal.TryParse(r.Cells[7].Value?.ToString(), out rowTotal)) continue;
+                if (!int.TryParse(r.Cells[5].Value?.ToString(), out rowQty)) rowQty = 1;
+                rowQty = Math.Max(1, rowQty);
+
+                decimal rowVatable = Math.Round(rowTotal / 1.12m, 2);
+
+                printItems.Add(new ReceiptItem
                 {
-                    if (r.IsNewRow) continue;
-                    if (r.Cells[2].Value == null) continue;
+                    PCode = r.Cells[2].Value.ToString(),
+                    Description = r.Cells[3].Value?.ToString() ?? "Unknown",
+                    Qty = rowQty,
+                    Total = rowTotal,
+                    Vatable = rowVatable,
+                    VatAmount = Math.Round(rowTotal - rowVatable, 2)
+                });
+            }
 
-                    decimal rowTotal = 0m;
-                    int rowQty = 1;
+            if (printItems.Count == 0)
+            {
+                btnSattle.Enabled = true;
+                return;
+            }
 
-                    // Safe parsing
-                    if (!decimal.TryParse(r.Cells[7].Value?.ToString(), out rowTotal)) continue;
-                    if (!int.TryParse(r.Cells[5].Value?.ToString(), out rowQty)) rowQty = 1;
-                    rowQty = Math.Max(1, rowQty);
+            receiptTotal = printItems.Sum(x => x.Total);
 
-                    decimal rowVatable = Math.Round(rowTotal / 1.12m, 2);
-
-                    printItems.Add(new ReceiptItem
-                    {
-                        PCode = r.Cells[2].Value.ToString(),
-                        Description = r.Cells[3].Value?.ToString() ?? "Unknown",
-                        Qty = rowQty,
-                        Total = rowTotal,
-                        Vatable = rowVatable,
-                        VatAmount = Math.Round(rowTotal - rowVatable, 2)
-                    });
-                }
-
-                if (printItems.Count == 0) return;
-
-                receiptTotal = printItems.Sum(x => x.Total);
-
-                await Task.Run(() =>
+            await Task.Run(() =>
+            {
+                try
                 {
-                    try
+                    using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                     {
-                        using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
+                        cn.Open();
+                        using (SQLiteCommand cmdMode = new SQLiteCommand("PRAGMA journal_mode=WAL;", cn))
+                            cmdMode.ExecuteNonQuery();
+
+                        using (var transaction = cn.BeginTransaction())
                         {
-                            cn.Open();
-
-                            using (SQLiteCommand cmdMode = new SQLiteCommand("PRAGMA journal_mode=WAL;", cn))
-                                cmdMode.ExecuteNonQuery();
-
-                            using (var transaction = cn.BeginTransaction())
+                            try
                             {
-                                try
+                                foreach (var item in printItems)
                                 {
-                                    foreach (var item in printItems)
+                                    // Check current stock first
+                                    int currentQty = 0;
+                                    using (SQLiteCommand cmCheck = new SQLiteCommand(
+                                        "SELECT qty FROM tblProduct1 WHERE pcode = @pcode", cn))
                                     {
-                                        using (SQLiteCommand cm = new SQLiteCommand(
-                                            "UPDATE tblProduct1 SET qty = qty - @qty WHERE pcode = @pcode AND qty >= @qty", cn))
-                                        {
-                                            cm.Parameters.AddWithValue("@qty", item.Qty);
-                                            cm.Parameters.AddWithValue("@pcode", item.PCode);
-
-                                            if (cm.ExecuteNonQuery() == 0)
-                                                throw new Exception($"Stock error: {item.Description} is out of stock.");
-                                        }
+                                        cmCheck.Parameters.AddWithValue("@pcode", item.PCode);
+                                        object res = cmCheck.ExecuteScalar();
+                                        currentQty = res != null ? Convert.ToInt32(res) : 0;
                                     }
 
-                                    using (SQLiteCommand cm = new SQLiteCommand(
-                                        "UPDATE tblCart1 SET status = 'Sold' WHERE transno = @transno", cn))
-                                    {
-                                        cm.Parameters.AddWithValue("@transno", lblTransno.Text);
-                                        cm.ExecuteNonQuery();
-                                    }
+                                    if (currentQty < item.Qty)
+                                        throw new Exception($"Stock error: {item.Description} has only {currentQty} left.");
 
-                                    transaction.Commit();
-                                    success = true;
+                                    // Update stock safely
+                                    using (SQLiteCommand cmUpdate = new SQLiteCommand(
+                                        "UPDATE tblProduct1 SET qty = qty - @qty WHERE pcode = @pcode", cn))
+                                    {
+                                        cmUpdate.Parameters.AddWithValue("@qty", item.Qty);
+                                        cmUpdate.Parameters.AddWithValue("@pcode", item.PCode);
+                                        cmUpdate.ExecuteNonQuery();
+                                    }
                                 }
-                                catch (Exception ex)
-                                {
-                                    transaction.Rollback();
-                                    LogError("Settle Transaction", ex);
 
-                                    // Safely show messagebox on UI thread
-                                    if (this.IsHandleCreated)
-                                    {
-                                        this.Invoke(new Action(() =>
-                                            MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error)));
-                                    }
+                                using (SQLiteCommand cmCart = new SQLiteCommand(
+                                    "UPDATE tblCart1 SET status = 'Sold' WHERE transno = @transno", cn))
+                                {
+                                    cmCart.Parameters.AddWithValue("@transno", lblTransno.Text);
+                                    cmCart.ExecuteNonQuery();
+                                }
+
+                                transaction.Commit();
+                                success = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                transaction.Rollback();
+                                LogError("Settle Transaction", ex);
+
+                                if (this.IsHandleCreated)
+                                {
+                                    this.Invoke(new Action(() =>
+                                        MessageBox.Show(ex.ToString(), stitle, MessageBoxButtons.OK, MessageBoxIcon.Error)));
                                 }
                             }
                         }
                     }
+                }
+                catch (Exception ex)
+                {
+                    LogError("Settle Transaction", ex);
+                }
+            });
+
+            if (success)
+            {
+                if (this.IsHandleCreated && MessageBox.Show(
+                    "Transaction Complete. Print Receipt?", stitle,
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    itemsPrinted = 0;
+                    try { pd.Print(); }
                     catch (Exception ex)
                     {
-                        LogError("Settle Transaction", ex);
+                        LogError("Printer Error", ex);
+                        if (this.IsHandleCreated)
+                            MessageBox.Show("Printer error: " + ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
-                });
-
-                if (success)
-                {
-                    if (this.IsHandleCreated && MessageBox.Show(
-                        "Transaction Complete. Print Receipt?", stitle,
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                    {
-                        itemsPrinted = 0;
-                        try { pd.Print(); }
-                        catch (Exception ex)
-                        {
-                            LogError("Printer Error", ex);
-                            MessageBox.Show("Printer error: " + ex.Message);
-                        }
-                    }
-
-                    GetTransNo();
-                    LoadCart();
                 }
+
+                GetTransNo();
+                LoadCart();
+
+                // Reset focus for faster workflow
+                if (dataGridView1.Rows.Count > 0)
+                    dataGridView1.Focus();
             }
-            catch (Exception ex)
-            {
-                LogError("Settle", ex);
-            }
-            finally
-            {
-                btnSattle.Enabled = true;
-            }
+
+            btnSattle.Enabled = true;
         }
 
         #endregion
@@ -327,7 +339,10 @@ namespace PosSystem
                     using (SQLiteDataReader dr = cmd.ExecuteReader())
                     {
                         while (dr.Read())
+                        {
                             ShowPopupSafe($"{dr["pdesc"]} has only {dr["qty"]} left!");
+                            Thread.Sleep(200); // small delay to batch notifications
+                        }
                     }
                 }
             }
@@ -355,7 +370,7 @@ namespace PosSystem
             try
             {
                 File.AppendAllText(logFile,
-                    $"{DateTime.Now} [{ctx}] {ex.Message}{Environment.NewLine}");
+                    $"{DateTime.Now} [{ctx}] {ex.ToString()}{Environment.NewLine}");
             }
             catch { }
         }
@@ -382,21 +397,45 @@ namespace PosSystem
         private void btnSattle_Click(object sender, EventArgs e) => SettlePayment();
 
         #endregion
-        // ===== DESIGNER REQUIRED EVENT HANDLERS (DO NOT DELETE) =====
 
         private void label14_Click(object sender, EventArgs e) { }
-
         private void LblUser_Click(object sender, EventArgs e) { }
-
         private void lblName_Click(object sender, EventArgs e) { }
-
         private void label7_Click(object sender, EventArgs e) { }
-
         private void label2_Click(object sender, EventArgs e) { }
-
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e) { }
-
         private void dataGridView1_SelectionChanged(object sender, EventArgs e) { }
+        private void lblSname_Click(object sender, EventArgs e) { }
+
+        private void btnSearch_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnTrans_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnDiscount_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnSales_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label6_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 
     public class ReceiptItem
@@ -408,7 +447,4 @@ namespace PosSystem
         public decimal Vatable { get; set; }
         public decimal VatAmount { get; set; }
     }
-
-
-
 }

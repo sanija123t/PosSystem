@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data.SQLite;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace PosSystem
@@ -9,6 +10,14 @@ namespace PosSystem
         public frmUserLogin()
         {
             InitializeComponent();
+            this.AcceptButton = btnSave; // Enter triggers login
+
+            // Ensure password masking
+            txtPass.UseSystemPasswordChar = true;
+
+            // MetroTextBox placeholder equivalent
+            txtUser.WaterMark = "Enter your username";
+            txtPass.WaterMark = "Enter your password";
         }
 
         private void frmUserLogin_Load(object sender, EventArgs e)
@@ -21,70 +30,107 @@ namespace PosSystem
             Application.Exit();
         }
 
-        private void btnSave_Click(object sender, EventArgs e)
+        private async void btnSave_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtUser.Text) || string.IsNullOrWhiteSpace(txtPass.Text))
+            string username = txtUser.Text.Trim();
+            string password = txtPass.Text;
+
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                MessageBox.Show("Enter username and password");
+                MessageBox.Show("Enter both username and password", "Login",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
+            btnSave.Enabled = false;
+            Cursor = Cursors.WaitCursor;
+
             try
             {
-                using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
+                var loginResult = await Task.Run(() => ValidateLogin(username, password));
+
+                if (loginResult.isSuccess)
                 {
-                    cn.Open();
-
-                    string sql = @"SELECT username, role 
-                                   FROM tblUser 
-                                   WHERE username = @u 
-                                   AND password = @p 
-                                   AND isactive = 1 
-                                   AND isdeleted = 0";
-
-                    using (SQLiteCommand cm = new SQLiteCommand(sql, cn))
-                    {
-                        cm.Parameters.AddWithValue("@u", txtUser.Text.Trim());
-                        cm.Parameters.AddWithValue("@p", DBConnection.GetHash(txtPass.Text));
-
-                        using (SQLiteDataReader dr = cm.ExecuteReader())
-                        {
-                            if (dr.Read())
-                            {
-                                OpenDashboard(
-                                    dr["username"].ToString(),
-                                    dr["role"].ToString()
-                                );
-                            }
-                            else
-                            {
-                                MessageBox.Show("Invalid login");
-                            }
-                        }
-                    }
+                    OpenDashboard(loginResult.Username, loginResult.Role);
+                }
+                else
+                {
+                    MessageBox.Show("Invalid login credentials", "Login",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    txtPass.Clear();
+                    txtPass.Focus();
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Login error: " + ex.Message);
+                MessageBox.Show("Login error: " + ex.Message, "Login",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally
+            {
+                btnSave.Enabled = true;
+                Cursor = Cursors.Default;
+            }
+        }
+
+        private (bool isSuccess, string Username, string Role) ValidateLogin(string username, string password)
+        {
+            using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
+            {
+                cn.Open();
+
+                string sql = @"SELECT username, role, password, salt 
+                               FROM tblUser 
+                               WHERE username = @u 
+                               AND isactive = 1 
+                               AND isdeleted = 0";
+
+                using (var cm = new SQLiteCommand(sql, cn))
+                {
+                    cm.Parameters.AddWithValue("@u", username);
+
+                    using (var dr = cm.ExecuteReader())
+                    {
+                        if (dr.Read())
+                        {
+                            string storedHash = dr["password"].ToString();
+                            string salt = dr["salt"].ToString();
+
+                            string inputHash = DBConnection.GetHash(password, salt);
+
+                            if (inputHash == storedHash)
+                                return (true, dr["username"].ToString(), dr["role"].ToString());
+                        }
+                    }
+                }
+            }
+
+            return (false, null, null);
         }
 
         private void OpenDashboard(string username, string role)
         {
-            this.Hide();
-
-            Form1 dashboard = new Form1
+            try
             {
-                StartPosition = FormStartPosition.CenterScreen
-            };
+                this.Hide();
 
-            dashboard.lblUserName.Text = username;
-            dashboard.lblRole.Text = role;
+                Form1 dashboard = new Form1
+                {
+                    StartPosition = FormStartPosition.CenterScreen
+                };
 
-            dashboard.FormClosed += (s, e) => this.Close();
+                dashboard.lblUserName.Text = username;
+                dashboard.lblRole.Text = role;
 
-            dashboard.Show(); // NOT ShowDialog
+                dashboard.FormClosed += (s, e) => Application.Exit();
+                dashboard.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error opening dashboard: " + ex.Message,
+                    "Login", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.Show();
+            }
         }
     }
 }

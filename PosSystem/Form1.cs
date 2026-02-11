@@ -86,7 +86,7 @@ namespace PosSystem
                 var dailySalesTask = Task.Run(() => DBConnection.DailySales());
                 var productLineTask = Task.Run(() => DBConnection.ProductLine());
                 var stockTask = Task.Run(() => DBConnection.StockOnHand());
-                var criticalTask = Task.Run(() => DBConnection.CraticalItems());
+                var criticalTask = Task.Run(() => DBConnection.CriticalItems());
 
                 await Task.WhenAll(dailySalesTask, productLineTask, stockTask, criticalTask);
 

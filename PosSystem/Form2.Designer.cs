@@ -1,6 +1,6 @@
 ﻿namespace PosSystem
 {
-    partial class Form1
+    partial class Form2
     {
         /// <summary>
         /// Required designer variable.
@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form2));
             this.panel2 = new System.Windows.Forms.Panel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.button9 = new System.Windows.Forms.Button();
@@ -46,17 +46,8 @@
             this.btnProduct = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.panel3 = new System.Windows.Forms.Panel();
-            this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.lblTransno = new System.Windows.Forms.Label();
-            this.lblTotal = new System.Windows.Forms.Label();
-            this.lblDisplayTotal = new System.Windows.Forms.Label();
-            this.lblPhone = new System.Windows.Forms.Label();
-            this.lblSname = new System.Windows.Forms.Label();
-            this.lblAddress = new System.Windows.Forms.Label();
-            this.lblDiscount = new System.Windows.Forms.Label();
             this.panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
             // panel2
@@ -77,11 +68,11 @@
             this.panel2.Controls.Add(this.lblUserName);
             this.panel2.Controls.Add(this.btnProduct);
             this.panel2.Controls.Add(this.button1);
-            this.panel2.Location = new System.Drawing.Point(-2, 37);
+            this.panel2.Dock = System.Windows.Forms.DockStyle.Left;
+            this.panel2.Location = new System.Drawing.Point(0, 0);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(243, 615);
-            this.panel2.TabIndex = 1;
-            this.panel2.Paint += new System.Windows.Forms.PaintEventHandler(this.panel2_Paint);
+            this.panel2.Size = new System.Drawing.Size(243, 650);
+            this.panel2.TabIndex = 2;
             // 
             // pictureBox1
             // 
@@ -108,7 +99,6 @@
             this.button9.TabIndex = 11;
             this.button9.Text = "Log Out";
             this.button9.UseVisualStyleBackColor = true;
-            this.button9.Click += new System.EventHandler(this.button9_Click);
             // 
             // button2
             // 
@@ -124,20 +114,18 @@
             this.button2.TabIndex = 13;
             this.button2.Text = "Stock Adjustment";
             this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
             // lblRole
             // 
             this.lblRole.BackColor = System.Drawing.Color.Transparent;
             this.lblRole.Font = new System.Drawing.Font("Franklin Gothic Medium", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblRole.ForeColor = System.Drawing.Color.White;
-            this.lblRole.Location = new System.Drawing.Point(3, 86);
+            this.lblRole.Location = new System.Drawing.Point(3, 89);
             this.lblRole.Name = "lblRole";
             this.lblRole.Size = new System.Drawing.Size(237, 23);
             this.lblRole.TabIndex = 2;
-            this.lblRole.Text = "Administrator";
+            this.lblRole.Text = "Cashier";
             this.lblRole.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.lblRole.Click += new System.EventHandler(this.lblRole_Click);
             // 
             // button8
             // 
@@ -153,7 +141,6 @@
             this.button8.TabIndex = 10;
             this.button8.Text = "User Settings";
             this.button8.UseVisualStyleBackColor = true;
-            this.button8.Click += new System.EventHandler(this.button8_Click);
             // 
             // button7
             // 
@@ -169,7 +156,6 @@
             this.button7.TabIndex = 9;
             this.button7.Text = "Store Settings";
             this.button7.UseVisualStyleBackColor = true;
-            this.button7.Click += new System.EventHandler(this.button7_Click);
             // 
             // btnSalesHistory
             // 
@@ -185,7 +171,6 @@
             this.btnSalesHistory.TabIndex = 8;
             this.btnSalesHistory.Text = "Sales History";
             this.btnSalesHistory.UseVisualStyleBackColor = true;
-            this.btnSalesHistory.Click += new System.EventHandler(this.btnSalesHistory_Click);
             // 
             // button6
             // 
@@ -201,7 +186,6 @@
             this.button6.TabIndex = 8;
             this.button6.Text = "Records";
             this.button6.UseVisualStyleBackColor = true;
-            this.button6.Click += new System.EventHandler(this.button6_Click);
             // 
             // btnBrand
             // 
@@ -217,7 +201,6 @@
             this.btnBrand.TabIndex = 7;
             this.btnBrand.Text = "Manage Brand";
             this.btnBrand.UseVisualStyleBackColor = true;
-            this.btnBrand.Click += new System.EventHandler(this.btnBrand_Click);
             // 
             // button4
             // 
@@ -233,7 +216,6 @@
             this.button4.TabIndex = 6;
             this.button4.Text = "Manage Category";
             this.button4.UseVisualStyleBackColor = true;
-            this.button4.Click += new System.EventHandler(this.button4_Click);
             // 
             // btnStock
             // 
@@ -249,7 +231,6 @@
             this.btnStock.TabIndex = 12;
             this.btnStock.Text = "Stock Entry";
             this.btnStock.UseVisualStyleBackColor = true;
-            this.btnStock.Click += new System.EventHandler(this.btnStock_Click);
             // 
             // btnVendor
             // 
@@ -265,19 +246,17 @@
             this.btnVendor.TabIndex = 12;
             this.btnVendor.Text = " Vendor";
             this.btnVendor.UseVisualStyleBackColor = true;
-            this.btnVendor.Click += new System.EventHandler(this.btnVendor_Click);
             // 
             // lblUserName
             // 
             this.lblUserName.Font = new System.Drawing.Font("Georgia", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblUserName.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(158)))), ((int)(((byte)(132)))));
-            this.lblUserName.Location = new System.Drawing.Point(46, 64);
+            this.lblUserName.Location = new System.Drawing.Point(46, 66);
             this.lblUserName.Name = "lblUserName";
             this.lblUserName.Size = new System.Drawing.Size(150, 29);
             this.lblUserName.TabIndex = 1;
             this.lblUserName.Text = "User Name";
             this.lblUserName.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.lblUserName.Click += new System.EventHandler(this.lblName_Click);
             // 
             // btnProduct
             // 
@@ -293,7 +272,6 @@
             this.btnProduct.TabIndex = 5;
             this.btnProduct.Text = "Manage Products";
             this.btnProduct.UseVisualStyleBackColor = true;
-            this.btnProduct.Click += new System.EventHandler(this.btnProduct_Click);
             // 
             // button1
             // 
@@ -309,87 +287,18 @@
             this.button1.TabIndex = 3;
             this.button1.Text = "Dashboard";
             this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // panel3
             // 
             this.panel3.BackColor = System.Drawing.Color.White;
+            this.panel3.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.panel3.ForeColor = System.Drawing.Color.Black;
-            this.panel3.Location = new System.Drawing.Point(241, 37);
+            this.panel3.Location = new System.Drawing.Point(243, 35);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(1059, 615);
-            this.panel3.TabIndex = 2;
-            this.panel3.Paint += new System.Windows.Forms.PaintEventHandler(this.panel3_Paint);
+            this.panel3.Size = new System.Drawing.Size(1057, 615);
+            this.panel3.TabIndex = 3;
             // 
-            // dataGridView1
-            // 
-            this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Location = new System.Drawing.Point(0, 0);
-            this.dataGridView1.Name = "dataGridView1";
-            this.dataGridView1.Size = new System.Drawing.Size(10, 10);
-            this.dataGridView1.TabIndex = 0;
-            this.dataGridView1.Visible = false;
-            // 
-            // lblTransno
-            // 
-            this.lblTransno.AutoSize = true;
-            this.lblTransno.Location = new System.Drawing.Point(0, 0);
-            this.lblTransno.Name = "lblTransno";
-            this.lblTransno.Size = new System.Drawing.Size(0, 17);
-            this.lblTransno.TabIndex = 3;
-            this.lblTransno.Visible = false;
-            // 
-            // lblTotal
-            // 
-            this.lblTotal.AutoSize = true;
-            this.lblTotal.Location = new System.Drawing.Point(0, 0);
-            this.lblTotal.Name = "lblTotal";
-            this.lblTotal.Size = new System.Drawing.Size(0, 17);
-            this.lblTotal.TabIndex = 4;
-            this.lblTotal.Visible = false;
-            // 
-            // lblDisplayTotal
-            // 
-            this.lblDisplayTotal.AutoSize = true;
-            this.lblDisplayTotal.Location = new System.Drawing.Point(0, 0);
-            this.lblDisplayTotal.Name = "lblDisplayTotal";
-            this.lblDisplayTotal.Size = new System.Drawing.Size(0, 17);
-            this.lblDisplayTotal.TabIndex = 5;
-            this.lblDisplayTotal.Visible = false;
-            // 
-            // lblPhone
-            // 
-            this.lblPhone.Location = new System.Drawing.Point(0, 0);
-            this.lblPhone.Name = "lblPhone";
-            this.lblPhone.Size = new System.Drawing.Size(100, 23);
-            this.lblPhone.TabIndex = 0;
-            this.lblPhone.Visible = false;
-            // 
-            // lblSname
-            // 
-            this.lblSname.Location = new System.Drawing.Point(0, 0);
-            this.lblSname.Name = "lblSname";
-            this.lblSname.Size = new System.Drawing.Size(100, 23);
-            this.lblSname.TabIndex = 0;
-            this.lblSname.Visible = false;
-            // 
-            // lblAddress
-            // 
-            this.lblAddress.Location = new System.Drawing.Point(0, 0);
-            this.lblAddress.Name = "lblAddress";
-            this.lblAddress.Size = new System.Drawing.Size(100, 23);
-            this.lblAddress.TabIndex = 0;
-            this.lblAddress.Visible = false;
-            // 
-            // lblDiscount
-            // 
-            this.lblDiscount.Location = new System.Drawing.Point(0, 0);
-            this.lblDiscount.Name = "lblDiscount";
-            this.lblDiscount.Size = new System.Drawing.Size(100, 23);
-            this.lblDiscount.TabIndex = 0;
-            this.lblDiscount.Visible = false;
-            // 
-            // Form1
+            // Form2
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -397,56 +306,38 @@
             this.ClientSize = new System.Drawing.Size(1300, 650);
             this.Controls.Add(this.panel3);
             this.Controls.Add(this.panel2);
-            this.Controls.Add(this.dataGridView1);
-            this.Controls.Add(this.lblTransno);
-            this.Controls.Add(this.lblTotal);
-            this.Controls.Add(this.lblDisplayTotal);
-            this.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Font = new System.Drawing.Font("Segoe UI", 9.75F);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.MaximizeBox = false;
-            this.Name = "Form1";
+            this.Name = "Form2";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Load += new System.EventHandler(this.Form1_Load);
+            this.Text = "Form2";
             this.panel2.ResumeLayout(false);
             this.panel2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
         #endregion
+
         private System.Windows.Forms.Panel panel2;
+        private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.Button button9;
+        private System.Windows.Forms.Button button2;
+        public System.Windows.Forms.Label lblRole;
+        private System.Windows.Forms.Button button8;
         private System.Windows.Forms.Button button7;
+        private System.Windows.Forms.Button btnSalesHistory;
         private System.Windows.Forms.Button button6;
         private System.Windows.Forms.Button btnBrand;
         private System.Windows.Forms.Button button4;
+        private System.Windows.Forms.Button btnStock;
+        private System.Windows.Forms.Button btnVendor;
+        public System.Windows.Forms.Label lblUserName;
         private System.Windows.Forms.Button btnProduct;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Panel panel3;
-        private System.Windows.Forms.Button btnStock;
-        public System.Windows.Forms.Label lblUserName;
-        private System.Windows.Forms.Button button8;
-        private System.Windows.Forms.Button btnSalesHistory;
-        private System.Windows.Forms.Button btnVendor;
-        public System.Windows.Forms.Label lblRole;
-        private System.Windows.Forms.Button button2;
-        private System.Windows.Forms.PictureBox pictureBox1;
-        private Guna.UI2.WinForms.Guna2BorderlessForm guna2BorderlessForm1;
-        private Guna.UI2.WinForms.Guna2BorderlessForm guna2BorderlessForm2;
-
-        // Missing Objects Defined
-        public System.Windows.Forms.DataGridView dataGridView1;
-        public System.Windows.Forms.Label lblTransno;
-        public System.Windows.Forms.Label lblTotal;
-        public System.Windows.Forms.Label lblDisplayTotal;
-        public System.Windows.Forms.Label lblPhone;
-        public System.Windows.Forms.Label lblSname;
-        public System.Windows.Forms.Label lblAddress;
-        public System.Windows.Forms.Label lblDiscount;
     }
 }
