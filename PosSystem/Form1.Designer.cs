@@ -436,8 +436,8 @@
         public System.Windows.Forms.Label lblRole;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.PictureBox pictureBox1;
-        private Guna.UI2.WinForms.Guna2BorderlessForm guna2BorderlessForm1;
-        private Guna.UI2.WinForms.Guna2BorderlessForm guna2BorderlessForm2;
+        //private Guna.UI2.WinForms.Guna2BorderlessForm guna2BorderlessForm1;
+        //private Guna.UI2.WinForms.Guna2BorderlessForm guna2BorderlessForm2;
 
         // Missing Objects Defined
         public System.Windows.Forms.DataGridView dataGridView1;

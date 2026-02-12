@@ -12,7 +12,6 @@ namespace PosSystem
     {
         private readonly Form1 _parent;
 
-        // Static bitmaps to avoid memory leak
         private static readonly Bitmap StatusActiveDot;
         private static readonly Bitmap StatusInactiveDot;
 
@@ -39,12 +38,15 @@ namespace PosSystem
             _parent = f;
             this.AcceptButton = button1;
 
-            // Wire up events manually only if NOT wired in Designer
             this.Load += frmUserAccount_Load;
             this.dataGridViewActive.CellFormatting += dataGridViewActive_CellFormatting;
 
             this.dataGridViewActive.AutoGenerateColumns = false;
             ConfigureActiveDataGridView();
+
+            // FIX: Ensure the Change Password username field is enabled
+            txtU.Enabled = true;
+            txtU.ReadOnly = false;
         }
 
         private void ConfigureActiveDataGridView()
@@ -83,7 +85,18 @@ namespace PosSystem
             string role = cbRole.Text.Trim();
             string name = txtName.Text.Trim();
 
-            if (!await ValidateNewUserAsync(username, password, txtRePassword.Text, role)) return;
+            // Modified Validation: We allow creation if the user exists but is deleted
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(role))
+            {
+                Notify("Please fill all required fields.", "Error", MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (password != txtRePassword.Text)
+            {
+                Notify("Passwords do not match.", "Error", MessageBoxIcon.Warning);
+                return;
+            }
 
             SetBusyState(true, button1);
             try
@@ -91,13 +104,13 @@ namespace PosSystem
                 bool success = await UserRepositoryV2.CreateAccountAsync(username, password, role, name);
                 if (success)
                 {
-                    Notify("New account successfully initialized.", "Success", MessageBoxIcon.Information);
+                    Notify("Account successfully saved/restored.", "Success", MessageBoxIcon.Information);
                     ClearNewAccountFields();
                     await LoadUserListAsync();
                 }
                 else
                 {
-                    Notify("Username already exists or creation failed.", "Duplicate", MessageBoxIcon.Warning);
+                    Notify("This username is currently active in the system.", "Duplicate", MessageBoxIcon.Warning);
                 }
             }
             catch (Exception ex)
@@ -116,9 +129,15 @@ namespace PosSystem
             string oldPass = txtOld.Text;
             string newPass = txtNew.Text;
 
-            if (string.IsNullOrEmpty(oldPass) || string.IsNullOrEmpty(newPass) || newPass != txtRePass.Text)
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(oldPass) || string.IsNullOrEmpty(newPass))
             {
-                Notify("Validation failed. Check password matching.", "Warning", MessageBoxIcon.Warning);
+                Notify("Please enter Username, Old Password and New Password.", "Warning", MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (newPass != txtRePass.Text)
+            {
+                Notify("New passwords do not match.", "Warning", MessageBoxIcon.Warning);
                 return;
             }
 
@@ -129,11 +148,11 @@ namespace PosSystem
                 if (success)
                 {
                     Notify("Credentials updated successfully.", "Security", MessageBoxIcon.Information);
-                    txtOld.Clear(); txtNew.Clear(); txtRePass.Clear();
+                    txtU.Clear(); txtOld.Clear(); txtNew.Clear(); txtRePass.Clear();
                 }
                 else
                 {
-                    Notify("Incorrect old password or user not found.", "Failed", MessageBoxIcon.Error);
+                    Notify("Invalid username or old password.", "Failed", MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
@@ -172,7 +191,7 @@ namespace PosSystem
                 bool updated = await UserRepositoryV2.UpdateStatusAsync(username, status);
                 if (updated)
                 {
-                    Notify("User status synchronized.", "Success", MessageBoxIcon.Information);
+                    Notify("User status updated.", "Success", MessageBoxIcon.Information);
                     await LoadUserListAsync();
                 }
                 else
@@ -230,19 +249,16 @@ namespace PosSystem
 
                 if (currentStatus && targetUser.ToLower() == currentUser.ToLower())
                 {
-                    Notify("Security Restriction: You cannot deactivate your own account.", "Denied", MessageBoxIcon.Stop);
+                    Notify("You cannot deactivate your own account.", "Denied", MessageBoxIcon.Stop);
                     return;
                 }
 
                 string action = currentStatus ? "deactivate" : "activate";
 
-                if (MessageBox.Show($"Are you sure you want to {action} account: {targetUser}?", "Confirm Change", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                if (MessageBox.Show($"Are you sure you want to {action} account: {targetUser}?", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
                     bool success = await UserRepositoryV2.UpdateStatusAsync(targetUser, !currentStatus);
-                    if (success)
-                    {
-                        await LoadUserListAsync();
-                    }
+                    if (success) await LoadUserListAsync();
                 }
             }
         }
@@ -262,20 +278,16 @@ namespace PosSystem
                         dt.Load(dr);
                     }
                 }
-
                 dataGridViewActive.DataSource = dt;
                 dataGridViewActive.ClearSelection();
             }
             catch (Exception ex) { HandleError("Load Users", ex); }
-            finally
-            {
-                Cursor = Cursors.Default;
-            }
+            finally { Cursor = Cursors.Default; }
         }
 
         #endregion
 
-        #region Fix for Designer Errors (Missing Handlers)
+        #region Fix for Designer Errors
 
         private void panel2_Paint(object sender, PaintEventArgs e) { }
         private void btnSave_Click(object sender, EventArgs e) => ClearNewAccountFields();
@@ -293,14 +305,8 @@ namespace PosSystem
         {
             if (string.IsNullOrWhiteSpace(user)) { Notify("Username required.", "Error", MessageBoxIcon.Warning); return false; }
             if (string.IsNullOrWhiteSpace(role)) { Notify("Select a role.", "Error", MessageBoxIcon.Warning); return false; }
-            if (pass.Length < 4) { Notify("Password too short.", "Error", MessageBoxIcon.Warning); return false; }
+            if (pass.Length < 4) { Notify("Password too short (Min 4).", "Error", MessageBoxIcon.Warning); return false; }
             if (pass != confirm) { Notify("Passwords mismatch.", "Error", MessageBoxIcon.Warning); return false; }
-
-            if (await UserRepositoryV2.UserExistsAsync(user))
-            {
-                Notify("Username already taken.", "Error", MessageBoxIcon.Warning);
-                return false;
-            }
             return true;
         }
 
@@ -327,37 +333,29 @@ namespace PosSystem
                 return;
             }
 
-            // Security Check: Don't delete self
             string currentUser = "";
             try { currentUser = _parent.Controls.Find("lblUser", true)[0].Text; } catch { currentUser = "admin"; }
 
             if (username == currentUser.ToLower())
             {
-                Notify("Security Restriction: You cannot delete your own account while logged in.", "Denied", MessageBoxIcon.Stop);
+                Notify("Security Restriction: You cannot delete yourself.", "Denied", MessageBoxIcon.Stop);
                 return;
             }
 
-            if (MessageBox.Show($"Are you sure you want to PERMANENTLY delete user: {username}?", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            if (MessageBox.Show($"Are you sure you want to delete user: {username}?", "Confirm Delete", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 try
                 {
-                    // Assuming you have a Delete method in your repository that sets isdeleted = 1
                     bool deleted = await UserRepositoryV2.DeleteUserAsync(username);
                     if (deleted)
                     {
-                        Notify("User has been successfully removed.", "Success", MessageBoxIcon.Information);
+                        Notify("User deleted successfully.", "Success", MessageBoxIcon.Information);
                         txtuser2.Clear();
                         await LoadUserListAsync();
                     }
-                    else
-                    {
-                        Notify("User not found.", "Error", MessageBoxIcon.Error);
-                    }
+                    else Notify("User not found.", "Error", MessageBoxIcon.Error);
                 }
-                catch (Exception ex)
-                {
-                    HandleError("Delete Fault", ex);
-                }
+                catch (Exception ex) { HandleError("Delete Fault", ex); }
             }
         }
     }

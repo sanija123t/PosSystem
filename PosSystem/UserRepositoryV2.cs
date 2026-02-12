@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Data.SQLite;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace PosSystem
@@ -9,167 +7,166 @@ namespace PosSystem
     public static class UserRepositoryV2
     {
         /// <summary>
-        /// Creates a new user account with a unique salt and hashed password.
+        /// ELITE: Uses Transactions to ensure account creation or reactivation is atomic.
         /// </summary>
         public static async Task<bool> CreateAccountAsync(string username, string password, string role, string name)
         {
+            if (string.IsNullOrWhiteSpace(username)) return false;
+
             try
             {
-                string salt = Guid.NewGuid().ToString("N");
-                string hashedPassword = DBConnection.GetHash(password, salt);
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
+                {
+                    await cn.OpenAsync();
+                    using (var transaction = cn.BeginTransaction())
+                    {
+                        // 1. Unified Check for existence and status
+                        string checkQuery = "SELECT isdeleted FROM tblUser WHERE username = @user LIMIT 1";
+                        object result;
+                        using (var cmCheck = new SQLiteCommand(checkQuery, cn, transaction))
+                        {
+                            cmCheck.Parameters.AddWithValue("@user", username.Trim().ToLower());
+                            result = await cmCheck.ExecuteScalarAsync();
+                        }
 
-                using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
+                        string newSalt = Guid.NewGuid().ToString("N");
+                        string newHash = DBConnection.GetHash(password, newSalt);
 
-                string query = @"INSERT INTO tblUser (username, password, salt, role, name, isactive, isdeleted)
-                                 VALUES (@username, @password, @salt, @role, @name, 1, 0)";
-                using var cm = new SQLiteCommand(query, cn);
-                cm.Parameters.AddWithValue("@username", username);
-                cm.Parameters.AddWithValue("@password", hashedPassword);
-                cm.Parameters.AddWithValue("@salt", salt);
-                cm.Parameters.AddWithValue("@role", role);
-                cm.Parameters.AddWithValue("@name", name);
+                        if (result != null) // User Exists in history
+                        {
+                            bool isDeleted = Convert.ToInt32(result) == 1;
+                            if (!isDeleted) return false; // Account active, cannot recreate
 
-                int rows = await cm.ExecuteNonQueryAsync();
-                return rows > 0;
+                            // ELITE: Reactivation logic (Overwrites old credentials with new ones)
+                            string reactivateQuery = @"UPDATE tblUser 
+                                                     SET password=@pass, salt=@salt, role=@role, name=@name, isdeleted=0, isactive=1 
+                                                     WHERE username=@user";
+
+                            using (var cmUp = new SQLiteCommand(reactivateQuery, cn, transaction))
+                            {
+                                cmUp.Parameters.AddWithValue("@user", username.Trim().ToLower());
+                                cmUp.Parameters.AddWithValue("@pass", newHash);
+                                cmUp.Parameters.AddWithValue("@salt", newSalt);
+                                cmUp.Parameters.AddWithValue("@role", role);
+                                cmUp.Parameters.AddWithValue("@name", name);
+                                await cmUp.ExecuteNonQueryAsync();
+                            }
+                        }
+                        else // Brand New User
+                        {
+                            string insertQuery = @"INSERT INTO tblUser (username, password, salt, role, name, isactive, isdeleted)
+                                                 VALUES (@username, @password, @salt, @role, @name, 1, 0)";
+
+                            using (var cmIns = new SQLiteCommand(insertQuery, cn, transaction))
+                            {
+                                cmIns.Parameters.AddWithValue("@username", username.Trim().ToLower());
+                                cmIns.Parameters.AddWithValue("@password", newHash);
+                                cmIns.Parameters.AddWithValue("@salt", newSalt);
+                                cmIns.Parameters.AddWithValue("@role", role);
+                                cmIns.Parameters.AddWithValue("@name", name);
+                                await cmIns.ExecuteNonQueryAsync();
+                            }
+                        }
+
+                        transaction.Commit();
+                        return true;
+                    }
+                }
             }
-            catch (SQLiteException ex) when (ex.ResultCode == SQLiteErrorCode.Constraint)
-            {
-                // Username already exists
-                return false;
-            }
-            catch (Exception)
-            {
-                throw; // Let the calling code handle general exceptions
-            }
+            catch (Exception) { throw; }
         }
 
         /// <summary>
-        /// Changes the password for an existing user. Returns true if successful.
+        /// RESTORED: Required by frmUserAccount for the status checkbox logic.
         /// </summary>
-        public static async Task<bool> ChangePasswordAsync(string username, string oldPassword, string newPassword)
-        {
-            try
-            {
-                using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
-
-                // 1. Get current hash and salt
-                string selectQuery = "SELECT password, salt FROM tblUser WHERE username=@username AND isdeleted=0";
-                using var selectCmd = new SQLiteCommand(selectQuery, cn);
-                selectCmd.Parameters.AddWithValue("@username", username);
-
-                using var reader = await selectCmd.ExecuteReaderAsync();
-                if (!reader.Read()) return false;
-
-                string currentHash = reader["password"].ToString();
-                string salt = reader["salt"].ToString();
-                reader.Close();
-
-                // 2. Verify old password
-                string oldHash = DBConnection.GetHash(oldPassword, salt);
-                if (!currentHash.Equals(oldHash)) return false;
-
-                // 3. Generate new salt and hash
-                string newSalt = Guid.NewGuid().ToString("N");
-                string newHash = DBConnection.GetHash(newPassword, newSalt);
-
-                // 4. Update in DB
-                string updateQuery = "UPDATE tblUser SET password=@pass, salt=@salt WHERE username=@username AND isdeleted=0";
-                using var updateCmd = new SQLiteCommand(updateQuery, cn);
-                updateCmd.Parameters.AddWithValue("@pass", newHash);
-                updateCmd.Parameters.AddWithValue("@salt", newSalt);
-                updateCmd.Parameters.AddWithValue("@username", username);
-
-                int rows = await updateCmd.ExecuteNonQueryAsync();
-                return rows > 0;
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-        }
-
-
         public static async Task<bool> GetUserStatusAsync(string username)
         {
-            using var cn = new SQLiteConnection(DBConnection.MyConnection());
-            await cn.OpenAsync();
-            using var cm = new SQLiteCommand("SELECT isactive FROM tblUser WHERE username=@username AND isdeleted=0", cn);
-            cm.Parameters.AddWithValue("@username", username);
-            var result = await cm.ExecuteScalarAsync();
-            return result != null && Convert.ToBoolean(result);
+            using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
+            {
+                await cn.OpenAsync();
+                using (var cm = new SQLiteCommand("SELECT isactive FROM tblUser WHERE username=@username AND isdeleted=0", cn))
+                {
+                    cm.Parameters.AddWithValue("@username", username.Trim().ToLower());
+                    var result = await cm.ExecuteScalarAsync();
+                    return result != null && Convert.ToInt32(result) == 1;
+                }
+            }
         }
 
         /// <summary>
-        /// Activate or deactivate a user account.
+        /// ELITE: Force-generates a NEW salt on password change (Re-salting).
         /// </summary>
-        public static async Task<bool> UpdateStatusAsync(string username, bool isActive)
-        {
-            try
-            {
-                using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
-
-                string query = "UPDATE tblUser SET isactive=@active WHERE username=@username AND isdeleted=0";
-                using var cm = new SQLiteCommand(query, cn);
-                cm.Parameters.AddWithValue("@active", isActive ? 1 : 0);
-                cm.Parameters.AddWithValue("@username", username);
-
-                int rows = await cm.ExecuteNonQueryAsync();
-                return rows > 0;
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-        }
-        public static async Task<bool> DeleteUserAsync(string username)
+        public static async Task<bool> ChangePasswordAsync(string username, string oldPassword, string newPassword)
         {
             try
             {
                 using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     await cn.OpenAsync();
-                    // We use a Soft Delete (isdeleted = 1) to keep data integrity
-                    string query = "UPDATE tblUser SET isdeleted = 1, isactive = 0 WHERE username = @user";
-
-                    using (var cm = new SQLiteCommand(query, cn))
+                    using (var transaction = cn.BeginTransaction())
                     {
-                        cm.Parameters.AddWithValue("@user", username.ToLower());
-                        int rowsAffected = await cm.ExecuteNonQueryAsync();
+                        string currentHash = "";
+                        string currentSalt = "";
 
-                        // Returns true if a user was actually found and updated
-                        return rowsAffected > 0;
+                        using (var selectCmd = new SQLiteCommand("SELECT password, salt FROM tblUser WHERE username=@u AND isdeleted=0", cn, transaction))
+                        {
+                            selectCmd.Parameters.AddWithValue("@u", username.ToLower());
+                            using (var reader = await selectCmd.ExecuteReaderAsync())
+                            {
+                                if (!await reader.ReadAsync()) return false;
+                                currentHash = reader["password"].ToString();
+                                currentSalt = reader["salt"].ToString();
+                            }
+                        }
+
+                        // Cryptographic Verification
+                        if (!currentHash.Equals(DBConnection.GetHash(oldPassword, currentSalt))) return false;
+
+                        // Re-salting
+                        string newSalt = Guid.NewGuid().ToString("N");
+                        string newHash = DBConnection.GetHash(newPassword, newSalt);
+
+                        using (var updateCmd = new SQLiteCommand("UPDATE tblUser SET password=@pass, salt=@s WHERE username=@u", cn, transaction))
+                        {
+                            updateCmd.Parameters.AddWithValue("@pass", newHash);
+                            updateCmd.Parameters.AddWithValue("@s", newSalt);
+                            updateCmd.Parameters.AddWithValue("@u", username.ToLower());
+                            await updateCmd.ExecuteNonQueryAsync();
+                        }
+
+                        transaction.Commit();
+                        return true;
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception) { throw; }
+        }
+
+        public static async Task<bool> UpdateStatusAsync(string username, bool isActive)
+        {
+            using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
             {
-                throw;
+                await cn.OpenAsync();
+                using (var cm = new SQLiteCommand("UPDATE tblUser SET isactive=@active WHERE username=@u AND isdeleted=0", cn))
+                {
+                    cm.Parameters.AddWithValue("@active", isActive ? 1 : 0);
+                    cm.Parameters.AddWithValue("@u", username.Trim().ToLower());
+                    return await cm.ExecuteNonQueryAsync() > 0;
+                }
             }
         }
 
-        /// <summary>
-        /// Checks if a username exists (optional helper).
-        /// </summary>
-        public static async Task<bool> UserExistsAsync(string username)
+        public static async Task<bool> DeleteUserAsync(string username)
         {
-            try
+            using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
             {
-                using var cn = new SQLiteConnection(DBConnection.MyConnection());
                 await cn.OpenAsync();
-
-                string query = "SELECT COUNT(*) FROM tblUser WHERE username=@username AND isdeleted=0";
-                using var cm = new SQLiteCommand(query, cn);
-                cm.Parameters.AddWithValue("@username", username);
-
-                int count = Convert.ToInt32(await cm.ExecuteScalarAsync());
-                return count > 0;
-            }
-            catch
-            {
-                return false;
+                // Soft Delete
+                using (var cm = new SQLiteCommand("UPDATE tblUser SET isdeleted=1, isactive=0 WHERE username=@u", cn))
+                {
+                    cm.Parameters.AddWithValue("@u", username.Trim().ToLower());
+                    return await cm.ExecuteNonQueryAsync() > 0;
+                }
             }
         }
     }

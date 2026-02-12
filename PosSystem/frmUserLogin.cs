@@ -10,12 +10,9 @@ namespace PosSystem
         public frmUserLogin()
         {
             InitializeComponent();
-            this.AcceptButton = btnSave; // Enter triggers login
+            this.AcceptButton = btnSave;
 
-            // Ensure password masking
             txtPass.UseSystemPasswordChar = true;
-
-            // MetroTextBox placeholder equivalent
             txtUser.WaterMark = "Enter your username";
             txtPass.WaterMark = "Enter your password";
         }
@@ -37,110 +34,111 @@ namespace PosSystem
 
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                MessageBox.Show("Enter both username and password", "Login",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Please enter credentials.", "Login", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            btnSave.Enabled = false;
-            Cursor = Cursors.WaitCursor;
+            ToggleUI(false);
 
             try
             {
-                // We run the logic and get a result object back
-                var (isSuccess, foundUsername, role, message) = await Task.Run(() => ValidateLogin(username, password));
+                var result = await ValidateLoginAsync(username, password);
 
-                if (isSuccess)
+                if (result.isSuccess)
                 {
-                    OpenDashboard(foundUsername, role);
+                    RedirectUser(result.Username, result.Role);
                 }
                 else
                 {
-                    // If login failed, show the specific message returned by ValidateLogin
-                    MessageBox.Show(message, "Login", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(result.Message, "Login failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     txtPass.Clear();
                     txtPass.Focus();
+                    ToggleUI(true);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Login error: " + ex.Message, "Login",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                btnSave.Enabled = true;
-                Cursor = Cursors.Default;
+                MessageBox.Show("Database Error: " + ex.Message, "Critical Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                ToggleUI(true);
             }
         }
 
-        private (bool isSuccess, string Username, string Role, string Message) ValidateLogin(string username, string password)
+        private void ToggleUI(bool enabled)
         {
-            using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
+            btnSave.Enabled = enabled;
+            this.UseWaitCursor = !enabled;
+        }
+
+        private async Task<(bool isSuccess, string Username, string Role, string Message)> ValidateLoginAsync(string username, string password)
+        {
+            try
             {
-                cn.Open();
-
-                // We select isactive as well to check it in C#
-                string sql = @"SELECT username, role, password, salt, isactive 
-                               FROM tblUser 
-                               WHERE username = @u 
-                               AND isdeleted = 0";
-
-                using (var cm = new SQLiteCommand(sql, cn))
+                using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
-                    cm.Parameters.AddWithValue("@u", username);
+                    await cn.OpenAsync();
+                    // Select only required fields
+                    string sql = "SELECT username, role, password, salt, isactive FROM tblUser WHERE username=@u AND isdeleted=0 LIMIT 1";
 
-                    using (var dr = cm.ExecuteReader())
+                    using (var cm = new SQLiteCommand(sql, cn))
                     {
-                        if (dr.Read())
+                        cm.Parameters.AddWithValue("@u", username.ToLower());
+                        using (var dr = await cm.ExecuteReaderAsync())
                         {
-                            // 1. Check if the account is active first
-                            int activeStatus = Convert.ToInt32(dr["isactive"]);
-                            if (activeStatus == 0)
+                            if (await dr.ReadAsync())
                             {
-                                return (false, null, null, "Your account has been deactivated. Please contact your administrator.");
-                            }
+                                if (Convert.ToInt32(dr["isactive"]) == 0)
+                                    return (false, null, null, "Account deactivated.");
 
-                            // 2. If active, validate the password
-                            string storedHash = dr["password"].ToString();
-                            string salt = dr["salt"].ToString();
-                            string inputHash = DBConnection.GetHash(password, salt);
+                                string storedHash = dr["password"].ToString();
+                                string salt = dr["salt"].ToString();
 
-                            if (inputHash == storedHash)
-                            {
-                                return (true, dr["username"].ToString(), dr["role"].ToString(), "Success");
+                                // Offload hashing to background thread
+                                string inputHash = await Task.Run(() => DBConnection.GetHash(password, salt));
+
+                                if (inputHash == storedHash)
+                                    return (true, dr["username"].ToString(), dr["role"].ToString(), "Success");
                             }
                         }
                     }
                 }
             }
-
-            // Default fallback for wrong username or wrong password
-            return (false, null, null, "Invalid login credentials");
+            catch { throw; }
+            return (false, null, null, "Invalid username or password.");
         }
 
-        private void OpenDashboard(string username, string role)
+        private void RedirectUser(string username, string role)
         {
-            try
+            Form nextForm = null;
+
+            // ELITE ROLE REDIRECTION: Fixed to match "Administrator" from DBConnection
+            if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                role.Equals("Administrator", StringComparison.OrdinalIgnoreCase))
+            {
+                Form1 adminDash = new Form1();
+                adminDash.lblUserName.Text = username;
+                adminDash.lblRole.Text = role;
+                nextForm = adminDash;
+            }
+            else if (role.Equals("Cashier", StringComparison.OrdinalIgnoreCase))
+            {
+                frmPOS cashierDash = new frmPOS();
+                // If your frmPOS needs labels, set them here:
+                // cashierDash.lblUser.Text = username;
+                nextForm = cashierDash;
+            }
+
+            if (nextForm != null)
             {
                 this.Hide();
-
-                Form1 dashboard = new Form1
-                {
-                    StartPosition = FormStartPosition.CenterScreen
-                };
-
-                dashboard.lblUserName.Text = username;
-                dashboard.lblRole.Text = role;
-
-                dashboard.FormClosed += (s, e) => Application.Exit();
-                dashboard.Show();
+                nextForm.StartPosition = FormStartPosition.CenterScreen;
+                nextForm.FormClosed += (s, e) => Application.Exit();
+                nextForm.Show();
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show("Error opening dashboard: " + ex.Message,
-                    "Login", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                this.Show();
+                // This matches the error in your screenshot
+                MessageBox.Show($"Role '{role}' not recognized. Access denied.", "Security Error", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                ToggleUI(true);
             }
         }
     }
