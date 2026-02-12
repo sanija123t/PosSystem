@@ -98,7 +98,7 @@
             this.txtOld.Multiline = true;
             this.txtOld.Name = "txtOld";
             this.txtOld.PasswordChar = '*';
-            //this.txtOld.PromptText = "Old Password";
+            this.txtOld.WaterMark = "Old Password";
             this.txtOld.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.txtOld.SelectedText = "";
             this.txtOld.SelectionLength = 0;
@@ -110,6 +110,7 @@
             this.txtOld.WaterMark = "Old Password";
             this.txtOld.WaterMarkColor = System.Drawing.Color.FromArgb(((int)(((byte)(109)))), ((int)(((byte)(109)))), ((int)(((byte)(109)))));
             this.txtOld.WaterMarkFont = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold);
+            this.txtOld.Click += new System.EventHandler(this.txtOld_Click);
             // 
             // txtNew
             // 
@@ -133,7 +134,7 @@
             this.txtNew.Multiline = true;
             this.txtNew.Name = "txtNew";
             this.txtNew.PasswordChar = '*';
-            //this.txtNew.PromptText = "New Password";
+            this.txtNew.WaterMark = "New Password";
             this.txtNew.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.txtNew.SelectedText = "";
             this.txtNew.SelectionLength = 0;
@@ -145,6 +146,7 @@
             this.txtNew.WaterMark = "New Password";
             this.txtNew.WaterMarkColor = System.Drawing.Color.FromArgb(((int)(((byte)(109)))), ((int)(((byte)(109)))), ((int)(((byte)(109)))));
             this.txtNew.WaterMarkFont = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold);
+            this.txtNew.Click += new System.EventHandler(this.txtNew_Click);
             // 
             // txtConfirm
             // 
@@ -168,7 +170,7 @@
             this.txtConfirm.Multiline = true;
             this.txtConfirm.Name = "txtConfirm";
             this.txtConfirm.PasswordChar = '*';
-            //this.txtConfirm.PromptText = "Confirm Password";
+            this.txtConfirm.WaterMark = "Confirm Password";
             this.txtConfirm.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.txtConfirm.SelectedText = "";
             this.txtConfirm.SelectionLength = 0;
@@ -180,6 +182,7 @@
             this.txtConfirm.WaterMark = "Confirm Password";
             this.txtConfirm.WaterMarkColor = System.Drawing.Color.FromArgb(((int)(((byte)(109)))), ((int)(((byte)(109)))), ((int)(((byte)(109)))));
             this.txtConfirm.WaterMarkFont = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold);
+            this.txtConfirm.Click += new System.EventHandler(this.txtConfirm_Click);
             // 
             // frmChangePaasword
             // 

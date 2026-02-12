@@ -128,6 +128,7 @@ namespace PosSystem
             this.txtID.Name = "txtID";
             this.txtID.Size = new System.Drawing.Size(270, 27);
             this.txtID.TabIndex = 4;
+            this.txtID.TextChanged += new System.EventHandler(this.txtID_TextChanged);
             // 
             // label3
             // 
@@ -145,6 +146,7 @@ namespace PosSystem
             this.txtTransno.Name = "txtTransno";
             this.txtTransno.Size = new System.Drawing.Size(351, 27);
             this.txtTransno.TabIndex = 4;
+            this.txtTransno.TextChanged += new System.EventHandler(this.txtTransno_TextChanged);
             // 
             // label4
             // 
@@ -174,6 +176,7 @@ namespace PosSystem
             this.txtPcode.Name = "txtPcode";
             this.txtPcode.Size = new System.Drawing.Size(270, 27);
             this.txtPcode.TabIndex = 4;
+            this.txtPcode.TextChanged += new System.EventHandler(this.txtPcode_TextChanged);
             // 
             // label6
             // 
@@ -192,6 +195,7 @@ namespace PosSystem
             this.txtDesc.Name = "txtDesc";
             this.txtDesc.Size = new System.Drawing.Size(270, 50);
             this.txtDesc.TabIndex = 4;
+            this.txtDesc.TextChanged += new System.EventHandler(this.txtDesc_TextChanged);
             // 
             // label7
             // 
@@ -210,6 +214,7 @@ namespace PosSystem
             this.txtPrice.Size = new System.Drawing.Size(351, 27);
             this.txtPrice.TabIndex = 4;
             this.txtPrice.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.txtPrice.TextChanged += new System.EventHandler(this.txtPrice_TextChanged);
             // 
             // label8
             // 
@@ -228,6 +233,7 @@ namespace PosSystem
             this.txtQty.Size = new System.Drawing.Size(176, 27);
             this.txtQty.TabIndex = 4;
             this.txtQty.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.txtQty.TextChanged += new System.EventHandler(this.txtQty_TextChanged);
             // 
             // label9
             // 
@@ -246,6 +252,7 @@ namespace PosSystem
             this.txtTotal.Size = new System.Drawing.Size(351, 27);
             this.txtTotal.TabIndex = 4;
             this.txtTotal.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.txtTotal.TextChanged += new System.EventHandler(this.txtTotal_TextChanged);
             // 
             // label10
             // 
@@ -275,6 +282,7 @@ namespace PosSystem
             this.txtVoidBy.Name = "txtVoidBy";
             this.txtVoidBy.Size = new System.Drawing.Size(191, 27);
             this.txtVoidBy.TabIndex = 4;
+            this.txtVoidBy.TextChanged += new System.EventHandler(this.txtVoidBy_TextChanged);
             // 
             // label12
             // 
@@ -292,6 +300,7 @@ namespace PosSystem
             this.txtCancelled.Name = "txtCancelled";
             this.txtCancelled.Size = new System.Drawing.Size(191, 27);
             this.txtCancelled.TabIndex = 4;
+            this.txtCancelled.TextChanged += new System.EventHandler(this.txtCancelled_TextChanged);
             // 
             // label13
             // 
@@ -309,6 +318,7 @@ namespace PosSystem
             this.txtReason.Name = "txtReason";
             this.txtReason.Size = new System.Drawing.Size(373, 119);
             this.txtReason.TabIndex = 4;
+            this.txtReason.TextChanged += new System.EventHandler(this.txtReason_TextChanged);
             // 
             // label14
             // 
@@ -329,6 +339,7 @@ namespace PosSystem
             this.cbAction.Name = "cbAction";
             this.cbAction.Size = new System.Drawing.Size(191, 28);
             this.cbAction.TabIndex = 6;
+            this.cbAction.SelectedIndexChanged += new System.EventHandler(this.cbAction_SelectedIndexChanged);
             this.cbAction.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.cbAction_KeyPress);
             // 
             // btnSave
@@ -361,6 +372,7 @@ namespace PosSystem
             this.txtCancelQty.Name = "txtCancelQty";
             this.txtCancelQty.Size = new System.Drawing.Size(373, 27);
             this.txtCancelQty.TabIndex = 4;
+            this.txtCancelQty.TextChanged += new System.EventHandler(this.txtCancelQty_TextChanged_1);
             // 
             // txtDiscount
             // 
@@ -370,6 +382,7 @@ namespace PosSystem
             this.txtDiscount.Size = new System.Drawing.Size(169, 27);
             this.txtDiscount.TabIndex = 11;
             this.txtDiscount.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.txtDiscount.TextChanged += new System.EventHandler(this.txtDiscount_TextChanged);
             // 
             // frmCancelDetails
             // 

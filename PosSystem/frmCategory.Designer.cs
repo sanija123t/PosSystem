@@ -128,6 +128,7 @@ namespace PosSystem
             this.txtcategory.Name = "txtcategory";
             this.txtcategory.Size = new System.Drawing.Size(235, 26);
             this.txtcategory.TabIndex = 8;
+            this.txtcategory.TextChanged += new System.EventHandler(this.txtcategory_TextChanged);
             // 
             // label2
             // 

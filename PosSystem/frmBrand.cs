@@ -2,197 +2,204 @@
 using System.Data.SQLite;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Drawing;
 
 namespace PosSystem
 {
     public partial class frmBrand : Form
     {
-        private SQLiteConnection cn;
-        private SQLiteCommand cm;
-        private readonly frmBrandList frmlist;
+        // ELITE: Connection string cached from our updated DBConnection
+        private readonly string _connectionString = DBConnection.MyConnection();
+        private readonly frmBrandList _frmlist;
 
         public frmBrand(frmBrandList flist)
         {
             InitializeComponent();
-            frmlist = flist;
+            _frmlist = flist;
 
-            // Button initial states
-            button1.Enabled = true;  // Save
-            button2.Enabled = false; // Update
-
-            // Keyboard shortcuts
+            this.StartPosition = FormStartPosition.CenterParent;
             this.KeyPreview = true;
             this.KeyDown += FrmBrand_KeyDown;
         }
 
-        // 🔹 Keyboard shortcuts: Enter = Save/Update, Esc = Close
         private void FrmBrand_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Escape)
-                this.Dispose();
+            if (e.KeyCode == Keys.Escape) this.Dispose();
             else if (e.KeyCode == Keys.Enter)
             {
-                if (button1.Enabled) button1.PerformClick();
-                else if (button2.Enabled) button2.PerformClick();
+                e.SuppressKeyPress = true;
+                if (button1.Enabled) button1_Click(sender, e);
+                else if (button2.Enabled) button2_Click(sender, e);
             }
         }
 
-        // 🔹 Clear input for new entry
         private void Clear()
         {
             txtBrand.Clear();
+            lblId.Text = ""; // Clear the hidden ID
             txtBrand.Focus();
             button1.Enabled = true;
             button2.Enabled = false;
         }
 
-        // =========================
-        // 🔹 SAVE BRAND (with double-click protection)
-        // =========================
+        // ============================================================
+        // 🔹 SAVE BRAND (Enterprise Implementation)
+        // ============================================================
         private async void button1_Click(object sender, EventArgs e)
         {
-            button1.Enabled = false; // prevent multiple clicks
             string brandName = txtBrand.Text.Trim();
 
+            // ENTERPRISE: Strict Input Validation
             if (string.IsNullOrWhiteSpace(brandName))
             {
-                MessageBox.Show("Please enter a brand name.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                button1.Enabled = true;
-                return;
-            }
-
-            if (!await ConfirmAndCheckDuplicate(brandName, isUpdate: false))
-            {
-                button1.Enabled = true;
+                MessageBox.Show("Brand name is required to proceed.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtBrand.Focus();
                 return;
             }
 
             try
             {
-                using (cn = new SQLiteConnection(DBConnection.MyConnection()))
+                // ENTERPRISE: Lock UI to prevent duplicate entries
+                this.Cursor = Cursors.WaitCursor;
+                button1.Enabled = false;
+
+                // 1. Check Duplicate First
+                if (await IsDuplicate(brandName))
+                {
+                    MessageBox.Show($"Brand '{brandName}' already exists in the system.", "Duplicate Conflict", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    return;
+                }
+
+                // 2. Confirm Save
+                if (MessageBox.Show($"Are you sure you want to save '{brandName}'?", "Confirm Save", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+                    return;
+
+                using (var cn = new SQLiteConnection(_connectionString))
                 {
                     await cn.OpenAsync();
-                    string sql = "INSERT INTO BrandTbl (brand) VALUES (@brand)";
-                    using (cm = new SQLiteCommand(sql, cn))
+                    // ENTERPRISE: Using Transaction for Atomic consistency
+                    using (var transaction = cn.BeginTransaction())
                     {
-                        cm.Parameters.AddWithValue("@brand", brandName);
-                        await cm.ExecuteNonQueryAsync();
+                        using (var cm = new SQLiteCommand("INSERT INTO BrandTbl (brand) VALUES (@brand)", cn, transaction))
+                        {
+                            cm.Parameters.AddWithValue("@brand", brandName);
+                            await cm.ExecuteNonQueryAsync();
+                        }
+                        transaction.Commit();
                     }
                 }
 
-                MessageBox.Show($"Brand '{brandName}' successfully added!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("New brand has been successfully registered.", "Registry Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                if (frmlist != null)
-                    await frmlist.LoadRecordsAsync(brandName); // refresh list with search highlight
-
+                if (_frmlist != null) await _frmlist.LoadRecordsAsync();
                 Clear();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error saving brand:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("System Error while saving: " + ex.Message, "Enterprise Database Failure", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                button1.Enabled = true; // re-enable in case of error
+                this.Cursor = Cursors.Default;
+                button1.Enabled = true; // Unlock UI
             }
         }
 
-        // =========================
-        // 🔹 UPDATE BRAND (with double-click protection)
-        // =========================
+        // ============================================================
+        // 🔹 UPDATE BRAND (Enterprise Implementation)
+        // ============================================================
         private async void button2_Click(object sender, EventArgs e)
         {
-            button2.Enabled = false; // prevent multiple clicks
             string brandName = txtBrand.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(brandName))
+            if (string.IsNullOrWhiteSpace(brandName) || string.IsNullOrEmpty(lblId.Text))
             {
-                MessageBox.Show("Brand name cannot be empty.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                button2.Enabled = true;
-                return;
-            }
-
-            if (!await ConfirmAndCheckDuplicate(brandName, isUpdate: true))
-            {
-                button2.Enabled = true;
+                MessageBox.Show("Target brand ID or name is missing. Please reload the record.", "System Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             try
             {
-                using (cn = new SQLiteConnection(DBConnection.MyConnection()))
+                this.Cursor = Cursors.WaitCursor;
+                button2.Enabled = false;
+
+                if (await IsDuplicate(brandName, lblId.Text))
+                {
+                    MessageBox.Show($"The name '{brandName}' is already assigned to another brand.", "Conflict Detected", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    return;
+                }
+
+                if (MessageBox.Show($"Update current record to '{brandName}'?", "Confirm Update", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+                    return;
+
+                using (var cn = new SQLiteConnection(_connectionString))
                 {
                     await cn.OpenAsync();
-                    string sql = "UPDATE BrandTbl SET brand = @brand WHERE id = @id";
-                    using (cm = new SQLiteCommand(sql, cn))
+                    using (var transaction = cn.BeginTransaction())
                     {
-                        cm.Parameters.AddWithValue("@brand", brandName);
-                        cm.Parameters.AddWithValue("@id", lblId.Text);
-                        await cm.ExecuteNonQueryAsync();
+                        using (var cm = new SQLiteCommand("UPDATE BrandTbl SET brand=@brand WHERE id=@id", cn, transaction))
+                        {
+                            cm.Parameters.AddWithValue("@brand", brandName);
+                            cm.Parameters.AddWithValue("@id", lblId.Text);
+                            await cm.ExecuteNonQueryAsync();
+                        }
+                        transaction.Commit();
                     }
                 }
 
-                MessageBox.Show($"Brand '{brandName}' successfully updated!", "Update", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                if (frmlist != null)
-                    await frmlist.LoadRecordsAsync(brandName);
-
+                MessageBox.Show("Record modified successfully.", "Update Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (_frmlist != null) await _frmlist.LoadRecordsAsync();
                 this.Dispose();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error updating brand:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("System Error while updating: " + ex.Message, "Enterprise Update Failure", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                button2.Enabled = true; // re-enable in case of error
+                this.Cursor = Cursors.Default;
+                button2.Enabled = true;
             }
         }
 
-        // =========================
-        // 🔹 CANCEL / CLOSE FORM
-        // =========================
-        private void btnCancel_Click(object sender, EventArgs e) => this.Dispose();
-        private void pictureBox1_Click(object sender, EventArgs e) => this.Dispose();
-
-        private void frmBrand_Load(object sender, EventArgs e)
+        // ============================================================
+        // 🔹 HELPER: DUPLICATE CHECK
+        // ============================================================
+        private async Task<bool> IsDuplicate(string brandName, string id = "")
         {
-            // You can leave this empty or use it to focus the textbox
-            txtBrand.Focus();
-        }
-
-        // =========================
-        // 🔹 DUPLICATE CHECK & CONFIRMATION
-        // =========================
-        private async Task<bool> ConfirmAndCheckDuplicate(string brandName, bool isUpdate)
-        {
-            string msg = isUpdate ? "Are you sure you want to update this brand?" :
-                                    "Are you sure you want to save this brand?";
-
-            if (MessageBox.Show(msg, "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return false;
-
-            using (cn = new SQLiteConnection(DBConnection.MyConnection()))
+            try
             {
-                await cn.OpenAsync();
-                string sql = "SELECT COUNT(*) FROM BrandTbl WHERE brand = @brand";
-                if (isUpdate) sql += " AND id != @id";
-
-                using (cm = new SQLiteCommand(sql, cn))
+                using (var cn = new SQLiteConnection(_connectionString))
                 {
-                    cm.Parameters.AddWithValue("@brand", brandName);
-                    if (isUpdate) cm.Parameters.AddWithValue("@id", lblId.Text);
+                    await cn.OpenAsync();
+                    // Case-insensitive check using LOWER()
+                    string sql = "SELECT COUNT(*) FROM BrandTbl WHERE LOWER(brand) = LOWER(@brand)";
+                    if (!string.IsNullOrEmpty(id)) sql += " AND id != @id";
 
-                    int count = Convert.ToInt32(await cm.ExecuteScalarAsync());
-                    if (count > 0)
+                    using (var cm = new SQLiteCommand(sql, cn))
                     {
-                        MessageBox.Show("This brand already exists!", "Duplicate", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return false;
+                        cm.Parameters.AddWithValue("@brand", brandName);
+                        if (!string.IsNullOrEmpty(id)) cm.Parameters.AddWithValue("@id", id);
+
+                        int count = Convert.ToInt32(await cm.ExecuteScalarAsync());
+                        return count > 0;
                     }
                 }
             }
+            catch { return false; } // Fail-safe
+        }
 
-            return true;
+        // ------------------------------------------------------------
+        // 🔹 JUNK LINES (Preserving for Designer Compatibility)
+        // ------------------------------------------------------------
+        private void btnCancel_Click(object sender, EventArgs e) => this.Dispose();
+        private void pictureBox1_Click(object sender, EventArgs e) => this.Dispose();
+        private void frmBrand_Load(object sender, EventArgs e) => txtBrand.Focus();
+        private void button3_Click(object sender, EventArgs e) => Clear();
+
+        private void txtBrand_TextChanged(object sender, EventArgs e)
+        {
+            // Do not remove: Designer dependency
         }
     }
 }

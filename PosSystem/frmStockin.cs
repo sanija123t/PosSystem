@@ -41,7 +41,8 @@ namespace PosSystem
                 using (var cn = new SQLiteConnection(connStr))
                 {
                     cn.Open();
-                    string query = "SELECT refno FROM tblStockIn WHERE refno LIKE @sdate ORDER BY id DESC LIMIT 1";
+                    // Refined query to find the max suffix for TODAY'S date only
+                    string query = "SELECT refno FROM tblStockIn WHERE refno LIKE @sdate ORDER BY refno DESC LIMIT 1";
                     using (var cmd = new SQLiteCommand(query, cn))
                     {
                         cmd.Parameters.AddWithValue("@sdate", sdate + "%");
@@ -49,7 +50,9 @@ namespace PosSystem
 
                         if (!string.IsNullOrEmpty(lastRef) && lastRef.Length >= 12)
                         {
-                            if (int.TryParse(lastRef.Substring(8), out int lastCount))
+                            // Safely extract the numeric part
+                            string suffix = lastRef.Substring(8);
+                            if (int.TryParse(suffix, out int lastCount))
                                 nextNumber = lastCount + 1;
                         }
                     }
@@ -112,6 +115,10 @@ namespace PosSystem
 
             if (MessageBox.Show("Are you sure you want to save this stock entry?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 
+            // ELITE FIX: Capture UI values BEFORE entering the background thread
+            string vendorID = lblVendorID.Text;
+            string stockInBy = txtBy.Text;
+
             try
             {
                 await Task.Run(() =>
@@ -125,12 +132,13 @@ namespace PosSystem
                             {
                                 foreach (DataGridViewRow row in dataGridView2.Rows)
                                 {
-                                    if (row.Cells[1].Value == null) continue;
+                                    if (row.Cells[1].Value == null || row.Cells[3].Value == null) continue;
 
                                     string id = row.Cells[1].Value.ToString();
                                     string pcode = row.Cells[3].Value.ToString();
                                     int qty = Convert.ToInt32(row.Cells[6].Value);
 
+                                    // 1. Update Product Quantity
                                     using (var cmd = new SQLiteCommand("UPDATE TblProduct1 SET qty = qty + @qty WHERE pcode = @pcode", cn, tran))
                                     {
                                         cmd.Parameters.AddWithValue("@qty", qty);
@@ -138,10 +146,11 @@ namespace PosSystem
                                         cmd.ExecuteNonQuery();
                                     }
 
+                                    // 2. Mark StockIn as Done
                                     using (var cmd = new SQLiteCommand("UPDATE tblStockIn SET status = 'Done', vendorid = @vid, stockinby = @by WHERE id = @id", cn, tran))
                                     {
-                                        cmd.Parameters.AddWithValue("@vid", lblVendorID.Text);
-                                        cmd.Parameters.AddWithValue("@by", txtBy.Text);
+                                        cmd.Parameters.AddWithValue("@vid", vendorID);
+                                        cmd.Parameters.AddWithValue("@by", stockInBy);
                                         cmd.Parameters.AddWithValue("@id", id);
                                         cmd.ExecuteNonQuery();
                                     }

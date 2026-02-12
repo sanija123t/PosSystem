@@ -120,6 +120,7 @@ namespace PosSystem
             this.txtBarcod.Name = "txtBarcod";
             this.txtBarcod.Size = new System.Drawing.Size(286, 27);
             this.txtBarcod.TabIndex = 3;
+            this.txtBarcod.TextChanged += new System.EventHandler(this.txtBarcod_TextChanged);
             // 
             // number
             // 
@@ -127,6 +128,7 @@ namespace PosSystem
             this.number.Name = "number";
             this.number.Size = new System.Drawing.Size(286, 27);
             this.number.TabIndex = 5;
+            this.number.ValueChanged += new System.EventHandler(this.number_ValueChanged);
             // 
             // label3
             // 
@@ -144,6 +146,7 @@ namespace PosSystem
             this.pictureBox.Size = new System.Drawing.Size(165, 59);
             this.pictureBox.TabIndex = 7;
             this.pictureBox.TabStop = false;
+            this.pictureBox.Click += new System.EventHandler(this.pictureBox_Click);
             // 
             // btnGenerate
             // 
@@ -165,6 +168,7 @@ namespace PosSystem
             // dataSet11
             // 
             this.dataSet11.DataSetName = "DataSet1";
+            this.dataSet11.Namespace = "http://tempuri.org/DataSet1.xsd";
             this.dataSet11.SchemaSerializationMode = System.Data.SchemaSerializationMode.IncludeSchema;
             // 
             // frmCreatebarcode

@@ -77,6 +77,7 @@ namespace PosSystem
             this.txtBrand.Name = "txtBrand";
             this.txtBrand.Size = new System.Drawing.Size(272, 27);
             this.txtBrand.TabIndex = 2;
+            this.txtBrand.TextChanged += new System.EventHandler(this.txtBrand_TextChanged);
             // 
             // button1
             // 
@@ -121,6 +122,7 @@ namespace PosSystem
             this.button3.TabIndex = 5;
             this.button3.Text = "Cancel";
             this.button3.UseVisualStyleBackColor = false;
+            this.button3.Click += new System.EventHandler(this.button3_Click);
             // 
             // lblId
             // 

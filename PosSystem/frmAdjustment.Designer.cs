@@ -84,6 +84,7 @@
             this.txtRef.Name = "txtRef";
             this.txtRef.Size = new System.Drawing.Size(345, 20);
             this.txtRef.TabIndex = 15;
+            this.txtRef.TextChanged += new System.EventHandler(this.txtRef_TextChanged);
             // 
             // label3
             // 
@@ -101,6 +102,7 @@
             this.txtPcode.Name = "txtPcode";
             this.txtPcode.Size = new System.Drawing.Size(345, 20);
             this.txtPcode.TabIndex = 13;
+            this.txtPcode.TextChanged += new System.EventHandler(this.txtPcode_TextChanged);
             // 
             // label4
             // 
@@ -117,6 +119,7 @@
             this.txtdesc.Name = "txtdesc";
             this.txtdesc.Size = new System.Drawing.Size(345, 20);
             this.txtdesc.TabIndex = 11;
+            this.txtdesc.TextChanged += new System.EventHandler(this.txtdesc_TextChanged);
             // 
             // cbCommands
             // 
@@ -128,6 +131,7 @@
             this.cbCommands.Name = "cbCommands";
             this.cbCommands.Size = new System.Drawing.Size(319, 21);
             this.cbCommands.TabIndex = 3;
+            this.cbCommands.SelectedIndexChanged += new System.EventHandler(this.cbCommands_SelectedIndexChanged);
             // 
             // label5
             // 
@@ -144,6 +148,7 @@
             this.txtQty.Name = "txtQty";
             this.txtQty.Size = new System.Drawing.Size(345, 20);
             this.txtQty.TabIndex = 9;
+            this.txtQty.TextChanged += new System.EventHandler(this.txtQty_TextChanged);
             // 
             // label6
             // 
@@ -169,6 +174,7 @@
             this.txtRemarks.Name = "txtRemarks";
             this.txtRemarks.Size = new System.Drawing.Size(319, 20);
             this.txtRemarks.TabIndex = 7;
+            this.txtRemarks.TextChanged += new System.EventHandler(this.txtRemarks_TextChanged);
             // 
             // label8
             // 
@@ -186,6 +192,7 @@
             this.txtUser.Name = "txtUser";
             this.txtUser.Size = new System.Drawing.Size(319, 20);
             this.txtUser.TabIndex = 5;
+            this.txtUser.TextChanged += new System.EventHandler(this.txtUser_TextChanged);
             // 
             // dataGridView1
             // 
@@ -292,6 +299,7 @@
             this.txtSearch.WaterMark = "Search here";
             this.txtSearch.WaterMarkColor = System.Drawing.Color.FromArgb(((int)(((byte)(109)))), ((int)(((byte)(109)))), ((int)(((byte)(109)))));
             this.txtSearch.WaterMarkFont = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Pixel);
+            this.txtSearch.Click += new System.EventHandler(this.txtSearch_Click);
             this.txtSearch.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtSearch_KeyPress);
             // 
             // frmAdjustment
