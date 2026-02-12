@@ -8,14 +8,24 @@ namespace PosSystem
     public partial class frmDiscount : Form
     {
         private readonly string stitle = "POS System";
-        private readonly Form1 f;
         private readonly frmPOS fPOS;
 
-        public frmDiscount(Form1 frm)
+        // 🔹 Callback approach for decoupling if needed in future
+        public Action<double, double> OnDiscountApplied;
+
+        // ✅ Added property to fix CS1061
+        public double DiscountAmount
         {
-            InitializeComponent();
-            f = frm;
-            KeyPreview = true;
+            get
+            {
+                if (double.TryParse(txtAmount.Text, out double amount))
+                    return amount;
+                return 0;
+            }
+            set
+            {
+                txtAmount.Text = value.ToString("0.00");
+            }
         }
 
         public frmDiscount(frmPOS frm)
@@ -51,9 +61,8 @@ namespace PosSystem
             if (!double.TryParse(txtDiscount.Text, out double percent))
                 percent = 0;
 
-            // Ensure discount % is within logical range
-            if (percent < 0) percent = 0;
-            if (percent > 100) percent = 100;
+            // ✅ Manual clamp for .NET Framework
+            percent = (percent < 0) ? 0 : (percent > 100) ? 100 : percent;
 
             double discount = price * (percent / 100.0);
             txtAmount.Text = discount.ToString("#,##0.00");
@@ -105,7 +114,10 @@ namespace PosSystem
                     await cm.ExecuteNonQueryAsync();
                 }
 
-                // Refresh cart if POS form is active
+                // 🔹 Trigger callback if any
+                OnDiscountApplied?.Invoke(discAmount, discPercent);
+
+                // Refresh POS cart
                 fPOS?.LoadCart();
 
                 Dispose();

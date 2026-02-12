@@ -39,6 +39,7 @@ namespace PosSystem
             InitializeComponent();
             f = frm;
             this.KeyPreview = true;
+            this.KeyDown += frmPOS_KeyDown;
             pd.PrintPage += PrintReceiptPage;
 
             timer1.Interval = 1000;
@@ -89,7 +90,7 @@ namespace PosSystem
                     }
                 }
                 UpdateTotals(total);
-                // Auto-scroll to last item for better UX
+
                 if (dataGridView1.Rows.Count > 0)
                     dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.Rows.Count - 1;
             }
@@ -118,7 +119,6 @@ namespace PosSystem
             btnSattle.Enabled = false;
             bool success = false;
 
-            // Collect items safely
             printItems = new List<ReceiptItem>();
             foreach (DataGridViewRow r in dataGridView1.Rows)
             {
@@ -168,7 +168,6 @@ namespace PosSystem
                             {
                                 foreach (var item in printItems)
                                 {
-                                    // Check current stock first
                                     int currentQty = 0;
                                     using (SQLiteCommand cmCheck = new SQLiteCommand(
                                         "SELECT qty FROM tblProduct1 WHERE pcode = @pcode", cn))
@@ -181,7 +180,6 @@ namespace PosSystem
                                     if (currentQty < item.Qty)
                                         throw new Exception($"Stock error: {item.Description} has only {currentQty} left.");
 
-                                    // Update stock safely
                                     using (SQLiteCommand cmUpdate = new SQLiteCommand(
                                         "UPDATE tblProduct1 SET qty = qty - @qty WHERE pcode = @pcode", cn))
                                     {
@@ -240,12 +238,144 @@ namespace PosSystem
                 GetTransNo();
                 LoadCart();
 
-                // Reset focus for faster workflow
                 if (dataGridView1.Rows.Count > 0)
                     dataGridView1.Focus();
             }
 
             btnSattle.Enabled = true;
+        }
+
+        #endregion
+
+        #region BUTTON HANDLERS
+
+        private void btnTrans_Click(object sender, EventArgs e)
+        {
+            GetTransNo();
+            LoadCart();
+            dataGridView1.Focus();
+        }
+
+        private void btnSearch_Click(object sender, EventArgs e)
+        {
+            using (frmLookUp lookup = new frmLookUp())
+            {
+                if (lookup.ShowDialog() == DialogResult.OK)
+                {
+                    string pcode = lookup.SelectedPCode;
+                    string desc = lookup.SelectedDescription;
+                    decimal price = lookup.SelectedPrice;
+                    int qty = 1;
+
+                    using (frmQty qtyForm = new frmQty())
+                    {
+                        if (qtyForm.ShowDialog() == DialogResult.OK)
+                        {
+                            qty = qtyForm.Quantity;
+                        }
+                    }
+
+                    decimal total = price * qty;
+
+                    using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
+                    {
+                        cn.Open();
+                        using (SQLiteCommand cmd = new SQLiteCommand(
+                            "INSERT INTO tblCart1 (transno,pcode,pdesc,price,qty,total,status) VALUES " +
+                            "(@transno,@pcode,@pdesc,@price,@qty,@total,'Pending')", cn))
+                        {
+                            cmd.Parameters.AddWithValue("@transno", lblTransno.Text);
+                            cmd.Parameters.AddWithValue("@pcode", pcode);
+                            cmd.Parameters.AddWithValue("@pdesc", desc);
+                            cmd.Parameters.AddWithValue("@price", price);
+                            cmd.Parameters.AddWithValue("@qty", qty);
+                            cmd.Parameters.AddWithValue("@total", total);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    LoadCart();
+                }
+            }
+        }
+
+        private void btnDiscount_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.CurrentRow == null) return;
+
+            using (frmDiscount disc = new frmDiscount(this))
+            {
+                if (disc.ShowDialog() == DialogResult.OK)
+                {
+                    decimal discount = (decimal)disc.DiscountAmount;
+                    int idx = dataGridView1.CurrentRow.Index;
+
+                    decimal price = Convert.ToDecimal(dataGridView1.Rows[idx].Cells[4].Value);
+                    int qty = Convert.ToInt32(dataGridView1.Rows[idx].Cells[5].Value);
+                    decimal total = (price * qty) - discount;
+
+                    dataGridView1.Rows[idx].Cells[6].Value = discount;
+                    dataGridView1.Rows[idx].Cells[7].Value = total;
+
+                    UpdateTotals(dataGridView1.Rows.Cast<DataGridViewRow>()
+                        .Sum(r => Convert.ToDecimal(r.Cells[7].Value)));
+                }
+            }
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Cancel this transaction?", stitle, MessageBoxButtons.YesNo) == DialogResult.Yes)
+            {
+                using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
+                {
+                    cn.Open();
+                    using (SQLiteCommand cmd = new SQLiteCommand(
+                        "DELETE FROM tblCart1 WHERE transno = @transno AND status='Pending'", cn))
+                    {
+                        cmd.Parameters.AddWithValue("@transno", lblTransno.Text);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                GetTransNo();
+                LoadCart();
+            }
+        }
+
+        private void btnSales_Click(object sender, EventArgs e)
+        {
+            using (frmSettel settle = new frmSettel(this))
+            {
+                settle.ShowDialog();
+            }
+        }
+
+        private void btnSattle_Click(object sender, EventArgs e)
+        {
+            SettlePayment();
+        }
+
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        #endregion
+
+        #region KEYBOARD SHORTCUTS
+
+        private void frmPOS_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.F1: btnTrans.PerformClick(); break;
+                case Keys.F2: btnSearch.PerformClick(); break;
+                case Keys.F3: btnDiscount.PerformClick(); break;
+                case Keys.F4: btnSattle.PerformClick(); break;
+                case Keys.F5: btnCancel.PerformClick(); break;
+                case Keys.F6: btnSales.PerformClick(); break;
+                case Keys.F10: btnClose.PerformClick(); break;
+            }
         }
 
         #endregion
@@ -341,7 +471,7 @@ namespace PosSystem
                         while (dr.Read())
                         {
                             ShowPopupSafe($"{dr["pdesc"]} has only {dr["qty"]} left!");
-                            Thread.Sleep(200); // small delay to batch notifications
+                            Thread.Sleep(200);
                         }
                     }
                 }
@@ -377,10 +507,7 @@ namespace PosSystem
 
         private void EnsureLogDirectory()
         {
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(logFile));
-            }
+            try { Directory.CreateDirectory(Path.GetDirectoryName(logFile)); }
             catch { }
         }
 
@@ -393,49 +520,17 @@ namespace PosSystem
             lblDate.Text = DateTime.Now.ToString("MMMM dd, yyyy | hh:mm:ss tt");
         }
 
-        private void btnClose_Click(object sender, EventArgs e) => Dispose();
-        private void btnSattle_Click(object sender, EventArgs e) => SettlePayment();
-
-        #endregion
-
         private void label14_Click(object sender, EventArgs e) { }
         private void LblUser_Click(object sender, EventArgs e) { }
         private void lblName_Click(object sender, EventArgs e) { }
         private void label7_Click(object sender, EventArgs e) { }
+        private void label6_Click(object sender, EventArgs e) { }
         private void label2_Click(object sender, EventArgs e) { }
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e) { }
         private void dataGridView1_SelectionChanged(object sender, EventArgs e) { }
         private void lblSname_Click(object sender, EventArgs e) { }
 
-        private void btnSearch_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnTrans_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnDiscount_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnCancel_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnSales_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void label6_Click(object sender, EventArgs e)
-        {
-
-        }
+        #endregion
     }
 
     public class ReceiptItem

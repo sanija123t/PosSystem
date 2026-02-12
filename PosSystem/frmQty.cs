@@ -16,6 +16,15 @@ namespace PosSystem
         private Form1 f;
         private frmPOS fPOS;
 
+        // Public property to expose quantity
+        public int Quantity { get; private set; }
+
+        // Parameterless constructor for compatibility
+        public frmQty()
+        {
+            InitializeComponent();
+        }
+
         public frmQty(Form1 frm)
         {
             InitializeComponent();
@@ -59,6 +68,8 @@ namespace PosSystem
                 txtQty.Focus();
                 return;
             }
+
+            Quantity = inputQty; // Set public property
 
             try
             {

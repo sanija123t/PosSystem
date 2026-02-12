@@ -19,14 +19,14 @@ namespace PosSystem
         {
             InitializeComponent();
             f = fp;
-            this.KeyPreview = true;
+            KeyPreview = true;
         }
 
         public frmSettel(frmPOS fp)
         {
             InitializeComponent();
             fPOS = fp;
-            this.KeyPreview = true;
+            KeyPreview = true;
         }
 
         private void frmSettel_Load(object sender, EventArgs e)
@@ -71,9 +71,8 @@ namespace PosSystem
             {
                 if (!string.IsNullOrEmpty(currentOperator) && !operatorClicked)
                 {
-                    // Perform previous operation if user clicks multiple operators
                     val = Calculate(tempValue, val, currentOperator);
-                    txtCash.Text = val.ToString("0.00"); // temporary display
+                    txtCash.Text = val.ToString("0.00");
                 }
                 tempValue = val;
                 currentOperator = btn.Text;
@@ -81,7 +80,6 @@ namespace PosSystem
             }
             else
             {
-                // If txtCash empty or invalid, just set operator
                 currentOperator = btn.Text;
                 operatorClicked = true;
             }
@@ -90,10 +88,10 @@ namespace PosSystem
         private void btnEquals_Click(object sender, EventArgs e)
         {
             if (!decimal.TryParse(txtCash.Text, out decimal secondValue))
-                secondValue = tempValue; // if user hits = without second number
+                secondValue = tempValue;
 
             decimal result = Calculate(tempValue, secondValue, currentOperator);
-            txtCash.Text = result.ToString("0.00"); // clean, no commas
+            txtCash.Text = result.ToString("0.00");
             tempValue = 0;
             currentOperator = "";
             operatorClicked = false;
@@ -101,14 +99,14 @@ namespace PosSystem
 
         private decimal Calculate(decimal first, decimal second, string op)
         {
-            switch (op)
+            return op switch
             {
-                case "+": return first + second;
-                case "-": return first - second;
-                case "*": return first * second;
-                case "/": return second != 0 ? first / second : 0;
-                default: return second;
-            }
+                "+" => first + second,
+                "-" => first - second,
+                "*" => first * second,
+                "/" => second != 0 ? first / second : 0,
+                _ => second
+            };
         }
 
         #endregion
@@ -120,7 +118,7 @@ namespace PosSystem
                 decimal sale = decimal.TryParse(txtSale.Text, out decimal s) ? s : 0;
                 decimal cash = decimal.TryParse(txtCash.Text, out decimal c) ? c : 0;
                 decimal change = cash - sale;
-                txtChange.Text = (change < 0) ? "0.00" : change.ToString("0.00"); // formatted for display only
+                txtChange.Text = (change < 0) ? "0.00" : change.ToString("0.00");
             }
             catch
             {
@@ -130,10 +128,10 @@ namespace PosSystem
 
         private void btnEnter_Click(object sender, EventArgs e)
         {
-            string currentTransNo = (fPOS != null) ? fPOS.lblTransno.Text : f.lblTransno.Text;
-            Form activeForm = (fPOS != null) ? (Form)fPOS : (Form)f;
+            string currentTransNo = fPOS != null ? fPOS.lblTransno.Text : f.lblTransno.Text;
+            Form activeForm = fPOS != null ? (Form)fPOS : (Form)f;
 
-            DataGridView dgv = (fPOS != null) ? fPOS.dataGridView1 : f.dataGridView1;
+            DataGridView dgv = fPOS != null ? fPOS.dataGridView1 : f.dataGridView1;
             if (dgv.Rows.Count == 0) return;
 
             decimal saleAmount = decimal.TryParse(txtSale.Text, out decimal s) ? s : 0;
@@ -152,13 +150,13 @@ namespace PosSystem
                     cn.Open();
                     using (var transaction = cn.BeginTransaction())
                     {
-                        for (int i = 0; i < dgv.Rows.Count; i++)
+                        foreach (DataGridViewRow row in dgv.Rows)
                         {
-                            if (dgv.Rows[i].IsNewRow) continue;
+                            if (row.IsNewRow) continue;
 
-                            string pcode = dgv.Rows[i].Cells[2].Value?.ToString();
-                            int soldQty = int.TryParse(dgv.Rows[i].Cells[5].Value?.ToString(), out int q) ? q : 0;
-                            int cartId = int.TryParse(dgv.Rows[i].Cells[1].Value?.ToString(), out int id) ? id : 0;
+                            string pcode = row.Cells[2].Value?.ToString();
+                            int soldQty = int.TryParse(row.Cells[5].Value?.ToString(), out int q) ? q : 0;
+                            int cartId = int.TryParse(row.Cells[1].Value?.ToString(), out int id) ? id : 0;
 
                             using (var cmdCheck = new SQLiteCommand("SELECT qty FROM TblProduct1 WHERE pcode=@pcode", cn))
                             {
@@ -189,7 +187,7 @@ namespace PosSystem
                     }
                 }
 
-                // Receipt
+                // Show receipt
                 frmResipt frm = new frmResipt(activeForm);
                 frm.LoadReport(txtCash.Text, txtChange.Text);
                 frm.ShowDialog();
@@ -200,7 +198,7 @@ namespace PosSystem
                 if (fPOS != null) { fPOS.GetTransNo(); fPOS.LoadCart(); }
                 else { f.GetTransNo(); f.LoadCart(); }
 
-                this.Dispose();
+                Dispose();
             }
             catch (Exception ex)
             {
@@ -235,10 +233,8 @@ namespace PosSystem
 
         private void txtSale_TextChanged(object sender, EventArgs e)
         {
-            // Optionally recalc change immediately
             txtCash_TextChanged(sender, e);
         }
-
 
         #endregion
 
