@@ -170,6 +170,30 @@ INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
                         using (var cm = new SQLiteCommand(script, cn))
                             cm.ExecuteNonQuery();
 
+                        // SAFETY CHECK: Add isactive column if it doesn't exist (for existing databases)
+                        try
+                        {
+                            using (var checkCol = new SQLiteCommand("PRAGMA table_info(tblUser);", cn))
+                            using (var reader = checkCol.ExecuteReader())
+                            {
+                                bool exists = false;
+                                while (reader.Read())
+                                {
+                                    if (reader["name"].ToString().Equals("isactive", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        exists = true;
+                                        break;
+                                    }
+                                }
+                                if (!exists)
+                                {
+                                    using (var alter = new SQLiteCommand("ALTER TABLE tblUser ADD COLUMN isactive INTEGER DEFAULT 1;", cn))
+                                        alter.ExecuteNonQuery();
+                                }
+                            }
+                        }
+                        catch { /* Column already exists or table busy */ }
+
                         // VAT row
                         using (var vatCheck = new SQLiteCommand("SELECT COUNT(*) FROM tblVat", cn))
                         {
@@ -187,7 +211,7 @@ INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
                             {
                                 string salt = Guid.NewGuid().ToString("N");
                                 using (var insertAdmin = new SQLiteCommand(
-                                    "INSERT INTO tblUser (username,password,salt,role,name) VALUES ('admin',@pass,@salt,'Administrator','System Admin')", cn))
+                                    "INSERT INTO tblUser (username,password,salt,role,name,isactive) VALUES ('admin',@pass,@salt,'Administrator','System Admin', 1)", cn))
                                 {
                                     insertAdmin.Parameters.AddWithValue("@salt", salt);
                                     insertAdmin.Parameters.AddWithValue("@pass", GetHash("admin123", salt));

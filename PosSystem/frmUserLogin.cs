@@ -47,16 +47,17 @@ namespace PosSystem
 
             try
             {
-                var loginResult = await Task.Run(() => ValidateLogin(username, password));
+                // We run the logic and get a result object back
+                var (isSuccess, foundUsername, role, message) = await Task.Run(() => ValidateLogin(username, password));
 
-                if (loginResult.isSuccess)
+                if (isSuccess)
                 {
-                    OpenDashboard(loginResult.Username, loginResult.Role);
+                    OpenDashboard(foundUsername, role);
                 }
                 else
                 {
-                    MessageBox.Show("Invalid login credentials", "Login",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    // If login failed, show the specific message returned by ValidateLogin
+                    MessageBox.Show(message, "Login", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     txtPass.Clear();
                     txtPass.Focus();
                 }
@@ -73,16 +74,16 @@ namespace PosSystem
             }
         }
 
-        private (bool isSuccess, string Username, string Role) ValidateLogin(string username, string password)
+        private (bool isSuccess, string Username, string Role, string Message) ValidateLogin(string username, string password)
         {
             using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
             {
                 cn.Open();
 
-                string sql = @"SELECT username, role, password, salt 
+                // We select isactive as well to check it in C#
+                string sql = @"SELECT username, role, password, salt, isactive 
                                FROM tblUser 
                                WHERE username = @u 
-                               AND isactive = 1 
                                AND isdeleted = 0";
 
                 using (var cm = new SQLiteCommand(sql, cn))
@@ -93,19 +94,29 @@ namespace PosSystem
                     {
                         if (dr.Read())
                         {
+                            // 1. Check if the account is active first
+                            int activeStatus = Convert.ToInt32(dr["isactive"]);
+                            if (activeStatus == 0)
+                            {
+                                return (false, null, null, "Your account has been deactivated. Please contact your administrator.");
+                            }
+
+                            // 2. If active, validate the password
                             string storedHash = dr["password"].ToString();
                             string salt = dr["salt"].ToString();
-
                             string inputHash = DBConnection.GetHash(password, salt);
 
                             if (inputHash == storedHash)
-                                return (true, dr["username"].ToString(), dr["role"].ToString());
+                            {
+                                return (true, dr["username"].ToString(), dr["role"].ToString(), "Success");
+                            }
                         }
                     }
                 }
             }
 
-            return (false, null, null);
+            // Default fallback for wrong username or wrong password
+            return (false, null, null, "Invalid login credentials");
         }
 
         private void OpenDashboard(string username, string role)

@@ -30,6 +30,8 @@ namespace PosSystem
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmUserAccount));
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             this.panel1 = new System.Windows.Forms.Panel();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
             this.label1 = new System.Windows.Forms.Label();
@@ -61,10 +63,18 @@ namespace PosSystem
             this.label11 = new System.Windows.Forms.Label();
             this.tabPage3 = new System.Windows.Forms.TabPage();
             this.panel3 = new System.Windows.Forms.Panel();
+            this.dataGridViewActive = new System.Windows.Forms.DataGridView();
+            this.colName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.isactive = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colUser = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colRole = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.StatusDot = new System.Windows.Forms.DataGridViewImageColumn();
+            this.Revoke = new System.Windows.Forms.DataGridViewButtonColumn();
             this.button2 = new System.Windows.Forms.Button();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.txtuser2 = new System.Windows.Forms.TextBox();
             this.label9 = new System.Windows.Forms.Label();
+            this.btndeluser = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.panel2.SuspendLayout();
@@ -73,6 +83,7 @@ namespace PosSystem
             this.tabPage2.SuspendLayout();
             this.tabPage3.SuspendLayout();
             this.panel3.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridViewActive)).BeginInit();
             this.SuspendLayout();
             // 
             // panel1
@@ -399,6 +410,8 @@ namespace PosSystem
             // 
             // panel3
             // 
+            this.panel3.Controls.Add(this.btndeluser);
+            this.panel3.Controls.Add(this.dataGridViewActive);
             this.panel3.Controls.Add(this.button2);
             this.panel3.Controls.Add(this.checkBox1);
             this.panel3.Controls.Add(this.txtuser2);
@@ -409,6 +422,94 @@ namespace PosSystem
             this.panel3.Size = new System.Drawing.Size(994, 499);
             this.panel3.TabIndex = 0;
             // 
+            // dataGridViewActive
+            // 
+            this.dataGridViewActive.AllowUserToAddRows = false;
+            this.dataGridViewActive.AllowUserToDeleteRows = false;
+            this.dataGridViewActive.AllowUserToResizeColumns = false;
+            this.dataGridViewActive.AllowUserToResizeRows = false;
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle1.BackColor = System.Drawing.SystemColors.Control;
+            dataGridViewCellStyle1.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle1.ForeColor = System.Drawing.SystemColors.WindowText;
+            dataGridViewCellStyle1.Padding = new System.Windows.Forms.Padding(0, 5, 0, 5);
+            dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+            this.dataGridViewActive.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
+            this.dataGridViewActive.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridViewActive.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.colName,
+            this.isactive,
+            this.colUser,
+            this.colRole,
+            this.StatusDot,
+            this.Revoke});
+            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle2.BackColor = System.Drawing.SystemColors.Window;
+            dataGridViewCellStyle2.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            dataGridViewCellStyle2.ForeColor = System.Drawing.SystemColors.ControlText;
+            dataGridViewCellStyle2.Padding = new System.Windows.Forms.Padding(2);
+            dataGridViewCellStyle2.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle2.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.dataGridViewActive.DefaultCellStyle = dataGridViewCellStyle2;
+            this.dataGridViewActive.Location = new System.Drawing.Point(18, 131);
+            this.dataGridViewActive.MultiSelect = false;
+            this.dataGridViewActive.Name = "dataGridViewActive";
+            this.dataGridViewActive.ReadOnly = true;
+            this.dataGridViewActive.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.dataGridViewActive.Size = new System.Drawing.Size(950, 363);
+            this.dataGridViewActive.TabIndex = 31;
+            this.dataGridViewActive.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewActive_CellContentClick);
+            // 
+            // colName
+            // 
+            this.colName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.colName.DataPropertyName = "name";
+            this.colName.HeaderText = "Name";
+            this.colName.Name = "colName";
+            this.colName.ReadOnly = true;
+            // 
+            // isactive
+            // 
+            this.isactive.HeaderText = "isactive";
+            this.isactive.Name = "isactive";
+            this.isactive.ReadOnly = true;
+            this.isactive.Visible = false;
+            this.isactive.Width = 5;
+            // 
+            // colUser
+            // 
+            this.colUser.DataPropertyName = "username";
+            this.colUser.HeaderText = "User Name";
+            this.colUser.Name = "colUser";
+            this.colUser.ReadOnly = true;
+            this.colUser.Width = 200;
+            // 
+            // colRole
+            // 
+            this.colRole.DataPropertyName = "role";
+            this.colRole.HeaderText = "Role";
+            this.colRole.Name = "colRole";
+            this.colRole.ReadOnly = true;
+            this.colRole.Width = 150;
+            // 
+            // StatusDot
+            // 
+            this.StatusDot.HeaderText = "Status";
+            this.StatusDot.ImageLayout = System.Windows.Forms.DataGridViewImageCellLayout.Zoom;
+            this.StatusDot.Name = "StatusDot";
+            this.StatusDot.ReadOnly = true;
+            // 
+            // Revoke
+            // 
+            this.Revoke.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.Revoke.HeaderText = "Revoke";
+            this.Revoke.Name = "Revoke";
+            this.Revoke.ReadOnly = true;
+            this.Revoke.Width = 150;
+            // 
             // button2
             // 
             this.button2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(38)))), ((int)(((byte)(38)))));
@@ -416,7 +517,7 @@ namespace PosSystem
             this.button2.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.button2.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.button2.ForeColor = System.Drawing.Color.White;
-            this.button2.Location = new System.Drawing.Point(626, 156);
+            this.button2.Location = new System.Drawing.Point(626, 95);
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(75, 30);
             this.button2.TabIndex = 30;
@@ -427,7 +528,7 @@ namespace PosSystem
             // checkBox1
             // 
             this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(320, 156);
+            this.checkBox1.Location = new System.Drawing.Point(320, 95);
             this.checkBox1.Name = "checkBox1";
             this.checkBox1.Size = new System.Drawing.Size(84, 24);
             this.checkBox1.TabIndex = 7;
@@ -436,7 +537,7 @@ namespace PosSystem
             // 
             // txtuser2
             // 
-            this.txtuser2.Location = new System.Drawing.Point(317, 121);
+            this.txtuser2.Location = new System.Drawing.Point(317, 60);
             this.txtuser2.Name = "txtuser2";
             this.txtuser2.Size = new System.Drawing.Size(384, 27);
             this.txtuser2.TabIndex = 6;
@@ -445,11 +546,26 @@ namespace PosSystem
             // label9
             // 
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(218, 124);
+            this.label9.Location = new System.Drawing.Point(218, 63);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(85, 20);
             this.label9.TabIndex = 5;
             this.label9.Text = "User Name";
+            // 
+            // btndeluser
+            // 
+            this.btndeluser.BackColor = System.Drawing.Color.Maroon;
+            this.btndeluser.FlatAppearance.BorderSize = 0;
+            this.btndeluser.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btndeluser.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btndeluser.ForeColor = System.Drawing.Color.White;
+            this.btndeluser.Location = new System.Drawing.Point(535, 95);
+            this.btndeluser.Name = "btndeluser";
+            this.btndeluser.Size = new System.Drawing.Size(75, 30);
+            this.btndeluser.TabIndex = 32;
+            this.btndeluser.Text = "Delete";
+            this.btndeluser.UseVisualStyleBackColor = false;
+            this.btndeluser.Click += new System.EventHandler(this.btndeluser_Click);
             // 
             // frmUserAccount
             // 
@@ -480,6 +596,7 @@ namespace PosSystem
             this.tabPage3.ResumeLayout(false);
             this.panel3.ResumeLayout(false);
             this.panel3.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridViewActive)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -521,5 +638,13 @@ namespace PosSystem
         private System.Windows.Forms.CheckBox checkBox1;
         private System.Windows.Forms.TextBox txtuser2;
         private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.DataGridView dataGridViewActive;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn isactive;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colUser;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colRole;
+        private System.Windows.Forms.DataGridViewImageColumn StatusDot;
+        private System.Windows.Forms.DataGridViewButtonColumn Revoke;
+        public System.Windows.Forms.Button btndeluser;
     }
 }
