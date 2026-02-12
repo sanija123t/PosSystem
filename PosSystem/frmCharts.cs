@@ -14,7 +14,7 @@ namespace PosSystem
         {
             InitializeComponent();
             KeyPreview = true;
-            // ELITE: Performance optimization for charting
+            // ELITE Performance
             chart1.AntiAliasing = AntiAliasingStyles.All;
             chart1.TextAntiAliasingQuality = TextAntiAliasingQuality.High;
         }
@@ -24,15 +24,11 @@ namespace PosSystem
             this.Dispose();
         }
 
-        // ============================================================
-        // 🔹 ELITE-LEVEL ASYNC CHART LOAD (Fixed & Optimized)
-        // ============================================================
         public async Task LoadCardSoldAsync(string sql)
         {
-            // 1. Reset Chart State
             chart1.Series.Clear();
             chart1.Titles.Clear();
-            chart1.Legends.Clear(); // Reset legends for enterprise refresh
+            chart1.Legends.Clear();
             chart1.DataSource = null;
 
             try
@@ -46,7 +42,6 @@ namespace PosSystem
                         DataTable dt = new DataTable();
                         await Task.Run(() => da.Fill(dt));
 
-                        // 2. Create Series with Elite Styling
                         Series series = new Series("Sold Items")
                         {
                             ChartType = SeriesChartType.Pie,
@@ -59,22 +54,23 @@ namespace PosSystem
                             Palette = ChartColorPalette.BrightPastel
                         };
 
-                        // 3. Configure 3D Area & Legend Layout
-                        if (chart1.ChartAreas.Count > 0)
-                        {
-                            chart1.ChartAreas[0].Area3DStyle.Enable3D = true;
-                            chart1.ChartAreas[0].Area3DStyle.Inclination = 45;
-                        }
-
-                        // ENTERPRISE: Add Legend to the Right Side
+                        // Legend setup for Right-Side descriptions
                         Legend leg = new Legend("MainLegend")
                         {
                             Docking = Docking.Right,
                             Alignment = StringAlignment.Center,
                             BackColor = Color.Transparent,
-                            Font = new Font("Segoe UI", 9, FontStyle.Regular)
+                            Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                            Title = "PRODUCT LIST",
+                            TitleFont = new Font("Segoe UI", 9, FontStyle.Bold)
                         };
                         chart1.Legends.Add(leg);
+
+                        if (chart1.ChartAreas.Count > 0)
+                        {
+                            chart1.ChartAreas[0].Area3DStyle.Enable3D = true;
+                            chart1.ChartAreas[0].Area3DStyle.Inclination = 45;
+                        }
 
                         chart1.Series.Add(series);
 
@@ -85,57 +81,44 @@ namespace PosSystem
                             series.YValueMembers = "total";
                             chart1.DataBind();
 
-                            // 4. Elite Logic: Legend setup & Top Item Explosion
-                            double maxValue = 0;
-                            DataPoint maxPoint = null;
-
                             foreach (DataPoint p in series.Points)
                             {
-                                // ENTERPRISE: Link descriptions to legend
-                                p.LegendText = p.AxisLabel;
-
-                                if (p.YValues[0] > maxValue)
-                                {
-                                    maxValue = p.YValues[0];
-                                    maxPoint = p;
-                                }
+                                p.LegendText = "#VALX (#PERCENT{P0})";
                             }
 
-                            if (maxPoint != null)
-                            {
-                                maxPoint["Exploded"] = "true";
-                                maxPoint.LabelForeColor = Color.DarkRed;
-                            }
-
-                            var mainTitle = chart1.Titles.Add("TOP SELLING ITEMS BY REVENUE");
+                            var mainTitle = chart1.Titles.Add("TOP SELLING ITEMS");
                             mainTitle.Font = new Font("Segoe UI", 12, FontStyle.Bold);
                         }
                         else
                         {
-                            // 5. Handling No Data (Enterprise Safety)
-                            // Fully gray-out the chart and hide labels/legends
-                            series.Points.AddXY("No Data", 1);
+                            // Enterprise Gray-Out Mode (Mismatch/No Data Safety)
+                            chart1.Legends["MainLegend"].Enabled = false;
+                            series.Points.AddXY("No Data Available", 1);
                             series.Points[0].Color = Color.LightGray;
-                            series.Points[0].BorderColor = Color.Gray;
+                            series.Points[0].BorderColor = Color.DarkGray;
                             series.IsValueShownAsLabel = false;
-                            chart1.Legends["MainLegend"].Enabled = false; // Hide legend if no data
 
-                            var emptyTitle = chart1.Titles.Add("NO SALES DATA FOUND FOR THIS PERIOD");
-                            emptyTitle.ForeColor = Color.Red;
-                            emptyTitle.Font = new Font("Segoe UI", 10, FontStyle.Italic);
+                            var emptyTitle = chart1.Titles.Add("NO DATA FOR SELECTED PERIOD");
+                            emptyTitle.ForeColor = Color.DimGray;
+                            emptyTitle.Font = new Font("Segoe UI", 11, FontStyle.Italic);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Business Intelligence Error: " + ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("BI Engine Error: " + ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void chart1_Click(object sender, EventArgs e)
         {
-            // Junk line preserved for designer
+            // Junk line for designer
+        }
+
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+            // Junk line for designer
         }
     }
 }
