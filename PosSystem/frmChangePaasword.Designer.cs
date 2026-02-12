@@ -98,7 +98,7 @@
             this.txtOld.Multiline = true;
             this.txtOld.Name = "txtOld";
             this.txtOld.PasswordChar = '*';
-            this.txtOld.PromptText = "Old Password";
+            //this.txtOld.PromptText = "Old Password";
             this.txtOld.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.txtOld.SelectedText = "";
             this.txtOld.SelectionLength = 0;
@@ -133,7 +133,7 @@
             this.txtNew.Multiline = true;
             this.txtNew.Name = "txtNew";
             this.txtNew.PasswordChar = '*';
-            this.txtNew.PromptText = "New Password";
+            //this.txtNew.PromptText = "New Password";
             this.txtNew.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.txtNew.SelectedText = "";
             this.txtNew.SelectionLength = 0;
@@ -168,7 +168,7 @@
             this.txtConfirm.Multiline = true;
             this.txtConfirm.Name = "txtConfirm";
             this.txtConfirm.PasswordChar = '*';
-            this.txtConfirm.PromptText = "Confirm Password";
+            //this.txtConfirm.PromptText = "Confirm Password";
             this.txtConfirm.ScrollBars = System.Windows.Forms.ScrollBars.None;
             this.txtConfirm.SelectedText = "";
             this.txtConfirm.SelectionLength = 0;
