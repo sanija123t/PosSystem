@@ -127,6 +127,7 @@
             this.panelSubSettings.Name = "panelSubSettings";
             this.panelSubSettings.Size = new System.Drawing.Size(243, 70);
             this.panelSubSettings.TabIndex = 6;
+            this.panelSubSettings.Paint += new System.Windows.Forms.PaintEventHandler(this.panelSubSettings_Paint);
             // 
             // btnStoreSettings
             // 
@@ -259,6 +260,7 @@
             this.panelSubProduct.Name = "panelSubProduct";
             this.panelSubProduct.Size = new System.Drawing.Size(243, 105);
             this.panelSubProduct.TabIndex = 0;
+            this.panelSubProduct.Paint += new System.Windows.Forms.PaintEventHandler(this.panelSubProduct_Paint);
             // 
             // btnManageBrand
             // 
@@ -341,6 +343,7 @@
             this.panelSubStocks.Name = "panelSubStocks";
             this.panelSubStocks.Size = new System.Drawing.Size(243, 105);
             this.panelSubStocks.TabIndex = 19;
+            this.panelSubStocks.Paint += new System.Windows.Forms.PaintEventHandler(this.panelSubStocks_Paint);
             // 
             // btnStockEntry
             // 

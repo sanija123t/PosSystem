@@ -20,14 +20,46 @@ namespace PosSystem
         public Form1()
         {
             InitializeComponent();
+            CustomizeDesign(); // Initialize sub-panel states
             NotifyCriticalItems();
         }
 
         private async void Form1_Load(object sender, EventArgs e)
         {
-            // async dashboard load after form is fully created
             await MyDashbordAsync();
         }
+
+        #region Sidebar UI Toggle Logic
+        // Sets initial state of the dropdown panels to hidden
+        private void CustomizeDesign()
+        {
+            panelSubProduct.Visible = false;
+            panelSubStocks.Visible = false;
+            panelSubSettings.Visible = false;
+            // Add other sub-panels here as you design them
+        }
+
+        // Handles the "Shrink and Drop" logic
+        private void HideSubMenu()
+        {
+            if (panelSubProduct.Visible) panelSubProduct.Visible = false;
+            if (panelSubStocks.Visible) panelSubStocks.Visible = false;
+            if (panelSubSettings.Visible) panelSubSettings.Visible = false;
+        }
+
+        private void ShowSubMenu(Panel subMenu)
+        {
+            if (subMenu.Visible == false)
+            {
+                HideSubMenu(); // Shrink currently open dropdowns
+                subMenu.Visible = true; // Drop the new one
+            }
+            else
+            {
+                subMenu.Visible = false; // Toggle off if clicked again
+            }
+        }
+        #endregion
 
         #region User Session
         public void SetUserSession(string user, string role, string name)
@@ -147,7 +179,7 @@ namespace PosSystem
         }
         #endregion
 
-        #region Button Handlers
+        #region Button Handlers (Old Buttons - Unchanged)
         private void btnBrand_Click(object sender, EventArgs e) => OpenChildForm(new frmBrandList());
 
         private void button4_Click(object sender, EventArgs e)
@@ -204,15 +236,17 @@ namespace PosSystem
             frm.ShowDialog();
         }
 
-        private void button1_Click(object sender, EventArgs e) => _ = MyDashbordAsync();
+        private void button1_Click(object sender, EventArgs e)
+        {
+            HideSubMenu(); // Shrink panels when returning to Dashboard
+            _ = MyDashbordAsync();
+        }
 
         private async void button2_Click(object sender, EventArgs e)
         {
-            // ✅ Correctly create instance and call async method
             var frm = new frmAdjustment(this);
             await frm.LoadRecordsAsync();
             frm.txtUser.Text = _user;
-            string refNo = frm.txtRef.Text;
             frm.ShowDialog();
         }
 
@@ -227,17 +261,48 @@ namespace PosSystem
         }
         #endregion
 
-        #region Utility Methods
+        #region New Toggle Handlers
+        private void btnStockMain_Click(object sender, EventArgs e)
+        {
+            ShowSubMenu(panelSubStocks);
+        }
+
+        private void btnProductMain_Click(object sender, EventArgs e)
+        {
+            ShowSubMenu(panelSubProduct);
+        }
+
+        private void btnSettingsMain_Click(object sender, EventArgs e)
+        {
+            ShowSubMenu(panelSubSettings);
+        }
+
+        private void btnPOSMain_Click(object sender, EventArgs e)
+        {
+            HideSubMenu(); // Cleanup UI before opening POS
+            frmPOS frm = new frmPOS(this); // Assuming constructor accepts Form1 or similar logic
+            frm.ShowDialog();
+        }
+
+        private void btnAuditMain_Click(object sender, EventArgs e)
+        {
+            // Reserved for future design
+        }
+
+        private void btnMaintenanceMain_Click(object sender, EventArgs e)
+        {
+            // Reserved for future design
+        }
+        #endregion
+
+        #region Utility Methods (Unchanged)
         public void LoadCart()
         {
             try
             {
                 if (dataGridView1 == null) return;
                 dataGridView1.Rows.Clear();
-
-                int i = 0;
-                double total = 0;
-
+                int i = 0; double total = 0;
                 using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     cn.Open();
@@ -255,21 +320,16 @@ namespace PosSystem
                             {
                                 i++;
                                 total += Convert.ToDouble(dr["total"]);
-
                                 dataGridView1.Rows.Add(i, dr["id"], dr["pcode"], dr["pdesc"],
                                     dr["price"], dr["qty"], dr["disc"], dr["total"]);
                             }
                         }
                     }
                 }
-
                 lblTotal.Text = total.ToString("#,##0.00");
                 lblDisplayTotal.Text = total.ToString("#,##0.00");
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+            catch (Exception ex) { MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         }
 
         public void GetTransNo()
@@ -285,68 +345,29 @@ namespace PosSystem
                     {
                         cm.Parameters.AddWithValue("@sdate", sdate + "%");
                         object result = cm.ExecuteScalar();
-
                         if (result != null && result != DBNull.Value)
                         {
                             string transno = result.ToString();
                             int count = int.Parse(transno.Substring(8, 4));
                             lblTransno.Text = sdate + (count + 1).ToString("D4");
                         }
-                        else
-                        {
-                            lblTransno.Text = sdate + "1001";
-                        }
+                        else { lblTransno.Text = sdate + "1001"; }
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+            catch (Exception ex) { MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
         }
         #endregion
 
-        #region Form & Panel Events
+        #region Empty/Standard Events
         private void guna2ControlBox1_Click(object sender, EventArgs e) => Application.Exit();
         private void panel3_Paint(object sender, PaintEventArgs e) { }
         private void lblRole_Click(object sender, EventArgs e) { }
         private void lblName_Click(object sender, EventArgs e) { }
+        private void panel2_Paint(object sender, PaintEventArgs e) { }
+        private void panelSubProduct_Paint(object sender, PaintEventArgs e) { }
+        private void panelSubStocks_Paint(object sender, PaintEventArgs e) { }
+        private void panelSubSettings_Paint(object sender, PaintEventArgs e) { }
         #endregion
-
-        private void btnStockMain_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnProductMain_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnAuditMain_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnPOSMain_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnSettingsMain_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void btnMaintenanceMain_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void panel2_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
     }
 }

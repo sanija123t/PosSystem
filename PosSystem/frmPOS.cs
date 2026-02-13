@@ -15,7 +15,10 @@ namespace PosSystem
     public partial class frmPOS : Form
     {
         string stitle = "POS System v1.0 - ELITE";
-        frmUserLogin f;
+
+        // Fixed: Changed reference type to Form1 to match the new navigation logic
+        Form1 f;
+
         PrintDocument pd = new PrintDocument();
         System.Windows.Forms.Timer barcodeDelayTimer = new System.Windows.Forms.Timer();
 
@@ -23,7 +26,8 @@ namespace PosSystem
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "PosSystem", "pos_error.log");
 
-        public frmPOS(frmUserLogin frm)
+        // Fixed: Constructor now correctly accepts Form1 as an argument
+        public frmPOS(Form1 frm)
         {
             InitializeComponent();
             f = frm;
