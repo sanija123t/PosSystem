@@ -108,20 +108,24 @@ namespace PosSystem
         {
             Form nextForm = null;
 
+            // We create Form1 for BOTH Admin and Cashier so that the session is properly initialized
+            Form1 mainDash = new Form1();
+
+            // Assuming you have a method to get the 'Full Name' from your database, 
+            // otherwise we use username for both.
+            mainDash.SetUserSession(username, role, username);
+
             if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
                 role.Equals("Administrator", StringComparison.OrdinalIgnoreCase))
             {
-                Form1 adminDash = new Form1();
-                adminDash.lblUserName.Text = username;
-                adminDash.lblRole.Text = role;
-                nextForm = adminDash;
+                nextForm = mainDash;
             }
             else if (role.Equals("Cashier", StringComparison.OrdinalIgnoreCase))
             {
-                frmPOS cashierDash = new frmPOS(this);
+                // ✅ FIX: Instead of passing 'this' (frmUserLogin), we pass 'mainDash' (Form1)
+                frmPOS cashierDash = new frmPOS(mainDash);
 
-                // ✅ FIX: Use 'LblUser' and 'lblName' which match your Designer file
-                // We access the controls via the Controls.Find method to avoid protection level errors
+                // Accessing controls safely
                 Control[] userLabel = cashierDash.Controls.Find("LblUser", true);
                 if (userLabel.Length > 0) userLabel[0].Text = username;
 
@@ -135,6 +139,7 @@ namespace PosSystem
             {
                 this.Hide();
                 nextForm.StartPosition = FormStartPosition.CenterScreen;
+                // If the child form (POS) or main form closes, exit the app
                 nextForm.FormClosed += (s, e) => Application.Exit();
                 nextForm.Show();
             }
