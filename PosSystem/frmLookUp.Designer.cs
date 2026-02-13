@@ -172,6 +172,7 @@
             // dataGridView1
             // 
             this.dataGridView1.AllowUserToAddRows = false;
+            this.dataGridView1.AllowUserToDeleteRows = false;
             this.dataGridView1.BackgroundColor = System.Drawing.Color.White;
             this.dataGridView1.BorderStyle = System.Windows.Forms.BorderStyle.None;
             dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
@@ -206,6 +207,7 @@
             this.dataGridView1.Location = new System.Drawing.Point(0, 80);
             this.dataGridView1.Margin = new System.Windows.Forms.Padding(4);
             this.dataGridView1.Name = "dataGridView1";
+            this.dataGridView1.ReadOnly = true;
             this.dataGridView1.RowHeadersVisible = false;
             this.dataGridView1.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.AutoSizeToAllHeaders;
             this.dataGridView1.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
@@ -218,6 +220,7 @@
             this.Column1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
             this.Column1.HeaderText = "#";
             this.Column1.Name = "Column1";
+            this.Column1.ReadOnly = true;
             this.Column1.Width = 43;
             // 
             // Column2
@@ -225,6 +228,7 @@
             this.Column2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
             this.Column2.HeaderText = "PCODE";
             this.Column2.Name = "Column2";
+            this.Column2.ReadOnly = true;
             this.Column2.Width = 82;
             // 
             // Colum8
@@ -232,12 +236,14 @@
             this.Colum8.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
             this.Colum8.HeaderText = "BARCODE";
             this.Colum8.Name = "Colum8";
+            this.Colum8.ReadOnly = true;
             this.Colum8.Width = 101;
             // 
             // Column4
             // 
             this.Column4.HeaderText = "DESCRIPTION";
             this.Column4.Name = "Column4";
+            this.Column4.ReadOnly = true;
             this.Column4.Width = 127;
             // 
             // Column3
@@ -245,12 +251,14 @@
             this.Column3.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.Column3.HeaderText = "BRAND";
             this.Column3.Name = "Column3";
+            this.Column3.ReadOnly = true;
             // 
             // Column5
             // 
             this.Column5.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
             this.Column5.HeaderText = "CATEGORY";
             this.Column5.Name = "Column5";
+            this.Column5.ReadOnly = true;
             this.Column5.Width = 107;
             // 
             // Column6
@@ -258,6 +266,7 @@
             this.Column6.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
             this.Column6.HeaderText = "PRICE";
             this.Column6.Name = "Column6";
+            this.Column6.ReadOnly = true;
             this.Column6.Width = 73;
             // 
             // Column7
@@ -265,6 +274,7 @@
             this.Column7.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
             this.Column7.HeaderText = "QTY";
             this.Column7.Name = "Column7";
+            this.Column7.ReadOnly = true;
             this.Column7.Width = 61;
             // 
             // colSelect
@@ -273,6 +283,7 @@
             this.colSelect.HeaderText = "";
             this.colSelect.Image = ((System.Drawing.Image)(resources.GetObject("colSelect.Image")));
             this.colSelect.Name = "colSelect";
+            this.colSelect.ReadOnly = true;
             this.colSelect.Width = 5;
             // 
             // frmLookUp

@@ -13,15 +13,15 @@ namespace PosSystem
         private static readonly string dbDirectory = Path.Combine(Application.StartupPath, "DATABASE");
         private static readonly string dbPath = Path.Combine(dbDirectory, "PosDB.db");
 
-        // ELITE: Optimized connection string for high-speed POS operations
-        private static readonly string con = $"Data Source={dbPath};Version=3;Journal Mode=WAL;Pooling=True;Cache=Shared;Busy Timeout=5000;";
+        // ULTRA PERFORMANCE CONNECTION STRING
+        private static readonly string con = $"Data Source={dbPath};Version=3;Journal Mode=WAL;Pooling=True;Cache=Shared;Busy Timeout=5000;Page Size=32768;Synchronous=Normal;";
 
         private static bool _initialized = false;
         private static readonly object _lock = new object();
 
         public static string MyConnection() => con;
 
-        // SHA256 password hash with salt logic
+        // SECURE HASH
         public static string GetHash(string password, string salt = "")
         {
             using (SHA256 sha = SHA256.Create())
@@ -41,7 +41,6 @@ namespace PosSystem
             lock (_lock)
             {
                 if (_initialized) return;
-                _initialized = true;
 
                 try
                 {
@@ -55,11 +54,14 @@ namespace PosSystem
                     {
                         cn.Open();
 
-                        using (var pragma = new SQLiteCommand("PRAGMA foreign_keys = ON; PRAGMA synchronous = NORMAL;", cn))
-                            pragma.ExecuteNonQuery();
+                        new SQLiteCommand("PRAGMA foreign_keys = ON;", cn).ExecuteNonQuery();
+                        new SQLiteCommand("PRAGMA synchronous = NORMAL;", cn).ExecuteNonQuery();
+                        new SQLiteCommand("PRAGMA journal_mode = WAL;", cn).ExecuteNonQuery();
+                        new SQLiteCommand("PRAGMA temp_store = MEMORY;", cn).ExecuteNonQuery();
+                        new SQLiteCommand("PRAGMA cache_size = -20000;", cn).ExecuteNonQuery(); // 20MB cache
 
-                        // ENTERPRISE: 10/10 Script with Transaction Header, Profit, and Supplier integration
                         string script = @"
+
 -- CORE TABLES
 CREATE TABLE IF NOT EXISTS BrandTbl (id INTEGER PRIMARY KEY AUTOINCREMENT, brand TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS TblCategory (id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL);
@@ -73,17 +75,16 @@ CREATE TABLE IF NOT EXISTS TblProduct1 (
     bid INTEGER,
     cid INTEGER,
     price REAL DEFAULT 0,
-    cost_price REAL DEFAULT 0,  
-    tax_rate REAL DEFAULT 0,    
-    sid INTEGER DEFAULT 0,      
+    cost_price REAL DEFAULT 0,
+    tax_rate REAL DEFAULT 0,
+    sid INTEGER DEFAULT 0,
     qty INTEGER DEFAULT 0,
     reorder INTEGER DEFAULT 0,
-    isactive INTEGER DEFAULT 1, 
+    isactive INTEGER DEFAULT 1,
     FOREIGN KEY (bid) REFERENCES BrandTbl(id),
     FOREIGN KEY (cid) REFERENCES TblCategory(id)
 );
 
--- 10/10 UPGRADE: TRANSACTION HEADER (For Receipts & Audits)
 CREATE TABLE IF NOT EXISTS tblTransaction (
     transno TEXT PRIMARY KEY,
     sdate TEXT,
@@ -137,12 +138,12 @@ CREATE TABLE IF NOT EXISTS tblAdjustment (
 );
 
 CREATE TABLE IF NOT EXISTS tblVendor (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-    vendor TEXT, 
-    address TEXT, 
-    contactperson TEXT, 
-    telephone TEXT, 
-    email TEXT, 
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vendor TEXT,
+    address TEXT,
+    contactperson TEXT,
+    telephone TEXT,
+    email TEXT,
     fax TEXT
 );
 
@@ -161,11 +162,83 @@ CREATE TABLE IF NOT EXISTS tblStockIn (
 
 CREATE TABLE IF NOT EXISTS tblCancel (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    transno TEXT, pcode TEXT, price REAL, qty INTEGER, total REAL, 
+    transno TEXT, pcode TEXT, price REAL, qty INTEGER, total REAL,
     sdate TEXT, voidby TEXT, cancelledby TEXT, reason TEXT, action TEXT
 );
 
+-- ========================================
+-- ENTERPRISE TABLES (NEW)
+-- ========================================
+
+CREATE TABLE IF NOT EXISTS tblAudit(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user TEXT,
+    action TEXT,
+    details TEXT,
+    sdate TEXT
+);
+
+CREATE TABLE IF NOT EXISTS tblProfitLog(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transno TEXT,
+    pcode TEXT,
+    cost REAL,
+    sell REAL,
+    qty INTEGER,
+    profit REAL,
+    sdate TEXT
+);
+
+-- ========================================
+-- INDEXES FOR 100K+ PRODUCTS PERFORMANCE
+-- ========================================
+
+CREATE INDEX IF NOT EXISTS idx_product_barcode ON TblProduct1(barcode);
+CREATE INDEX IF NOT EXISTS idx_product_active ON TblProduct1(isactive);
+CREATE INDEX IF NOT EXISTS idx_cart_transno ON tblCart1(transno);
+CREATE INDEX IF NOT EXISTS idx_cart_pcode ON tblCart1(pcode);
+CREATE INDEX IF NOT EXISTS idx_cart_status ON tblCart1(status);
+CREATE INDEX IF NOT EXISTS idx_trans_date ON tblTransaction(sdate);
+CREATE INDEX IF NOT EXISTS idx_stockin_pcode ON tblStockIn(pcode);
+
+-- ========================================
+-- TRIGGERS (AUTO PROFIT + AUDIT LOGGING)
+-- ========================================
+
+CREATE TRIGGER IF NOT EXISTS trg_after_sale
+AFTER INSERT ON tblCart1
+WHEN NEW.status='Sold'
+BEGIN
+    INSERT INTO tblProfitLog(transno,pcode,cost,sell,qty,profit,sdate)
+    SELECT
+        NEW.transno,
+        NEW.pcode,
+        p.cost_price,
+        NEW.price,
+        NEW.qty,
+        (NEW.price - p.cost_price)*NEW.qty,
+        NEW.sdate
+    FROM TblProduct1 p WHERE p.pcode = NEW.pcode;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_user_update
+AFTER UPDATE ON tblUser
+BEGIN
+    INSERT INTO tblAudit(user,action,details,sdate)
+    VALUES(NEW.username,'USER UPDATED','User record modified',datetime('now','localtime'));
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_product_update
+AFTER UPDATE ON TblProduct1
+BEGIN
+    INSERT INTO tblAudit(user,action,details,sdate)
+    VALUES('SYSTEM','PRODUCT UPDATED','Product '||NEW.pcode||' modified',datetime('now','localtime'));
+END;
+
+-- ========================================
 -- VIEWS
+-- ========================================
+
 DROP VIEW IF EXISTS vwInventory;
 CREATE VIEW vwInventory AS
 SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.cost_price, p.qty, p.reorder, p.isactive
@@ -182,6 +255,19 @@ CREATE VIEW vwSoldItems AS
 SELECT c.id, c.transno, c.pcode, p.pdesc, c.price, c.qty, c.disc, c.total, c.sdate, c.status, c.user
 FROM tblCart1 c
 INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
+
+DROP VIEW IF EXISTS vwProfitDaily;
+CREATE VIEW vwProfitDaily AS
+SELECT DATE(sdate) AS day, SUM(profit) AS total_profit
+FROM tblProfitLog
+GROUP BY DATE(sdate);
+
+DROP VIEW IF EXISTS vwProfitProducts;
+CREATE VIEW vwProfitProducts AS
+SELECT pcode, SUM(qty) sold_qty, SUM(profit) profit
+FROM tblProfitLog
+GROUP BY pcode;
+
 ";
 
                         using (var cm = new SQLiteCommand(script, cn))
@@ -190,6 +276,8 @@ INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
                         FixSchema(cn);
                         SeedData(cn);
                     }
+
+                    _initialized = true;
                 }
                 catch (Exception ex)
                 {
@@ -200,7 +288,6 @@ INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
 
         private static void FixSchema(SQLiteConnection cn)
         {
-            // List of updates using a cleaner array approach
             string[,] updates = {
                 { "TblProduct1", "cost_price", "REAL DEFAULT 0" },
                 { "TblProduct1", "tax_rate", "REAL DEFAULT 0" },
@@ -225,10 +312,8 @@ INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
             using (var reader = cmd.ExecuteReader())
             {
                 while (reader.Read())
-                {
                     if (reader["name"].ToString().Equals(columnName, StringComparison.OrdinalIgnoreCase))
                         return true;
-                }
             }
             return false;
         }
@@ -236,43 +321,36 @@ INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
         private static void SeedData(SQLiteConnection cn)
         {
             using (var cmd = new SQLiteCommand("SELECT COUNT(*) FROM tblVat", cn))
-            {
                 if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
-                {
-                    using (var ins = new SQLiteCommand("INSERT INTO tblVat (vat) VALUES (0)", cn)) ins.ExecuteNonQuery();
-                }
-            }
+                    new SQLiteCommand("INSERT INTO tblVat (vat) VALUES (0)", cn).ExecuteNonQuery();
 
             using (var cmd = new SQLiteCommand("SELECT COUNT(*) FROM tblUser", cn))
             {
                 if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
                 {
                     string salt = Guid.NewGuid().ToString("N");
-                    string sql = "INSERT INTO tblUser (username, password, salt, role, name, isactive) VALUES ('admin', @pass, @salt, 'Administrator', 'System Admin', 1)";
-                    using (var ins = new SQLiteCommand(sql, cn))
-                    {
-                        ins.Parameters.AddWithValue("@salt", salt);
-                        ins.Parameters.AddWithValue("@pass", GetHash("admin123", salt));
-                        ins.ExecuteNonQuery();
-                    }
+                    var ins = new SQLiteCommand("INSERT INTO tblUser (username,password,salt,role,name,isactive) VALUES ('admin',@p,@s,'Administrator','System Admin',1)", cn);
+                    ins.Parameters.AddWithValue("@s", salt);
+                    ins.Parameters.AddWithValue("@p", GetHash("admin123", salt));
+                    ins.ExecuteNonQuery();
                 }
             }
         }
 
-        // --- DASHBOARD HELPERS (RESTORED TO PREVENT CS0117 ERRORS) ---
+        // DASHBOARD
         public static double DailySales()
         {
             try
             {
                 using var cn = new SQLiteConnection(con); cn.Open();
-                using var cm = new SQLiteCommand("SELECT IFNULL(SUM(total),0) FROM tblCart1 WHERE DATE(sdate)=DATE('now','localtime') AND status='Sold'", cn);
+                using var cm = new SQLiteCommand("SELECT IFNULL(SUM(total),0) FROM tblTransaction WHERE DATE(sdate)=DATE('now','localtime') AND status='Sold'", cn);
                 return Convert.ToDouble(cm.ExecuteScalar() ?? 0);
             }
             catch { return 0; }
         }
 
-        public static double ProductLine() { try { using var cn = new SQLiteConnection(con); cn.Open(); using var cm = new SQLiteCommand("SELECT COUNT(*) FROM TblProduct1 WHERE isactive = 1", cn); return Convert.ToDouble(cm.ExecuteScalar() ?? 0); } catch { return 0; } }
-        public static double StockOnHand() { try { using var cn = new SQLiteConnection(con); cn.Open(); using var cm = new SQLiteCommand("SELECT IFNULL(SUM(qty),0) FROM TblProduct1 WHERE isactive = 1", cn); return Convert.ToDouble(cm.ExecuteScalar() ?? 0); } catch { return 0; } }
+        public static double ProductLine() { try { using var cn = new SQLiteConnection(con); cn.Open(); using var cm = new SQLiteCommand("SELECT COUNT(*) FROM TblProduct1 WHERE isactive=1", cn); return Convert.ToDouble(cm.ExecuteScalar() ?? 0); } catch { return 0; } }
+        public static double StockOnHand() { try { using var cn = new SQLiteConnection(con); cn.Open(); using var cm = new SQLiteCommand("SELECT IFNULL(SUM(qty),0) FROM TblProduct1 WHERE isactive=1", cn); return Convert.ToDouble(cm.ExecuteScalar() ?? 0); } catch { return 0; } }
         public static double CriticalItems() { try { using var cn = new SQLiteConnection(con); cn.Open(); using var cm = new SQLiteCommand("SELECT COUNT(*) FROM vwCriticalItems", cn); return Convert.ToDouble(cm.ExecuteScalar() ?? 0); } catch { return 0; } }
     }
 }

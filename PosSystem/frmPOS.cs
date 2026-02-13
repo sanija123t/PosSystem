@@ -17,24 +17,19 @@ namespace PosSystem
         string stitle = "POS System v1.0 - ELITE";
         frmUserLogin f;
         PrintDocument pd = new PrintDocument();
-        List<ReceiptItem> printItems = new List<ReceiptItem>();
-
-        decimal receiptTotal = 0m;
+        System.Windows.Forms.Timer barcodeDelayTimer = new System.Windows.Forms.Timer();
 
         string logFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "PosSystem", "pos_error.log");
 
-        // Constructor
         public frmPOS(frmUserLogin frm)
         {
             InitializeComponent();
             f = frm;
-            this.KeyPreview = true; // CRITICAL: Allows the Form to catch F-keys before the controls do
-            pd.PrintPage += PrintReceiptPage;
-
-            timer1.Interval = 1000;
-            timer1.Start();
+            this.KeyPreview = true;
+            barcodeDelayTimer.Interval = 400;
+            barcodeDelayTimer.Tick += BarcodeDelayTimer_Tick;
             EnsureLogDirectory();
         }
 
@@ -43,166 +38,69 @@ namespace PosSystem
             LoadStoreInfo();
             GetTransNo();
             LoadCart();
-            _ = Task.Run(() => NotifyCriticalItems());
             txtSearch.Focus();
         }
 
-        #region KEYBOARD SHORTCUTS (F1 - F10)
-
-        // 10/10 ELITE FEATURE: Keyboard-driven workflow
-        private void frmPOS_KeyDown(object sender, KeyEventArgs e)
+        #region BARCODE LOGIC
+        private void txtSearch_TextChanged(object sender, EventArgs e)
         {
-            switch (e.KeyCode)
-            {
-                case Keys.F1:
-                    btnSearch_Click(sender, e); // Search Products
-                    break;
-                case Keys.F2:
-                    GetTransNo(); // New Transaction / Refresh
-                    break;
-                case Keys.F3:
-                    btnDiscount_Click(sender, e); // Add Discount
-                    break;
-                case Keys.F4:
-                    btnSattle_Click(sender, e); // Settle Payment
-                    break;
-                case Keys.F5:
-                    btnCancel_Click(sender, e); // Void/Cancel
-                    break;
-                case Keys.F6:
-                    btnSales_Click(sender, e); // Daily Sales Report
-                    break;
-                case Keys.F10:
-                    btnClose_Click(sender, e); // Exit POS
-                    break;
-            }
+            if (string.IsNullOrWhiteSpace(txtSearch.Text)) return;
+            barcodeDelayTimer.Stop();
+            barcodeDelayTimer.Start();
         }
 
-        #endregion
-
-        #region CORE POS LOGIC
-
-        public void LoadCart()
+        private void BarcodeDelayTimer_Tick(object sender, EventArgs e)
         {
-            dataGridView1.Rows.Clear();
-            decimal total = 0;
-            decimal discount = 0;
+            barcodeDelayTimer.Stop();
+            ProcessBarcode(txtSearch.Text.Trim());
+            txtSearch.Clear();
+            txtSearch.Focus();
+        }
+
+        private void ProcessBarcode(string barcode)
+        {
             try
             {
                 using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     cn.Open();
-                    string sql = @"SELECT c.*, p.pdesc as product_name 
-                                 FROM tblCart1 c 
-                                 INNER JOIN TblProduct1 p ON c.pcode = p.pcode 
-                                 WHERE c.transno = @transno AND c.status = 'Pending'";
-
+                    string sql = "SELECT * FROM TblProduct1 WHERE (barcode = @barcode OR pcode = @barcode) AND isactive = 1";
                     using (SQLiteCommand cmd = new SQLiteCommand(sql, cn))
                     {
-                        cmd.Parameters.AddWithValue("@transno", lblTransno.Text);
+                        cmd.Parameters.AddWithValue("@barcode", barcode);
                         using (SQLiteDataReader dr = cmd.ExecuteReader())
                         {
-                            while (dr.Read())
+                            if (dr.Read())
                             {
-                                total += Convert.ToDecimal(dr["total"]);
-                                discount += Convert.ToDecimal(dr["disc"]);
-
-                                dataGridView1.Rows.Add(dr["id"], dr["transno"], dr["pcode"], dr["product_name"],
-                                                     dr["price"], dr["qty"], dr["disc"], dr["total"]);
+                                string pcode = dr["pcode"].ToString();
+                                double price = Convert.ToDouble(dr["price"]);
+                                int stock = Convert.ToInt32(dr["qty"]);
+                                using (frmQty qtyForm = new frmQty(this))
+                                {
+                                    qtyForm.ProductDetails(pcode, price, lblTransno.Text, stock);
+                                    qtyForm.ShowDialog();
+                                }
+                                LoadCart();
                             }
                         }
                     }
                 }
-                UpdateTotals(total, discount);
             }
-            catch (Exception ex) { LogError("LoadCart", ex); }
+            catch (Exception ex) { LogError("Barcode", ex); }
         }
+        #endregion
 
-        private void UpdateTotals(decimal total, decimal discount = 0)
+        #region BUTTONS
+        private void btnTrans_Click(object sender, EventArgs e)
         {
-            lblTotal.Text = total.ToString("#,##0.00");
-            lblDisplayTotal.Text = total.ToString("#,##0.00");
-
-            decimal vatable = Math.Round(total / 1.12m, 2);
-            decimal vat = Math.Round(total - vatable, 2);
-
-            lblVatable.Text = vatable.ToString("#,##0.00");
-            lblVat.Text = vat.ToString("#,##0.00");
-            lblDiscount.Text = discount.ToString("#,##0.00");
-
-            receiptTotal = total;
-        }
-
-        public async void SettlePayment()
-        {
-            if (dataGridView1.Rows.Count == 0) return;
-            // logic to open frmSettle would go here
+            if (dataGridView1.Rows.Count > 0)
+            {
+                if (MessageBox.Show("Discard current cart?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No) return;
+            }
             GetTransNo();
             LoadCart();
-            MessageBox.Show("Transaction Finalized Successfully", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            txtSearch.Focus();
         }
-
-        #endregion
-
-        #region EVENT HANDLERS
-
-        private void btnSales_Click(object sender, EventArgs e) { /* Sales Logic */ }
-        private void btnCancel_Click(object sender, EventArgs e) { /* Cancel Logic */ }
-        private void btnDiscount_Click(object sender, EventArgs e) { /* Discount Logic */ }
-        private void btnTrans_Click(object sender, EventArgs e) { /* History Logic */ }
-        private void panel6_Paint(object sender, PaintEventArgs e) { }
-        private void label14_Click(object sender, EventArgs e) { }
-        private void LblUser_Click(object sender, EventArgs e) { }
-        private void lblName_Click(object sender, EventArgs e) { }
-        private void label7_Click(object sender, EventArgs e) { }
-        private void label6_Click(object sender, EventArgs e) { }
-        private void label2_Click(object sender, EventArgs e) { }
-
-        public void btnOK_Click_1(object sender, EventArgs e)
-        {
-            this.DialogResult = DialogResult.OK;
-            this.Close();
-        }
-
-        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0) return;
-            string colName = dataGridView1.Columns[e.ColumnIndex].Name;
-
-            if (colName == "qty")
-            {
-                string pcode = dataGridView1.Rows[e.RowIndex].Cells[2].Value.ToString();
-                double price = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells[4].Value);
-
-                using (frmQty qtyForm = new frmQty(this))
-                {
-                    qtyForm.ProductDetails(pcode, price, lblTransno.Text, 999);
-                    qtyForm.ShowDialog();
-                }
-                LoadCart();
-            }
-
-            if (colName == "Delete")
-            {
-                if (MessageBox.Show("Remove item?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                {
-                    using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
-                    {
-                        cn.Open();
-                        using (SQLiteCommand cmd = new SQLiteCommand("DELETE FROM tblCart1 WHERE id = @id", cn))
-                        {
-                            cmd.Parameters.AddWithValue("@id", dataGridView1.Rows[e.RowIndex].Cells[0].Value);
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
-                    LoadCart();
-                }
-            }
-        }
-
-        #endregion
-
-        #region BUTTON ACTIONS
 
         private void btnSearch_Click(object sender, EventArgs e)
         {
@@ -220,57 +118,85 @@ namespace PosSystem
             }
         }
 
-        private void btnSattle_Click(object sender, EventArgs e) => SettlePayment();
-
-        private void btnClose_Click(object sender, EventArgs e)
+        private void btnDiscount_Click(object sender, EventArgs e)
         {
-            if (dataGridView1.Rows.Count > 0)
-            {
-                if (MessageBox.Show("Cart is not empty. Exit anyway?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No) return;
-            }
-            this.Close();
+            using (frmDiscount frm = new frmDiscount(this)) { frm.ShowDialog(); }
+            LoadCart();
         }
 
+        private void btnSattle_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.Rows.Count == 0) return;
+
+            using (frmSettel frm = new frmSettel(this))
+            {
+                // Mapping the Display Total to your txtSale field in the Settle form
+                frm.txtSale.Text = lblDisplayTotal.Text;
+                if (frm.ShowDialog() == DialogResult.OK)
+                {
+                    GetTransNo();
+                    LoadCart();
+                }
+            }
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            using (frmConfirmPaasword frm = new frmConfirmPaasword())
+            {
+                if (frm.ShowDialog() == DialogResult.OK)
+                {
+                    using (frmCancelDetails cancelFrm = new frmCancelDetails(null, 0))
+                    {
+                        cancelFrm.ShowDialog();
+                    }
+                    LoadCart();
+                }
+            }
+        }
+
+        private void btnSales_Click(object sender, EventArgs e)
+        {
+            using (frmReportSold frm = new frmReportSold(null))
+            {
+                frm.ShowDialog();
+            }
+        }
+
+        private void btnClose_Click(object sender, EventArgs e) { Application.Exit(); }
         #endregion
 
-        #region NOTIFICATIONS & PRINTING
-
-        private void NotifyCriticalItems()
+        #region CORE FUNCTIONS
+        public void LoadCart()
         {
+            dataGridView1.Rows.Clear();
+            decimal total = 0; decimal discount = 0;
             try
             {
                 using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     cn.Open();
-                    string sql = "SELECT pdesc, qty FROM TblProduct1 WHERE qty <= reorder AND isactive = 1";
+                    string sql = @"SELECT c.*, p.pdesc FROM tblCart1 c INNER JOIN TblProduct1 p ON c.pcode = p.pcode WHERE c.transno = @transno AND c.status = 'Pending'";
                     using (SQLiteCommand cmd = new SQLiteCommand(sql, cn))
-                    using (SQLiteDataReader dr = cmd.ExecuteReader())
                     {
-                        while (dr.Read())
+                        cmd.Parameters.AddWithValue("@transno", lblTransno.Text);
+                        using (SQLiteDataReader dr = cmd.ExecuteReader())
                         {
-                            string msg = $"{dr["pdesc"]} low stock: {dr["qty"]}";
-                            this.Invoke(new Action(() =>
+                            while (dr.Read())
                             {
-                                PopupNotifier popup = new PopupNotifier();
-                                popup.TitleText = "Stock Alert";
-                                popup.ContentText = msg;
-                                popup.Popup();
-                            }));
+                                total += Convert.ToDecimal(dr["total"]);
+                                discount += Convert.ToDecimal(dr["disc"]);
+                                dataGridView1.Rows.Add(dr["id"], dr["transno"], dr["pcode"], dr["pdesc"], dr["price"], dr["qty"], dr["disc"], dr["total"]);
+                            }
                         }
                     }
                 }
+                lblDisplayTotal.Text = total.ToString("#,##0.00");
+                lblTotal.Text = total.ToString("#,##0.00");
+                lblDiscount.Text = discount.ToString("#,##0.00");
             }
-            catch { }
+            catch (Exception ex) { LogError("LoadCart", ex); }
         }
-
-        private void PrintReceiptPage(object sender, PrintPageEventArgs e)
-        {
-            // Print implementation
-        }
-
-        #endregion
-
-        #region UTILITIES
 
         public void GetTransNo()
         {
@@ -279,18 +205,22 @@ namespace PosSystem
                 using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     cn.Open();
-                    using (SQLiteCommand cmd = new SQLiteCommand("SELECT COUNT(*) FROM tblTransaction", cn))
+                    using (SQLiteCommand cmd = new SQLiteCommand("SELECT transno FROM tblCart1 ORDER BY id DESC LIMIT 1", cn))
                     {
+                        object obj = cmd.ExecuteScalar();
                         string sdate = DateTime.Now.ToString("yyyyMMdd");
-                        int count = Convert.ToInt32(cmd.ExecuteScalar()) + 1;
-                        lblTransno.Text = sdate + count.ToString("D4");
+                        if (obj != null)
+                        {
+                            string lastTrans = obj.ToString();
+                            long count = long.Parse(lastTrans.Substring(8)) + 1;
+                            lblTransno.Text = sdate + count.ToString("D4");
+                        }
+                        else { lblTransno.Text = sdate + "0001"; }
                     }
                 }
             }
             catch { lblTransno.Text = DateTime.Now.ToString("yyyyMMdd0001"); }
         }
-
-        private void timer1_Tick(object sender, EventArgs e) => lblDate.Text = DateTime.Now.ToString("MMMM dd, yyyy | hh:mm:ss tt");
 
         private void LoadStoreInfo()
         {
@@ -299,40 +229,52 @@ namespace PosSystem
                 using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     cn.Open();
-                    using (SQLiteCommand cmd = new SQLiteCommand("SELECT * FROM tblStore LIMIT 1", cn))
-                    using (SQLiteDataReader dr = cmd.ExecuteReader())
+                    using (SQLiteCommand cmd = new SQLiteCommand("SELECT store FROM tblStore LIMIT 1", cn))
                     {
-                        if (dr.Read())
-                        {
-                            lblSname.Text = dr["store"].ToString();
-                            lblAddress.Text = dr["address"].ToString();
-                        }
+                        lblSname.Text = cmd.ExecuteScalar()?.ToString() ?? "ELITE POS SYSTEM";
                     }
                 }
             }
-            catch { }
+            catch { lblSname.Text = "ELITE POS SYSTEM"; }
         }
 
-        private void LogError(string ctx, Exception ex)
-        {
-            try { EnsureLogDirectory(); File.AppendAllText(logFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{ctx}] {ex}{Environment.NewLine}"); } catch { }
-        }
-
+        private void LogError(string ctx, Exception ex) => File.AppendAllText(logFile, $"{DateTime.Now} [{ctx}] {ex}\n");
         private void EnsureLogDirectory() => Directory.CreateDirectory(Path.GetDirectoryName(logFile));
+        private void timer1_Tick(object sender, EventArgs e) => lblDate.Text = DateTime.Now.ToString("MMMM dd, yyyy | hh:mm:ss tt");
 
-        private void dataGridView1_SelectionChanged(object sender, EventArgs e) { }
-        private void lblSname_Click(object sender, EventArgs e) { }
-
+        private void frmPOS_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.F1) btnTrans_Click(sender, e);
+            else if (e.KeyCode == Keys.F2) btnSearch_Click(sender, e);
+            else if (e.KeyCode == Keys.F3) btnDiscount_Click(sender, e);
+            else if (e.KeyCode == Keys.F4) btnSattle_Click(sender, e);
+            else if (e.KeyCode == Keys.F5) btnCancel_Click(sender, e);
+            else if (e.KeyCode == Keys.F6) btnSales_Click(sender, e);
+            else if (e.KeyCode == Keys.F10) btnClose_Click(sender, e);
+        }
         #endregion
-    }
 
-    public class ReceiptItem
-    {
-        public string PCode { get; set; }
-        public string Description { get; set; }
-        public int Qty { get; set; }
-        public decimal Total { get; set; }
-        public decimal Vatable { get; set; }
-        public decimal VatAmount { get; set; }
+        #region DESIGNER GHOST FIXES (STOPS CS1061 ERRORS)
+        private void label2_Click(object sender, EventArgs e) { }
+        private void panel6_Paint(object sender, PaintEventArgs e) { }
+        private void label14_Click(object sender, EventArgs e) { }
+        private void lblSname_Click(object sender, EventArgs e) { }
+        private void LblUser_Click(object sender, EventArgs e) { }
+        private void lblName_Click(object sender, EventArgs e) { }
+        private void label7_Click(object sender, EventArgs e) { }
+        private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e) { }
+        private void dataGridView1_SelectionChanged(object sender, EventArgs e) { }
+        private void label6_Click(object sender, EventArgs e) { }
+        #endregion
+
+        private void lblAddress_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblPhone_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }
