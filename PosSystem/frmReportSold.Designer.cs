@@ -67,15 +67,15 @@ namespace PosSystem
             this.label2.ForeColor = System.Drawing.Color.White;
             this.label2.Location = new System.Drawing.Point(6, 7);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(105, 21);
+            this.label2.Size = new System.Drawing.Size(67, 21);
             this.label2.TabIndex = 2;
-            this.label2.Text = "Print Preview";
+            this.label2.Text = "Preview";
             // 
             // reportViewer1
             // 
             this.reportViewer1.Location = new System.Drawing.Point(0, 35);
             this.reportViewer1.Name = "reportViewer1";
-            //this.reportViewer1.ServerReport.BearerToken = null;
+            this.reportViewer1.ServerReport.BearerToken = null;
             this.reportViewer1.Size = new System.Drawing.Size(1199, 562);
             this.reportViewer1.TabIndex = 3;
             this.reportViewer1.Load += new System.EventHandler(this.reportViewer1_Load_1);

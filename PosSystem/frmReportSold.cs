@@ -20,38 +20,29 @@ namespace PosSystem
         }
 
         #region Form Events
-
         private void frmReportSold_Load(object sender, EventArgs e)
         {
-            // Optionally, load report on form load
-            // LoadReportAsync(); // can uncomment if needed
+            // Report is triggered manually by f.LoadReport() from the parent form
         }
 
         private void pictureBox2_Click(object sender, EventArgs e)
         {
-            Dispose();
+            this.Dispose();
         }
 
-        private void panel1_Paint(object sender, PaintEventArgs e)
-        {
-            // required by Designer
-        }
-
-        // Fix for CS1061: Added missing event handler referenced in Designer
-        private void reportViewer1_Load_1(object sender, EventArgs e)
-        {
-        }
-
+        private void reportViewer1_Load_1(object sender, EventArgs e) { }
         #endregion
 
         #region Report Generation
-
-        // Fix for CS1061: Added LoadReport wrapper to satisfy external calls from frmSoldItems.cs
         public void LoadReport()
         {
+            // Fire and forget the async task
             _ = LoadReportAsync();
         }
-
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+            // This can stay empty. It just stops the CS1061 error.
+        }
         public async Task LoadReportAsync()
         {
             try
@@ -59,68 +50,82 @@ namespace PosSystem
                 DataSet1 ds = new DataSet1();
                 ReportDataSource rptDS;
 
+                // Path to the RDLC file in the Debug/Release folder
                 string reportPath = Path.Combine(Application.StartupPath, "Bill", "Report2.rdlc");
+
                 if (!File.Exists(reportPath))
                 {
-                    MessageBox.Show($"Report file not found:\n{reportPath}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Report file not found at:\n{reportPath}\n\nPlease ensure the 'Bill' folder exists in your project output.", "File Missing", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
                 reportViewer1.LocalReport.ReportPath = reportPath;
                 reportViewer1.LocalReport.DataSources.Clear();
 
-                // ✅ Using statement ensures connection closes automatically
                 using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     await cn.OpenAsync();
 
-                    string sql =
-                        @"SELECT c.id, c.transno, c.pcode, p.pdesc, c.price, c.qty, c.disc AS discount,
-                                  (c.price * c.qty) - c.disc AS total
-                           FROM tblCart1 AS c
-                           INNER JOIN TblProduct1 AS p ON c.pcode = p.pcode
-                           WHERE c.status = @status
-                             AND c.sdate BETWEEN @dateFrom AND @dateTo
-                             AND (@cashier IS NULL OR c.cashier = @cashier)"; // ✅ SQL simplification
+                    // IMPROVED SQL: Explicitly casting numbers to ensure the RDLC can calculate 'total'
+                    string sql = @"
+                        SELECT 
+                            c.id, 
+                            c.transno, 
+                            c.pcode, 
+                            p.pdesc, 
+                            CAST(c.price AS DOUBLE) as price, 
+                            CAST(c.qty AS INTEGER) as qty, 
+                            CAST(c.disc AS DOUBLE) AS discount,
+                            (CAST(c.price AS DOUBLE) * CAST(c.qty AS INTEGER)) - CAST(c.disc AS DOUBLE) AS total
+                        FROM tblCart1 AS c
+                        INNER JOIN TblProduct1 AS p ON c.pcode = p.pcode
+                        INNER JOIN tblTransaction AS t ON c.transno = t.transno
+                        WHERE c.status = @status
+                          AND t.sdate BETWEEN @dateFrom AND @dateTo
+                          AND (@cashier IS NULL OR c.cashier = @cashier)";
 
                     using (var cmd = new SQLiteCommand(sql, cn))
                     {
                         cmd.Parameters.AddWithValue("@status", STATUS_SOLD);
-                        cmd.Parameters.AddWithValue("@dateFrom", f.dateTimePicker1.Value.Date);
-                        cmd.Parameters.AddWithValue("@dateTo", f.dateTimePicker2.Value.Date.AddDays(1).AddSeconds(-1));
+                        cmd.Parameters.AddWithValue("@dateFrom", f.dateTimePicker1.Value.ToString("yyyy-MM-dd"));
+                        cmd.Parameters.AddWithValue("@dateTo", f.dateTimePicker2.Value.ToString("yyyy-MM-dd"));
 
-                        // Pass null if "All Cashier" is selected
-                        cmd.Parameters.AddWithValue("@cashier", f.cbCashier.Text == "All Cashier" ? DBNull.Value : f.cbCashier.Text);
+                        // Handles the "All Cashier" filter logic
+                        cmd.Parameters.AddWithValue("@cashier", (f.cbCashier.Text == "All Cashier" || string.IsNullOrEmpty(f.cbCashier.Text)) ? DBNull.Value : f.cbCashier.Text);
 
                         using (var da = new SQLiteDataAdapter(cmd))
                         {
-                            // ✅ Async fill using Task.Run to prevent UI freezing
+                            // Runs the data fill on a background thread to keep UI responsive
                             await Task.Run(() => da.Fill(ds.Tables["dtSoldReport"]));
                         }
                     }
                 }
 
-                // Report parameters
-                var pDate = new ReportParameter("pDate", $"Date From: {f.dateTimePicker1.Value:dd/MM/yyyy} To {f.dateTimePicker2.Value:dd/MM/yyyy}");
-                var pCashier = new ReportParameter("pCashier", $"Cashier: {f.cbCashier.Text}");
-                var pHeader = new ReportParameter("pHeader", "SALES REPORT");
+                // Map the C# values to the RDLC Parameters
+                ReportParameter pDate = new ReportParameter("pDate", $"Range: {f.dateTimePicker1.Value:dd/MM/yyyy} - {f.dateTimePicker2.Value:dd/MM/yyyy}");
+                ReportParameter pCashier = new ReportParameter("pCashier", $"Cashier: {f.cbCashier.Text}");
+                ReportParameter pHeader = new ReportParameter("pHeader", "DAILY SALES REPORT");
 
                 reportViewer1.LocalReport.SetParameters(new ReportParameter[] { pDate, pCashier, pHeader });
 
+                // Link the processed data table to the RDLC's "DataSet1"
                 rptDS = new ReportDataSource("DataSet1", ds.Tables["dtSoldReport"]);
                 reportViewer1.LocalReport.DataSources.Add(rptDS);
 
+                // Set up the view mode
                 reportViewer1.SetDisplayMode(DisplayMode.PrintLayout);
                 reportViewer1.ZoomMode = ZoomMode.Percent;
                 reportViewer1.ZoomPercent = 100;
+
                 reportViewer1.RefreshReport();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Report Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("An error occurred while generating the report: " + ex.Message, "Report Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
 
+
+        }
         #endregion
     }
 }
