@@ -1,12 +1,32 @@
 ﻿using System;
 using System.Data.SQLite;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices; // Added for draggable logic
 using System.Windows.Forms;
 
 namespace PosSystem
 {
     public partial class frmCategory : Form
     {
+        #region WINAPI FOR DRAGGING
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
+
+        private void panel1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                ReleaseCapture();
+                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+            }
+        }
+        #endregion
+
         private readonly frmCategoryList flist;
 
         public frmCategory(frmCategoryList frm)

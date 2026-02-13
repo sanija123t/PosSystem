@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Runtime.InteropServices; // Added for draggable logic
 using System.Windows.Forms;
 using BarcodeStandard;
 using Type = BarcodeStandard.Type;
@@ -10,6 +11,25 @@ namespace PosSystem
 {
     public partial class frmCreatebarcode : Form
     {
+        #region WINAPI FOR DRAGGING
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
+
+        private void panel1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                ReleaseCapture();
+                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+            }
+        }
+        #endregion
+
         // ENTERPRISE: Define standard barcode limits
         private const int MAX_STICKERS = 100;
         private const int MIN_STICKERS = 1;

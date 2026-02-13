@@ -14,11 +14,10 @@ namespace PosSystem
         #region Private Fields & Constants
 
         public string suser;
-        private const string STATUS_SOLD = "sold";
+        private const string STATUS_SOLD = "Sold"; // Standardized to match tblCart1 status
         private readonly string _dbPath = DBConnection.MyConnection();
         private readonly string _appTitle = "POS System";
 
-        // ELITE: Win32 API for smooth borderless dragging
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
         [DllImport("user32.dll")]
@@ -37,11 +36,8 @@ namespace PosSystem
 
         private void InitializeDefaults()
         {
-            // Set default date range to today's full day
             dateTimePicker1.Value = DateTime.Now;
             dateTimePicker2.Value = DateTime.Now;
-
-            // ELITE: Set Label styling for that "POS Dashboard" look
             lblTotal1.Text = "0.00";
             lblTotal1.TextAlign = ContentAlignment.MiddleRight;
         }
@@ -50,7 +46,9 @@ namespace PosSystem
         {
             try
             {
-                await Task.WhenAll(LoadCashierAsync(), LoadSoldItemsAsync());
+                // Load UI components first, then data
+                await LoadCashierAsync();
+                await LoadSoldItemsAsync();
             }
             catch (Exception ex)
             {
@@ -63,11 +61,12 @@ namespace PosSystem
         public async Task LoadSoldItemsAsync()
         {
             dataGridView1.Rows.Clear();
-            double runningTotal = 0;
+            decimal runningTotal = 0; // Fixed: Use decimal for money
             int recordCount = 0;
 
-            DateTime dateFrom = dateTimePicker1.Value.Date;
-            DateTime dateTo = dateTimePicker2.Value.Date.AddDays(1).AddSeconds(-1);
+            // Database format usually expects yyyy-MM-dd
+            string dateFrom = dateTimePicker1.Value.ToString("yyyy-MM-dd");
+            string dateTo = dateTimePicker2.Value.ToString("yyyy-MM-dd");
 
             try
             {
@@ -75,16 +74,17 @@ namespace PosSystem
                 {
                     await cn.OpenAsync();
 
+                    // Fixed SQL: Added net_total calculation and ensured parameter consistency
                     string sql = @"
                         SELECT c.id, c.transno, c.pcode, p.pdesc, 
                                c.price, c.qty, c.disc, 
-                               (c.qty * c.price) - c.disc AS net_total
+                               c.total AS net_total
                         FROM tblCart1 AS c
                         INNER JOIN TblProduct1 AS p ON c.pcode = p.pcode
                         WHERE c.status = @status 
                         AND c.sdate BETWEEN @date1 AND @date2";
 
-                    if (cbCashier.Text != "All Cashier")
+                    if (cbCashier.Text != "All Cashier" && !string.IsNullOrWhiteSpace(cbCashier.Text))
                     {
                         sql += " AND c.cashier = @cashier";
                     }
@@ -95,7 +95,7 @@ namespace PosSystem
                         cmd.Parameters.AddWithValue("@date1", dateFrom);
                         cmd.Parameters.AddWithValue("@date2", dateTo);
 
-                        if (cbCashier.Text != "All Cashier")
+                        if (cbCashier.Text != "All Cashier" && !string.IsNullOrWhiteSpace(cbCashier.Text))
                             cmd.Parameters.AddWithValue("@cashier", cbCashier.Text);
 
                         using (var reader = await cmd.ExecuteReaderAsync())
@@ -103,7 +103,7 @@ namespace PosSystem
                             while (await reader.ReadAsync())
                             {
                                 recordCount++;
-                                double netTotal = Convert.ToDouble(reader["net_total"]);
+                                decimal netTotal = Convert.ToDecimal(reader["net_total"]);
                                 runningTotal += netTotal;
 
                                 dataGridView1.Rows.Add(
@@ -112,9 +112,9 @@ namespace PosSystem
                                     reader["transno"],
                                     reader["pcode"],
                                     reader["pdesc"],
-                                    Convert.ToDouble(reader["price"]).ToString("#,##0.00"),
+                                    Convert.ToDecimal(reader["price"]).ToString("#,##0.00"),
                                     reader["qty"],
-                                    Convert.ToDouble(reader["disc"]).ToString("#,##0.00"),
+                                    Convert.ToDecimal(reader["disc"]).ToString("#,##0.00"),
                                     netTotal.ToString("#,##0.00")
                                 );
                             }
@@ -139,7 +139,8 @@ namespace PosSystem
                 using (var cn = new SQLiteConnection(_dbPath))
                 {
                     await cn.OpenAsync();
-                    string sql = "SELECT username FROM tblUser WHERE role = 'Cashier' ORDER BY username ASC";
+                    // Database Reference: tblUser column names
+                    string sql = "SELECT username FROM tblUser ORDER BY username ASC";
 
                     using (var cmd = new SQLiteCommand(sql, cn))
                     using (var reader = await cmd.ExecuteReaderAsync())
@@ -181,7 +182,9 @@ namespace PosSystem
         private void OpenCancelDetails(int rowIndex)
         {
             var row = dataGridView1.Rows[rowIndex];
+            // Passing 'this' so frmCancelDetails can call LoadSoldItemsAsync() back
             frmCancelDetails f = new frmCancelDetails(this);
+
             f.txtID.Text = row.Cells[1].Value.ToString();
             f.txtTransno.Text = row.Cells[2].Value.ToString();
             f.txtPcode.Text = row.Cells[3].Value.ToString();
@@ -190,12 +193,13 @@ namespace PosSystem
             f.txtQty.Text = row.Cells[6].Value.ToString();
             f.txtDiscount.Text = row.Cells[7].Value.ToString();
             f.txtTotal.Text = row.Cells[8].Value.ToString();
-            f.txtCancelled.Text = suser;
+            f.txtCancelled.Text = suser; // Current user session
             f.ShowDialog();
         }
 
         private void btnSave_Click(object sender, EventArgs e)
         {
+            // Implementation for report printing
             frmReportSold frm = new frmReportSold(this);
             frm.LoadReport();
             frm.ShowDialog();
@@ -226,14 +230,12 @@ namespace PosSystem
         #endregion
 
         #region Designer Compatibility Stubs
-        // ELITE: These methods satisfy the requirements of your Designer.cs file 
-        // while redirecting to the optimized async logic.
 
         private void dateTimePicker1_ValueChanged(object sender, EventArgs e) => FilterCriteria_Changed(sender, e);
         private void dateTimePicker2_ValueChanged(object sender, EventArgs e) => FilterCriteria_Changed(sender, e);
         private void cbCashier_SelectedIndexChanged(object sender, EventArgs e) => FilterCriteria_Changed(sender, e);
-        private void panel1_Paint(object sender, PaintEventArgs e) { /* Intentionally empty */ }
-        private void lblTotal1_Click(object sender, EventArgs e) { /* Intentionally empty */ }
+        private void panel1_Paint(object sender, PaintEventArgs e) { }
+        private void lblTotal1_Click(object sender, EventArgs e) { }
 
         #endregion
     }

@@ -1,12 +1,32 @@
 ﻿using System;
 using System.Data.SQLite;
 using System.Windows.Forms;
+using System.Runtime.InteropServices; // Added for draggable logic
 using Microsoft.Reporting.WinForms;
 
 namespace PosSystem
 {
     public partial class frmInventoryReport : Form
     {
+        #region WINAPI FOR DRAGGING
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
+
+        private void panel1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                ReleaseCapture();
+                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+            }
+        }
+        #endregion
+
         public frmInventoryReport()
         {
             InitializeComponent();
@@ -46,11 +66,12 @@ namespace PosSystem
         public void LoadReport()
         {
             var ds = new DataSet1();
+            // FIXED: Changed TblCatecory to TblCategory to match database truth
             string query = @"
                 SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.qty, p.reorder
                 FROM TblProduct1 AS p
                 INNER JOIN BrandTbl AS b ON p.bid = b.id
-                INNER JOIN TblCatecory AS c ON p.cid = c.id";
+                INNER JOIN TblCategory AS c ON p.cid = c.id";
 
             FillDataSet(ds.Tables["dtInventory"], query);
             SetReport("Bill\\Report3.rdlc", ds.Tables["dtInventory"]);

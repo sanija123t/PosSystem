@@ -1,11 +1,31 @@
 ﻿using System;
 using System.Data.SQLite;
+using System.Runtime.InteropServices; // Required for Draggable Logic
 using System.Windows.Forms;
 
 namespace PosSystem
 {
     public partial class frmSearchProductStokin : Form
     {
+        #region Win32 API for Draggable Form
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
+
+        private void panel1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                ReleaseCapture();
+                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+            }
+        }
+        #endregion
+
         private readonly string stitle = "POS System";
         private readonly frmStockin _stockInForm;
 
@@ -27,6 +47,7 @@ namespace PosSystem
         {
             if (e.RowIndex < 0) return;
 
+            // Check if colSelect exists in your designer
             if (dataGridView1.Columns[e.ColumnIndex].Name == "colSelect")
             {
                 AddProductToStockIn(e.RowIndex);
@@ -37,9 +58,11 @@ namespace PosSystem
         {
             if (dataGridView1.Rows.Count <= rowIndex) return;
 
-            string pcode = dataGridView1.Rows[rowIndex].Cells["Column2"].Value?.ToString();
-            string pdesc = dataGridView1.Rows[rowIndex].Cells["Column4"].Value?.ToString();
+            // Mapping to TblProduct1 schema
+            string pcode = dataGridView1.Rows[rowIndex].Cells[1].Value?.ToString();
+            string pdesc = dataGridView1.Rows[rowIndex].Cells[2].Value?.ToString();
 
+            // Validation against StockIn Form requirements
             if (string.IsNullOrWhiteSpace(_stockInForm.txtRefNo.Text) || string.IsNullOrWhiteSpace(_stockInForm.txtBy.Text))
             {
                 MessageBox.Show("Please ensure Reference No and 'Stock In By' fields are filled!", stitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -53,6 +76,7 @@ namespace PosSystem
                     cn.Open();
                     using (var transaction = cn.BeginTransaction())
                     {
+                        // DB CHECK: Ensure pcode isn't already pending in this refno
                         string checkSql = "SELECT COUNT(*) FROM tblStockIn WHERE refno = @ref AND pcode = @pcode AND status = 'Pending'";
                         using (var checkCmd = new SQLiteCommand(checkSql, cn, transaction))
                         {
@@ -65,6 +89,7 @@ namespace PosSystem
                             }
                         }
 
+                        // DB INSERT: Mapping to tblStockIn columns
                         string sql = @"INSERT INTO tblStockIn (refno, pcode, sdate, stockinby, vendorid, status) 
                                        VALUES (@ref, @pcode, @sdate, @by, @vrid, 'Pending')";
                         using (var cmd = new SQLiteCommand(sql, cn, transaction))
@@ -98,6 +123,7 @@ namespace PosSystem
                 using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     cn.Open();
+                    // Matching TblProduct1 schema: pcode, pdesc, qty
                     string sql = "SELECT pcode, pdesc, qty FROM TblProduct1 WHERE pdesc LIKE @search OR pcode LIKE @search ORDER BY pdesc";
                     using (var cmd = new SQLiteCommand(sql, cn))
                     {

@@ -3,6 +3,7 @@ using System.Data;
 using System.Data.SQLite;
 using System.IO;
 using System.Drawing.Printing;
+using System.Runtime.InteropServices; // Added for draggable logic
 using System.Windows.Forms;
 using Tulpep.NotificationWindow;
 
@@ -10,6 +11,25 @@ namespace PosSystem
 {
     public partial class frmPOS : Form
     {
+        #region WINAPI FOR DRAGGING
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+        [DllImport("user32.dll")]
+        private static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
+
+        private void panel1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                ReleaseCapture();
+                SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+            }
+        }
+        #endregion
+
         string stitle = "POS System v1.0 - ELITE";
         Form1 f;
         PrintDocument pd = new PrintDocument();
@@ -127,11 +147,11 @@ namespace PosSystem
                                 double price = Convert.ToDouble(dr["price"]);
                                 int stock = Convert.ToInt32(dr["qty"]);
 
-                                using (frmQty qty = new frmQty(this))
-                                {
-                                    qty.ProductDetails(pcode, price, lblTransno.Text, stock);
-                                    qty.ShowDialog();
-                                }
+                                // Changed to Show() and assigned owner to allow swapping and remove ding sound
+                                frmQty qty = new frmQty(this);
+                                qty.ProductDetails(pcode, price, lblTransno.Text, stock);
+                                qty.Show(this);
+
                                 LoadCart();
                             }
                         }
@@ -162,68 +182,39 @@ namespace PosSystem
 
         private void btnSearch_Click(object sender, EventArgs e)
         {
-            using (frmLookUp lookup = new frmLookUp())
-            {
-                if (lookup.ShowDialog() == DialogResult.OK)
-                {
-                    using (frmQty qty = new frmQty(this))
-                    {
-                        qty.ProductDetails(
-                            lookup.SelectedPCode,
-                            (double)lookup.SelectedPrice,
-                            lblTransno.Text,
-                            lookup.SelectedStock);
-
-                        qty.ShowDialog();
-                    }
-                    LoadCart();
-                }
-            }
+            // Changed to Show() to allow swapping between forms without dinging
+            frmLookUp lookup = new frmLookUp();
+            lookup.Show(this);
         }
 
         private void btnDiscount_Click(object sender, EventArgs e)
         {
-            using (frmDiscount frm = new frmDiscount(this))
-                frm.ShowDialog();
-
-            LoadCart();
+            // Changed to Show() to allow swapping between forms
+            frmDiscount frm = new frmDiscount(this);
+            frm.Show(this);
         }
 
         private void btnSattle_Click(object sender, EventArgs e)
         {
             if (dataGridView1.Rows.Count == 0) return;
 
-            using (frmSettel frm = new frmSettel(this))
-            {
-                frm.txtSale.Text = lblDisplayTotal.Text;
-
-                if (frm.ShowDialog() == DialogResult.OK)
-                {
-                    Elite_FinalizeTransaction(lblTransno.Text);
-                    GetTransNo();
-                    LoadCart();
-                }
-            }
+            // Settlement usually needs to stay Modal (ShowDialog) to ensure payment is finished,
+            // but if you want to swap, use Show(this). 
+            frmSettel frm = new frmSettel(this);
+            frm.txtSale.Text = lblDisplayTotal.Text;
+            frm.Show(this);
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            using (frmConfirmPaasword f = new frmConfirmPaasword())
-            {
-                if (f.ShowDialog() == DialogResult.OK)
-                {
-                    using (frmCancelDetails c = new frmCancelDetails(null, 0))
-                        c.ShowDialog();
-
-                    LoadCart();
-                }
-            }
+            frmConfirmPaasword fcp = new frmConfirmPaasword();
+            fcp.Show(this);
         }
 
         private void btnSales_Click(object sender, EventArgs e)
         {
-            using (frmReportSold frm = new frmReportSold(null))
-                frm.ShowDialog();
+            frmReportSold frm = new frmReportSold(null);
+            frm.Show(this);
         }
 
         private void btnClose_Click(object sender, EventArgs e)
@@ -350,6 +341,7 @@ namespace PosSystem
         #region SYSTEM
         private void LogError(string ctx, Exception ex)
         {
+            if (!Directory.Exists(Path.GetDirectoryName(logFile))) EnsureLogDirectory();
             File.AppendAllText(logFile, $"{DateTime.Now} [{ctx}] {ex}\n");
         }
 
