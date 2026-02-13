@@ -37,6 +37,9 @@ namespace PosSystem
         public string CancelledBy { get; set; }       // name of person who cancelled
         public frmSoldItems SoldItemForm { get; set; } // optional link to refresh sold items
 
+        // ✅ Added property to indicate if void was approved
+        public bool Approved { get; private set; } = false;
+
         public frmVoid()
         {
             InitializeComponent();
@@ -87,6 +90,8 @@ namespace PosSystem
 
                     // ✅ Commit transaction
                     tx.Commit();
+
+                    Approved = true; // <-- Mark as approved after successful void
 
                     MessageBox.Show("Order transaction successfully cancelled!",
                         "Cancel Order", MessageBoxButtons.OK, MessageBoxIcon.Information);

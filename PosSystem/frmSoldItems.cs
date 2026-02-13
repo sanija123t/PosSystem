@@ -28,6 +28,13 @@ namespace PosSystem
 
         #endregion
 
+        #region Public Properties
+
+        // ✅ Fix for Cancel Form
+        public string ConnectionString => _dbPath;
+
+        #endregion
+
         public frmSoldItems()
         {
             InitializeComponent();
@@ -46,7 +53,6 @@ namespace PosSystem
         {
             try
             {
-                // Load UI components first, then data
                 await LoadCashierAsync();
                 await LoadSoldItemsAsync();
             }
@@ -61,10 +67,9 @@ namespace PosSystem
         public async Task LoadSoldItemsAsync()
         {
             dataGridView1.Rows.Clear();
-            decimal runningTotal = 0; // Fixed: Use decimal for money
+            decimal runningTotal = 0;
             int recordCount = 0;
 
-            // Database format usually expects yyyy-MM-dd
             string dateFrom = dateTimePicker1.Value.ToString("yyyy-MM-dd");
             string dateTo = dateTimePicker2.Value.ToString("yyyy-MM-dd");
 
@@ -74,7 +79,6 @@ namespace PosSystem
                 {
                     await cn.OpenAsync();
 
-                    // Fixed SQL: Added net_total calculation and ensured parameter consistency
                     string sql = @"
                         SELECT c.id, c.transno, c.pcode, p.pdesc, 
                                c.price, c.qty, c.disc, 
@@ -85,9 +89,7 @@ namespace PosSystem
                         AND c.sdate BETWEEN @date1 AND @date2";
 
                     if (cbCashier.Text != "All Cashier" && !string.IsNullOrWhiteSpace(cbCashier.Text))
-                    {
                         sql += " AND c.cashier = @cashier";
-                    }
 
                     using (var cmd = new SQLiteCommand(sql, cn))
                     {
@@ -139,7 +141,7 @@ namespace PosSystem
                 using (var cn = new SQLiteConnection(_dbPath))
                 {
                     await cn.OpenAsync();
-                    // Database Reference: tblUser column names
+
                     string sql = "SELECT username FROM tblUser ORDER BY username ASC";
 
                     using (var cmd = new SQLiteCommand(sql, cn))
@@ -182,7 +184,6 @@ namespace PosSystem
         private void OpenCancelDetails(int rowIndex)
         {
             var row = dataGridView1.Rows[rowIndex];
-            // Passing 'this' so frmCancelDetails can call LoadSoldItemsAsync() back
             frmCancelDetails f = new frmCancelDetails(this);
 
             f.txtID.Text = row.Cells[1].Value.ToString();
@@ -193,13 +194,12 @@ namespace PosSystem
             f.txtQty.Text = row.Cells[6].Value.ToString();
             f.txtDiscount.Text = row.Cells[7].Value.ToString();
             f.txtTotal.Text = row.Cells[8].Value.ToString();
-            f.txtCancelled.Text = suser; // Current user session
+            f.txtCancelled.Text = suser;
             f.ShowDialog();
         }
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            // Implementation for report printing
             frmReportSold frm = new frmReportSold(this);
             frm.LoadReport();
             frm.ShowDialog();

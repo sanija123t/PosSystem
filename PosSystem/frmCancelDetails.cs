@@ -2,6 +2,10 @@
 using System.Runtime.InteropServices; // Added for draggable logic
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Data.SQLite;
+using iTextSharp.text;       // PDF export
+using iTextSharp.text.pdf;
+using System.IO;
 
 namespace PosSystem
 {
@@ -27,7 +31,7 @@ namespace PosSystem
         #endregion
 
         private readonly frmSoldItems f;
-        private decimal unitPrice = 0; // optional: unit price for refund calculation
+        private decimal unitPrice = 0; // original sold price
 
         public frmCancelDetails(frmSoldItems frm, decimal soldPrice = 0)
         {
@@ -36,8 +40,11 @@ namespace PosSystem
             unitPrice = soldPrice;
             KeyPreview = true;
 
-            // ELITE: Explicitly re-binding to ensure the 'not working' bars are forced to trigger logic
             txtCancelQty.TextChanged += TxtCancelQty_TextChanged;
+
+            // Auto-fill sold item info on Enter
+            txtID.KeyDown += TxtID_KeyDown;
+            txtPcode.KeyDown += TxtPcode_KeyDown;
         }
 
         private void frmCancelDetails_Load(object sender, EventArgs e)
@@ -45,38 +52,20 @@ namespace PosSystem
             cbAction.Focus();
         }
 
-        private void pictureBox1_Click(object sender, EventArgs e)
-        {
-            Dispose();
-        }
+        private void pictureBox1_Click(object sender, EventArgs e) => Dispose();
 
-        // Prevent typing in the ComboBox
-        private void cbAction_KeyPress(object sender, KeyPressEventArgs e)
-        {
-            e.Handled = true;
-        }
+        private void cbAction_KeyPress(object sender, KeyPressEventArgs e) => e.Handled = true;
 
-        // ============================================================
-        // 🔹 DYNAMIC REFUND CALCULATION (Enterprise Logic)
-        // ============================================================
-        private void TxtCancelQty_TextChanged(object sender, EventArgs e)
-        {
-            PerformCalculation();
-        }
+        private void TxtCancelQty_TextChanged(object sender, EventArgs e) => PerformCalculation();
 
         private void PerformCalculation()
         {
             try
             {
-                // ENTERPRISE: Use decimal for financial accuracy
                 if (decimal.TryParse(txtCancelQty.Text, out decimal qty))
-                {
                     txtTotal.Text = (unitPrice * qty).ToString("N2");
-                }
                 else
-                {
                     txtTotal.Text = "0.00";
-                }
             }
             catch
             {
@@ -84,57 +73,45 @@ namespace PosSystem
             }
         }
 
-        // ============================================================
-        // 🔹 SAVE CANCEL ACTION (Elite Implementation)
-        // ============================================================
         private async void btnSave_Click(object sender, EventArgs e)
         {
-            // Lock UI to prevent race conditions
             btnSave.Enabled = false;
             this.Cursor = Cursors.WaitCursor;
 
             try
             {
-                // 1. ELITE VALIDATION: Ensure all enterprise fields are satisfied
+                // Manual fields validation
                 if (string.IsNullOrWhiteSpace(cbAction.Text) ||
                     string.IsNullOrWhiteSpace(txtCancelQty.Text) ||
                     string.IsNullOrWhiteSpace(txtReason.Text) ||
                     string.IsNullOrWhiteSpace(txtVoidBy.Text))
                 {
-                    MessageBox.Show("Security and Data Integrity Error: Please fill in all required fields, including Voided By.",
-                        "Validation Failure", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Please fill all required fields manually (Action, Cancel Qty, Reason, Voided By).",
+                        "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                // 2. DATA PARSING: Prevent crashes from non-numeric input
                 if (!int.TryParse(txtQty.Text, out int currentQty) ||
                     !int.TryParse(txtCancelQty.Text, out int cancelQty))
                 {
-                    MessageBox.Show("Format Error: Quantities must be whole numeric values.", "Input Error",
+                    MessageBox.Show("Quantities must be whole numeric values.", "Input Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                // 3. LOGIC CHECK
-                if (cancelQty <= 0)
+                if (cancelQty <= 0 || cancelQty > currentQty)
                 {
-                    MessageBox.Show("Quantity must be greater than zero.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                if (cancelQty > currentQty)
-                {
-                    MessageBox.Show("Inventory Conflict: Cancel quantity exceeds original sold quantity.", "Logic Error",
+                    MessageBox.Show("Cancel quantity must be >0 and <= sold quantity.", "Logic Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                // 4. CONFIRMATION
-                if (MessageBox.Show("Confirming this action will void the selected item(s). Proceed?", "System Confirmation",
+                // Confirm cancel
+                if (MessageBox.Show("This action will void the selected item(s). Proceed?", "Confirm Cancel",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                     return;
 
-                // 5. PROCESSING: Pass data to frmVoid
+                // 🔹 Ask admin approval via frmVoid
                 using (frmVoid voidForm = new frmVoid())
                 {
                     voidForm.CancelAction = cbAction.Text.Trim();
@@ -143,15 +120,25 @@ namespace PosSystem
                     voidForm.SoldItemForm = f;
 
                     voidForm.ShowDialog();
+
+                    // If approval not granted, stop
+                    if (!voidForm.Approved)
+                    {
+                        MessageBox.Show("Cancellation not approved by admin.", "Access Denied", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
                 }
 
-                // 6. REFRESH & DISPOSE
                 await RefreshList();
-                this.Dispose();
+
+                // Export PDF only if cancel approved
+                ExportCancelDetailsToPDF();
+
+                Dispose();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Enterprise Critical Error: " + ex.Message, "Fatal Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Critical Error: " + ex.Message, "Fatal Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -160,35 +147,126 @@ namespace PosSystem
             }
         }
 
-        // =========================
-        // 🔹 ASYNC REFRESH SOLD ITEMS
-        // =========================
         public async Task RefreshList()
         {
             if (f != null)
-            {
                 await f.LoadSoldItemsAsync();
-            }
         }
 
-        // =========================
-        // 🔹 KEYBOARD SHORTCUTS
-        // =========================
         private void frmCancelDetails_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Escape)
-                Dispose();
+            if (e.KeyCode == Keys.Escape) Dispose();
             else if (e.KeyCode == Keys.Enter)
             {
-                e.SuppressKeyPress = true; // Prevents the 'ding' sound
+                e.SuppressKeyPress = true;
                 btnSave_Click(sender, e);
             }
         }
 
-        // --------------------------------------------------------------------------------------
-        // 🔹 JUNK LINES / DESIGNER DEPENDENCIES 
-        // DO NOT REMOVE: Removing these will break the WinForms Designer (InitializeComponent)
-        // --------------------------------------------------------------------------------------
+        #region Auto-Fill Sold Info (Manual Cancel Fields Only)
+
+        private void TxtID_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                AutoFillByID(txtID.Text.Trim());
+            }
+        }
+
+        private void TxtPcode_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                AutoFillByPcode(txtPcode.Text.Trim());
+            }
+        }
+
+        private void AutoFillByID(string id)
+        {
+            using (SQLiteConnection con = new SQLiteConnection(f.ConnectionString))
+            {
+                con.Open();
+                using (SQLiteCommand cmd = new SQLiteCommand("SELECT * FROM SoldItems WHERE ID=@id", con))
+                {
+                    cmd.Parameters.AddWithValue("@id", id);
+                    using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            txtPcode.Text = reader["Pcode"].ToString();
+                            txtDesc.Text = reader["Description"].ToString();
+                            txtQty.Text = reader["Qty"].ToString();
+                            txtPrice.Text = reader["Price"].ToString();
+                            unitPrice = Convert.ToDecimal(reader["Price"]);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void AutoFillByPcode(string pcode)
+        {
+            using (SQLiteConnection con = new SQLiteConnection(f.ConnectionString))
+            {
+                con.Open();
+                using (SQLiteCommand cmd = new SQLiteCommand("SELECT * FROM SoldItems WHERE Pcode=@pcode", con))
+                {
+                    cmd.Parameters.AddWithValue("@pcode", pcode);
+                    using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            txtID.Text = reader["ID"].ToString();
+                            txtDesc.Text = reader["Description"].ToString();
+                            txtQty.Text = reader["Qty"].ToString();
+                            txtPrice.Text = reader["Price"].ToString();
+                            unitPrice = Convert.ToDecimal(reader["Price"]);
+                        }
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        #region Export to PDF
+
+        private void ExportCancelDetailsToPDF()
+        {
+            try
+            {
+                string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), $"Cancel_{txtID.Text}_{DateTime.Now:yyyyMMddHHmmss}.pdf");
+                Document doc = new Document(PageSize.A4);
+                PdfWriter.GetInstance(doc, new FileStream(path, FileMode.Create));
+                doc.Open();
+
+                doc.Add(new Paragraph("Cancel Details Report"));
+                doc.Add(new Paragraph($"ID: {txtID.Text}"));
+                doc.Add(new Paragraph($"Pcode: {txtPcode.Text}"));
+                doc.Add(new Paragraph($"Description: {txtDesc.Text}"));
+                doc.Add(new Paragraph($"Qty Sold: {txtQty.Text}"));
+                doc.Add(new Paragraph($"Qty Cancel: {txtCancelQty.Text}"));
+                doc.Add(new Paragraph($"Unit Price: {txtPrice.Text}"));
+                doc.Add(new Paragraph($"Total Refund: {txtTotal.Text}"));
+                doc.Add(new Paragraph($"Action: {cbAction.Text}"));
+                doc.Add(new Paragraph($"Reason: {txtReason.Text}"));
+                doc.Add(new Paragraph($"Voided By: {txtVoidBy.Text}"));
+                doc.Close();
+
+                MessageBox.Show($"PDF Exported Successfully to Desktop:\n{path}", "PDF Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("PDF Export Failed: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        #endregion
+
+        #region Junk Designer Stubs
+
         private void txtID_TextChanged(object sender, EventArgs e) { }
         private void txtPcode_TextChanged(object sender, EventArgs e) { }
         private void txtDesc_TextChanged(object sender, EventArgs e) { }
@@ -201,11 +279,8 @@ namespace PosSystem
         private void txtCancelled_TextChanged(object sender, EventArgs e) { }
         private void cbAction_SelectedIndexChanged(object sender, EventArgs e) { }
         private void txtReason_TextChanged(object sender, EventArgs e) { }
+        private void txtCancelQty_TextChanged_1(object sender, EventArgs e) { PerformCalculation(); }
 
-        private void txtCancelQty_TextChanged_1(object sender, EventArgs e)
-        {
-            // ELITE: Redirecting designer duplicate to the main calculation logic
-            PerformCalculation();
-        }
+        #endregion
     }
 }
