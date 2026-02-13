@@ -14,41 +14,28 @@ namespace PosSystem
         // 🔥 Debounce controller for search
         private CancellationTokenSource _searchCts;
 
-        // Properties to get the selected item
+        // ✅ Properties to get the selected item (Used by frmPOS)
         public string SelectedPCode { get; private set; }
         public string SelectedDescription { get; private set; }
         public decimal SelectedPrice { get; private set; }
+        public int SelectedStock { get; private set; }
 
         // ✅ Parameterless constructor (required)
         public frmLookUp()
         {
             InitializeComponent();
-            KeyPreview = true;
+            this.KeyPreview = true;
         }
 
-        // ✅ Optional: constructor with callback if you want to pass OnProductSelected directly
+        // ✅ Optional: constructor with callback
         public frmLookUp(Action<string, double, string, int> callback) : this()
         {
             OnProductSelected = callback;
         }
 
-        // ✅ btnOK selects the row and closes the form
-        private void btnOK_Click(object sender, EventArgs e)
-        {
-            if (dataGridView1.CurrentRow != null)
-            {
-                SelectedPCode = dataGridView1.CurrentRow.Cells["pcode"].Value.ToString();
-                SelectedDescription = dataGridView1.CurrentRow.Cells["pdesc"].Value.ToString();
-                SelectedPrice = Convert.ToDecimal(dataGridView1.CurrentRow.Cells["price"].Value);
-
-                this.DialogResult = DialogResult.OK;
-                this.Close();
-            }
-        }
-
         private void pictureBox2_Click(object sender, EventArgs e)
         {
-            Dispose();
+            this.Dispose();
         }
 
         // 🔥 ASYNC + DEBOUNCED LOAD
@@ -95,14 +82,10 @@ namespace PosSystem
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // Ignore, user typing
-            }
+            catch (OperationCanceledException) { /* Typing... */ }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -120,7 +103,7 @@ namespace PosSystem
 
             try
             {
-                await Task.Delay(300, token); // debounce
+                await Task.Delay(300, token); // Wait 300ms before searching
                 await LoadRecordsAsync(txtSearch.Text.Trim(), token);
             }
             catch (OperationCanceledException) { }
@@ -131,40 +114,67 @@ namespace PosSystem
             if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
 
             string colName = dataGridView1.Columns[e.ColumnIndex].Name;
-            if (colName != "Select") return;
 
+            if (colName == "Select")
+            {
+                SelectProduct(e.RowIndex);
+            }
+        }
+
+        private void SelectProduct(int rowIndex)
+        {
             try
             {
-                string pcode = dataGridView1.Rows[e.RowIndex].Cells["pcode"].Value?.ToString();
-                double.TryParse(dataGridView1.Rows[e.RowIndex].Cells["price"].Value?.ToString(), out double price);
-                int.TryParse(dataGridView1.Rows[e.RowIndex].Cells["qty"].Value?.ToString(), out int qtyHand);
+                SelectedPCode = dataGridView1.Rows[rowIndex].Cells["pcode"].Value?.ToString();
+                SelectedDescription = dataGridView1.Rows[rowIndex].Cells["pdesc"].Value?.ToString();
 
-                // Call the callback if used
-                OnProductSelected?.Invoke(pcode, price, DateTime.Now.ToString("yyyyMMddHHmmss"), qtyHand);
+                decimal.TryParse(dataGridView1.Rows[rowIndex].Cells["price"].Value?.ToString(), out decimal price);
+                SelectedPrice = price;
 
-                Dispose(); // close lookup
+                int.TryParse(dataGridView1.Rows[rowIndex].Cells["qty"].Value?.ToString(), out int qtyHand);
+                SelectedStock = qtyHand;
+
+                OnProductSelected?.Invoke(SelectedPCode, (double)SelectedPrice, DateTime.Now.ToString("yyyyMMddHHmmss"), SelectedStock);
+
+                this.DialogResult = DialogResult.OK;
+                this.Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Selection Error: " + ex.Message,
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Selection Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void frmLookUp_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Escape)
-                Dispose();
+                this.Dispose();
+
+            if (e.KeyCode == Keys.Enter && dataGridView1.CurrentRow != null)
+            {
+                e.Handled = true;
+                SelectProduct(dataGridView1.CurrentRow.Index);
+            }
         }
 
+        private void btnOK_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.CurrentRow != null)
+            {
+                SelectProduct(dataGridView1.CurrentRow.Index);
+            }
+        }
+
+        // ✅ FIXED: This method resolves the CS1061 error in your Designer file
+        private void btnOK_Click_1(object sender, EventArgs e)
+        {
+            btnOK_Click(sender, e);
+        }
+
+        // Clean up events
+        private void txtSearch_Click(object sender, EventArgs e) { }
         private void panel2_Paint(object sender, PaintEventArgs e) { }
         private void panel1_Paint(object sender, PaintEventArgs e) { }
         private void frmLookUp_KeyPress(object sender, KeyPressEventArgs e) { }
-
-        // ✅ Fixed missing method body
-        private void txtSearch_Click(object sender, EventArgs e)
-        {
-            // optional: do something on click
-        }
     }
 }

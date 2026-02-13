@@ -76,7 +76,6 @@ namespace PosSystem
                 using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     await cn.OpenAsync();
-                    // Select only required fields
                     string sql = "SELECT username, role, password, salt, isactive FROM tblUser WHERE username=@u AND isdeleted=0 LIMIT 1";
 
                     using (var cm = new SQLiteCommand(sql, cn))
@@ -92,7 +91,6 @@ namespace PosSystem
                                 string storedHash = dr["password"].ToString();
                                 string salt = dr["salt"].ToString();
 
-                                // Offload hashing to background thread
                                 string inputHash = await Task.Run(() => DBConnection.GetHash(password, salt));
 
                                 if (inputHash == storedHash)
@@ -110,7 +108,6 @@ namespace PosSystem
         {
             Form nextForm = null;
 
-            // ELITE ROLE REDIRECTION: Fixed to match "Administrator" from DBConnection
             if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
                 role.Equals("Administrator", StringComparison.OrdinalIgnoreCase))
             {
@@ -121,9 +118,16 @@ namespace PosSystem
             }
             else if (role.Equals("Cashier", StringComparison.OrdinalIgnoreCase))
             {
-                frmPOS cashierDash = new frmPOS();
-                // If your frmPOS needs labels, set them here:
-                // cashierDash.lblUser.Text = username;
+                frmPOS cashierDash = new frmPOS(this);
+
+                // ✅ FIX: Use 'LblUser' and 'lblName' which match your Designer file
+                // We access the controls via the Controls.Find method to avoid protection level errors
+                Control[] userLabel = cashierDash.Controls.Find("LblUser", true);
+                if (userLabel.Length > 0) userLabel[0].Text = username;
+
+                Control[] nameLabel = cashierDash.Controls.Find("lblName", true);
+                if (nameLabel.Length > 0) nameLabel[0].Text = username;
+
                 nextForm = cashierDash;
             }
 
@@ -136,7 +140,6 @@ namespace PosSystem
             }
             else
             {
-                // This matches the error in your screenshot
                 MessageBox.Show($"Role '{role}' not recognized. Access denied.", "Security Error", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                 ToggleUI(true);
             }

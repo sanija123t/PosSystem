@@ -10,10 +10,10 @@ namespace PosSystem
         private readonly string stitle = "POS System";
         private readonly frmPOS fPOS;
 
-        // 🔹 Callback approach for decoupling if needed in future
+        // 🔹 Callback approach for decoupling
         public Action<double, double> OnDiscountApplied;
 
-        // ✅ Added property to fix CS1061
+        // ✅ Property for external access
         public double DiscountAmount
         {
             get
@@ -40,36 +40,71 @@ namespace PosSystem
             Dispose();
         }
 
-        // =========================
-        // 🔹 CALCULATION LOGIC
-        // =========================
+        // ============================================================
+        // 🔹 ELITE CALCULATION ENGINE (Bi-Directional)
+        // ============================================================
+
+        // Triggers when Percentage is typed
         private void txtDiscount_TextChanged(object sender, EventArgs e)
         {
-            CalculateDiscount();
+            if (txtDiscount.Focused) // Only calculate if user is actually typing here
+            {
+                CalculateFromPercentage();
+            }
+        }
+
+        // Triggers when Amount is typed
+        private void txtAmount_TextChanged(object sender, EventArgs e)
+        {
+            if (txtAmount.Focused) // Only calculate if user is actually typing here
+            {
+                CalculateFromAmount();
+            }
+        }
+
+        private void CalculateFromPercentage()
+        {
+            try
+            {
+                double price = double.TryParse(txtPrice.Text, out double p) ? p : 0;
+                double percent = double.TryParse(txtDiscount.Text, out double d) ? d : 0;
+
+                // Elite Clamping
+                if (percent > 100) percent = 100;
+
+                double amount = price * (percent / 100.0);
+                txtAmount.Text = amount.ToString("0.00");
+            }
+            catch { }
+        }
+
+        private void CalculateFromAmount()
+        {
+            try
+            {
+                double price = double.TryParse(txtPrice.Text, out double p) ? p : 0;
+                double amount = double.TryParse(txtAmount.Text, out double a) ? a : 0;
+
+                if (price > 0)
+                {
+                    // Elite Clamping: Cannot discount more than the price
+                    if (amount > price) amount = price;
+
+                    double percent = (amount / price) * 100.0;
+                    txtDiscount.Text = percent.ToString("0.00");
+                }
+            }
+            catch { }
         }
 
         private void txtPrice_TextChanged(object sender, EventArgs e)
         {
-            CalculateDiscount();
-        }
-
-        private void CalculateDiscount()
-        {
-            if (!double.TryParse(txtPrice.Text, out double price))
-                price = 0;
-
-            if (!double.TryParse(txtDiscount.Text, out double percent))
-                percent = 0;
-
-            // ✅ Manual clamp for .NET Framework
-            percent = (percent < 0) ? 0 : (percent > 100) ? 100 : percent;
-
-            double discount = price * (percent / 100.0);
-            txtAmount.Text = discount.ToString("#,##0.00");
+            // If price changes, update the amount based on current percentage
+            CalculateFromPercentage();
         }
 
         // =========================
-        // 🔹 CONFIRM DISCOUNT (ASYNC + VALIDATION)
+        // 🔹 CONFIRM DISCOUNT
         // =========================
         private async void btnConfirm_Click(object sender, EventArgs e)
         {
@@ -84,20 +119,8 @@ namespace PosSystem
                 if (!int.TryParse(lblID.Text, out int cartId))
                     throw new Exception("Invalid cart item ID.");
 
-                if (!double.TryParse(txtDiscount.Text, out double discPercent))
-                    discPercent = 0;
-
-                if (!double.TryParse(txtAmount.Text, out double discAmount))
-                    discAmount = 0;
-
-                // 🔹 LOGICAL VALIDATION
-                if (discPercent < 0 || discPercent > 100)
-                {
-                    MessageBox.Show("Discount must be between 0% and 100%.", stitle,
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    txtDiscount.Focus();
-                    return;
-                }
+                double.TryParse(txtDiscount.Text, out double discPercent);
+                double.TryParse(txtAmount.Text, out double discAmount);
 
                 string sql = @"UPDATE tblCart1 
                                SET disc = @disc, disc_precent = @disc_precent 
@@ -114,12 +137,8 @@ namespace PosSystem
                     await cm.ExecuteNonQueryAsync();
                 }
 
-                // 🔹 Trigger callback if any
                 OnDiscountApplied?.Invoke(discAmount, discPercent);
-
-                // Refresh POS cart
                 fPOS?.LoadCart();
-
                 Dispose();
             }
             catch (Exception ex)
@@ -147,5 +166,10 @@ namespace PosSystem
         {
             txtDiscount.Focus();
         }
+
+        // =========================
+        // 🔹 PRESERVED JUNK LINES
+        // =========================
+        private void CalculateDiscount() { /* Old method logic replaced by Bi-Directional Engine */ }
     }
 }

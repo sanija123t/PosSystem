@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
 using System.Security.Cryptography;
@@ -54,10 +55,10 @@ namespace PosSystem
                     {
                         cn.Open();
 
-                        using (var pragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", cn))
+                        using (var pragma = new SQLiteCommand("PRAGMA foreign_keys = ON; PRAGMA synchronous = NORMAL;", cn))
                             pragma.ExecuteNonQuery();
 
-                        // ENTERPRISE: Updated script with missing columns for Cancel and Adjustment modules
+                        // ENTERPRISE: 10/10 Script with Transaction Header, Profit, and Supplier integration
                         string script = @"
 -- CORE TABLES
 CREATE TABLE IF NOT EXISTS BrandTbl (id INTEGER PRIMARY KEY AUTOINCREMENT, brand TEXT NOT NULL);
@@ -72,10 +73,29 @@ CREATE TABLE IF NOT EXISTS TblProduct1 (
     bid INTEGER,
     cid INTEGER,
     price REAL DEFAULT 0,
+    cost_price REAL DEFAULT 0,  
+    tax_rate REAL DEFAULT 0,    
+    sid INTEGER DEFAULT 0,      
     qty INTEGER DEFAULT 0,
     reorder INTEGER DEFAULT 0,
+    isactive INTEGER DEFAULT 1, 
     FOREIGN KEY (bid) REFERENCES BrandTbl(id),
     FOREIGN KEY (cid) REFERENCES TblCategory(id)
+);
+
+-- 10/10 UPGRADE: TRANSACTION HEADER (For Receipts & Audits)
+CREATE TABLE IF NOT EXISTS tblTransaction (
+    transno TEXT PRIMARY KEY,
+    sdate TEXT,
+    subtotal REAL DEFAULT 0,
+    discount REAL DEFAULT 0,
+    vat REAL DEFAULT 0,
+    total REAL DEFAULT 0,
+    payment_type TEXT,
+    cash_tendered REAL DEFAULT 0,
+    cash_change REAL DEFAULT 0,
+    user_id TEXT,
+    status TEXT DEFAULT 'Sold'
 );
 
 CREATE TABLE IF NOT EXISTS tblUser (
@@ -100,7 +120,8 @@ CREATE TABLE IF NOT EXISTS tblCart1 (
     disc REAL DEFAULT 0,
     total REAL DEFAULT 0,
     user TEXT,
-    FOREIGN KEY (pcode) REFERENCES TblProduct1(pcode)
+    FOREIGN KEY (pcode) REFERENCES TblProduct1(pcode),
+    FOREIGN KEY (transno) REFERENCES tblTransaction(transno) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS tblAdjustment (
@@ -138,32 +159,23 @@ CREATE TABLE IF NOT EXISTS tblStockIn (
     FOREIGN KEY (vendorid) REFERENCES tblVendor(id)
 );
 
--- ELITE: Full cancel schema with all UI-required columns
 CREATE TABLE IF NOT EXISTS tblCancel (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    transno TEXT,
-    pcode TEXT,
-    price REAL,
-    qty INTEGER,
-    total REAL,
-    sdate TEXT,
-    voidby TEXT,
-    cancelledby TEXT,
-    reason TEXT,
-    action TEXT
+    transno TEXT, pcode TEXT, price REAL, qty INTEGER, total REAL, 
+    sdate TEXT, voidby TEXT, cancelledby TEXT, reason TEXT, action TEXT
 );
 
 -- VIEWS
 DROP VIEW IF EXISTS vwInventory;
 CREATE VIEW vwInventory AS
-SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.qty, p.reorder
+SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.cost_price, p.qty, p.reorder, p.isactive
 FROM TblProduct1 p
-INNER JOIN BrandTbl b ON b.id = p.bid
-INNER JOIN TblCategory c ON c.id = p.cid;
+LEFT JOIN BrandTbl b ON b.id = p.bid
+LEFT JOIN TblCategory c ON c.id = p.cid;
 
 DROP VIEW IF EXISTS vwCriticalItems;
 CREATE VIEW vwCriticalItems AS
-SELECT * FROM vwInventory WHERE qty <= reorder;
+SELECT * FROM vwInventory WHERE qty <= reorder AND isactive = 1;
 
 DROP VIEW IF EXISTS vwSoldItems;
 CREATE VIEW vwSoldItems AS
@@ -188,31 +200,41 @@ INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
 
         private static void FixSchema(SQLiteConnection cn)
         {
-            // ENTERPRISE: Automated column injection to prevent SQL errors on older DB files
-            string[] tables = { "tblUser", "tblCancel" };
-            foreach (var table in tables)
-            {
-                using (var check = new SQLiteCommand($"PRAGMA table_info({table});", cn))
-                using (var reader = check.ExecuteReader())
-                {
-                    bool hasActive = false;
-                    while (reader.Read())
-                    {
-                        if (reader["name"].ToString().Equals("isactive", StringComparison.OrdinalIgnoreCase)) hasActive = true;
-                    }
+            // List of updates using a cleaner array approach
+            string[,] updates = {
+                { "TblProduct1", "cost_price", "REAL DEFAULT 0" },
+                { "TblProduct1", "tax_rate", "REAL DEFAULT 0" },
+                { "TblProduct1", "sid", "INTEGER DEFAULT 0" },
+                { "TblProduct1", "isactive", "INTEGER DEFAULT 1" },
+                { "tblUser", "isactive", "INTEGER DEFAULT 1" }
+            };
 
-                    if (table == "tblUser" && !hasActive)
-                    {
-                        using (var alter = new SQLiteCommand("ALTER TABLE tblUser ADD COLUMN isactive INTEGER DEFAULT 1;", cn))
-                            alter.ExecuteNonQuery();
-                    }
+            for (int i = 0; i < updates.GetLength(0); i++)
+            {
+                if (!ColumnExists(cn, updates[i, 0], updates[i, 1]))
+                {
+                    using (var cmd = new SQLiteCommand($"ALTER TABLE {updates[i, 0]} ADD COLUMN {updates[i, 1]} {updates[i, 2]};", cn))
+                        cmd.ExecuteNonQuery();
                 }
             }
         }
 
+        private static bool ColumnExists(SQLiteConnection cn, string tableName, string columnName)
+        {
+            using (var cmd = new SQLiteCommand($"PRAGMA table_info({tableName});", cn))
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    if (reader["name"].ToString().Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+            return false;
+        }
+
         private static void SeedData(SQLiteConnection cn)
         {
-            // Seed VAT
             using (var cmd = new SQLiteCommand("SELECT COUNT(*) FROM tblVat", cn))
             {
                 if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
@@ -221,7 +243,6 @@ INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
                 }
             }
 
-            // Seed Admin
             using (var cmd = new SQLiteCommand("SELECT COUNT(*) FROM tblUser", cn))
             {
                 if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
@@ -238,7 +259,7 @@ INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
             }
         }
 
-        // --- DASHBOARD HELPERS (Junk Lines Preserved for UI compatibility) ---
+        // --- DASHBOARD HELPERS (RESTORED TO PREVENT CS0117 ERRORS) ---
         public static double DailySales()
         {
             try
@@ -250,8 +271,8 @@ INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
             catch { return 0; }
         }
 
-        public static double ProductLine() { try { using var cn = new SQLiteConnection(con); cn.Open(); using var cm = new SQLiteCommand("SELECT COUNT(*) FROM TblProduct1", cn); return Convert.ToDouble(cm.ExecuteScalar() ?? 0); } catch { return 0; } }
-        public static double StockOnHand() { try { using var cn = new SQLiteConnection(con); cn.Open(); using var cm = new SQLiteCommand("SELECT IFNULL(SUM(qty),0) FROM TblProduct1", cn); return Convert.ToDouble(cm.ExecuteScalar() ?? 0); } catch { return 0; } }
+        public static double ProductLine() { try { using var cn = new SQLiteConnection(con); cn.Open(); using var cm = new SQLiteCommand("SELECT COUNT(*) FROM TblProduct1 WHERE isactive = 1", cn); return Convert.ToDouble(cm.ExecuteScalar() ?? 0); } catch { return 0; } }
+        public static double StockOnHand() { try { using var cn = new SQLiteConnection(con); cn.Open(); using var cm = new SQLiteCommand("SELECT IFNULL(SUM(qty),0) FROM TblProduct1 WHERE isactive = 1", cn); return Convert.ToDouble(cm.ExecuteScalar() ?? 0); } catch { return 0; } }
         public static double CriticalItems() { try { using var cn = new SQLiteConnection(con); cn.Open(); using var cm = new SQLiteCommand("SELECT COUNT(*) FROM vwCriticalItems", cn); return Convert.ToDouble(cm.ExecuteScalar() ?? 0); } catch { return 0; } }
     }
 }
