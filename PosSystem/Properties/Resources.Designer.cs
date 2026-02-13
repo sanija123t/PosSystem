@@ -83,9 +83,59 @@ namespace PosSystem.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap audit {
+            get {
+                object obj = ResourceManager.GetObject("audit", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap btnStockMain {
+            get {
+                object obj = ResourceManager.GetObject("btnStockMain", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap close_window_16 {
             get {
                 object obj = ResourceManager.GetObject("close_window_16", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap dashboard {
+            get {
+                object obj = ResourceManager.GetObject("dashboard", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap data_recovery {
+            get {
+                object obj = ResourceManager.GetObject("data-recovery", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap database {
+            get {
+                object obj = ResourceManager.GetObject("database", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -113,6 +163,36 @@ namespace PosSystem.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap history {
+            get {
+                object obj = ResourceManager.GetObject("history", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap logout {
+            get {
+                object obj = ResourceManager.GetObject("logout", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap pos {
+            get {
+                object obj = ResourceManager.GetObject("pos", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap pos_full_img {
             get {
                 object obj = ResourceManager.GetObject("pos full img", resourceCulture);
@@ -126,6 +206,46 @@ namespace PosSystem.Properties {
         internal static System.Drawing.Bitmap pos_logo_img {
             get {
                 object obj = ResourceManager.GetObject("pos logo img", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap productdropdownbtn {
+            get {
+                object obj = ResourceManager.GetObject("productdropdownbtn", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap productdropdownbtn2 {
+            get {
+                object obj = ResourceManager.GetObject("productdropdownbtn2", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap productdropdownbtn3 {
+            get {
+                object obj = ResourceManager.GetObject("productdropdownbtn3", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap settings {
+            get {
+                object obj = ResourceManager.GetObject("settings", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

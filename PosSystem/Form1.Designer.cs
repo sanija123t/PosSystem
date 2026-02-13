@@ -29,22 +29,32 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
-            this.panel2 = new System.Windows.Forms.Panel();
-            this.pictureBox1 = new System.Windows.Forms.PictureBox();
-            this.button9 = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
-            this.lblRole = new System.Windows.Forms.Label();
-            this.button8 = new System.Windows.Forms.Button();
-            this.button7 = new System.Windows.Forms.Button();
-            this.btnSalesHistory = new System.Windows.Forms.Button();
-            this.button6 = new System.Windows.Forms.Button();
-            this.btnBrand = new System.Windows.Forms.Button();
-            this.button4 = new System.Windows.Forms.Button();
-            this.btnStock = new System.Windows.Forms.Button();
+            this.panelSlide = new System.Windows.Forms.Panel();
+            this.btnMaintenanceMain = new System.Windows.Forms.Button();
+            this.panelSubSettings = new System.Windows.Forms.Panel();
+            this.btnStoreSettings = new System.Windows.Forms.Button();
+            this.btnUsersettings = new System.Windows.Forms.Button();
+            this.btnSettingsMain = new System.Windows.Forms.Button();
+            this.btnPOSMain = new System.Windows.Forms.Button();
+            this.btnAuditMain = new System.Windows.Forms.Button();
+            this.btnSalesHistoryMain = new System.Windows.Forms.Button();
+            this.btnRecordsMain = new System.Windows.Forms.Button();
+            this.panelSubProduct = new System.Windows.Forms.Panel();
+            this.btnManageBrand = new System.Windows.Forms.Button();
+            this.btnManageProduct = new System.Windows.Forms.Button();
+            this.btnManageCategory = new System.Windows.Forms.Button();
+            this.btnProductMain = new System.Windows.Forms.Button();
+            this.panelSubStocks = new System.Windows.Forms.Panel();
+            this.btnStockEntry = new System.Windows.Forms.Button();
+            this.btnStockAdjestment = new System.Windows.Forms.Button();
             this.btnVendor = new System.Windows.Forms.Button();
+            this.lblRole = new System.Windows.Forms.Label();
             this.lblUserName = new System.Windows.Forms.Label();
-            this.btnProduct = new System.Windows.Forms.Button();
-            this.button1 = new System.Windows.Forms.Button();
+            this.btnStockMain = new System.Windows.Forms.Button();
+            this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.btnDashboardMain = new System.Windows.Forms.Button();
+            this.panelUserProfile = new System.Windows.Forms.Panel();
+            this.btnLogOutMain = new System.Windows.Forms.Button();
             this.panel3 = new System.Windows.Forms.Panel();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.lblTransno = new System.Windows.Forms.Label();
@@ -54,84 +64,344 @@
             this.lblSname = new System.Windows.Forms.Label();
             this.lblAddress = new System.Windows.Forms.Label();
             this.lblDiscount = new System.Windows.Forms.Label();
-            this.panel2.SuspendLayout();
+            this.panelSlide.SuspendLayout();
+            this.panelSubSettings.SuspendLayout();
+            this.panelSubProduct.SuspendLayout();
+            this.panelSubStocks.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
-            // panel2
+            // panelSlide
             // 
-            this.panel2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(38)))));
-            this.panel2.Controls.Add(this.pictureBox1);
-            this.panel2.Controls.Add(this.button9);
-            this.panel2.Controls.Add(this.button2);
-            this.panel2.Controls.Add(this.lblRole);
-            this.panel2.Controls.Add(this.button8);
-            this.panel2.Controls.Add(this.button7);
-            this.panel2.Controls.Add(this.btnSalesHistory);
-            this.panel2.Controls.Add(this.button6);
-            this.panel2.Controls.Add(this.btnBrand);
-            this.panel2.Controls.Add(this.button4);
-            this.panel2.Controls.Add(this.btnStock);
-            this.panel2.Controls.Add(this.btnVendor);
-            this.panel2.Controls.Add(this.lblUserName);
-            this.panel2.Controls.Add(this.btnProduct);
-            this.panel2.Controls.Add(this.button1);
-            this.panel2.Location = new System.Drawing.Point(-2, 37);
-            this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(243, 615);
-            this.panel2.TabIndex = 1;
-            this.panel2.Paint += new System.Windows.Forms.PaintEventHandler(this.panel2_Paint);
+            this.panelSlide.AutoScroll = true;
+            this.panelSlide.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(38)))));
+            this.panelSlide.Controls.Add(this.btnMaintenanceMain);
+            this.panelSlide.Controls.Add(this.panelSubSettings);
+            this.panelSlide.Controls.Add(this.btnSettingsMain);
+            this.panelSlide.Controls.Add(this.btnPOSMain);
+            this.panelSlide.Controls.Add(this.btnAuditMain);
+            this.panelSlide.Controls.Add(this.btnSalesHistoryMain);
+            this.panelSlide.Controls.Add(this.btnRecordsMain);
+            this.panelSlide.Controls.Add(this.panelSubProduct);
+            this.panelSlide.Controls.Add(this.btnProductMain);
+            this.panelSlide.Controls.Add(this.panelSubStocks);
+            this.panelSlide.Controls.Add(this.lblRole);
+            this.panelSlide.Controls.Add(this.lblUserName);
+            this.panelSlide.Controls.Add(this.btnStockMain);
+            this.panelSlide.Controls.Add(this.pictureBox1);
+            this.panelSlide.Controls.Add(this.btnDashboardMain);
+            this.panelSlide.Controls.Add(this.panelUserProfile);
+            this.panelSlide.Controls.Add(this.btnLogOutMain);
+            this.panelSlide.Dock = System.Windows.Forms.DockStyle.Left;
+            this.panelSlide.Location = new System.Drawing.Point(0, 0);
+            this.panelSlide.Name = "panelSlide";
+            this.panelSlide.Size = new System.Drawing.Size(260, 651);
+            this.panelSlide.TabIndex = 1;
+            this.panelSlide.Paint += new System.Windows.Forms.PaintEventHandler(this.panel2_Paint);
             // 
-            // pictureBox1
+            // btnMaintenanceMain
             // 
-            this.pictureBox1.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox1.Image")));
-            this.pictureBox1.Location = new System.Drawing.Point(83, 3);
-            this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(72, 63);
-            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
-            this.pictureBox1.TabIndex = 15;
-            this.pictureBox1.TabStop = false;
+            this.btnMaintenanceMain.AutoSize = true;
+            this.btnMaintenanceMain.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnMaintenanceMain.FlatAppearance.BorderSize = 0;
+            this.btnMaintenanceMain.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnMaintenanceMain.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnMaintenanceMain.ForeColor = System.Drawing.Color.White;
+            this.btnMaintenanceMain.Image = global::PosSystem.Properties.Resources.data_recovery;
+            this.btnMaintenanceMain.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnMaintenanceMain.Location = new System.Drawing.Point(0, 705);
+            this.btnMaintenanceMain.Name = "btnMaintenanceMain";
+            this.btnMaintenanceMain.Size = new System.Drawing.Size(243, 38);
+            this.btnMaintenanceMain.TabIndex = 23;
+            this.btnMaintenanceMain.Text = "Maintenance";
+            this.btnMaintenanceMain.UseVisualStyleBackColor = true;
+            this.btnMaintenanceMain.Click += new System.EventHandler(this.btnMaintenanceMain_Click);
             // 
-            // button9
+            // panelSubSettings
             // 
-            this.button9.AutoSize = true;
-            this.button9.FlatAppearance.BorderSize = 0;
-            this.button9.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button9.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button9.ForeColor = System.Drawing.Color.White;
-            this.button9.Image = ((System.Drawing.Image)(resources.GetObject("button9.Image")));
-            this.button9.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.button9.Location = new System.Drawing.Point(6, 576);
-            this.button9.Name = "button9";
-            this.button9.Size = new System.Drawing.Size(228, 33);
-            this.button9.TabIndex = 11;
-            this.button9.Text = "Log Out";
-            this.button9.UseVisualStyleBackColor = true;
-            this.button9.Click += new System.EventHandler(this.button9_Click);
+            this.panelSubSettings.Controls.Add(this.btnStoreSettings);
+            this.panelSubSettings.Controls.Add(this.btnUsersettings);
+            this.panelSubSettings.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelSubSettings.Location = new System.Drawing.Point(0, 635);
+            this.panelSubSettings.Name = "panelSubSettings";
+            this.panelSubSettings.Size = new System.Drawing.Size(243, 70);
+            this.panelSubSettings.TabIndex = 6;
             // 
-            // button2
+            // btnStoreSettings
             // 
-            this.button2.FlatAppearance.BorderSize = 0;
-            this.button2.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button2.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button2.ForeColor = System.Drawing.Color.White;
-            this.button2.Image = ((System.Drawing.Image)(resources.GetObject("button2.Image")));
-            this.button2.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.button2.Location = new System.Drawing.Point(3, 289);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(234, 35);
-            this.button2.TabIndex = 13;
-            this.button2.Text = "Stock Adjustment";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.button2_Click);
+            this.btnStoreSettings.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(50)))));
+            this.btnStoreSettings.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnStoreSettings.FlatAppearance.BorderSize = 0;
+            this.btnStoreSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnStoreSettings.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnStoreSettings.ForeColor = System.Drawing.Color.White;
+            this.btnStoreSettings.Image = ((System.Drawing.Image)(resources.GetObject("btnStoreSettings.Image")));
+            this.btnStoreSettings.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnStoreSettings.Location = new System.Drawing.Point(0, 35);
+            this.btnStoreSettings.Name = "btnStoreSettings";
+            this.btnStoreSettings.Size = new System.Drawing.Size(243, 35);
+            this.btnStoreSettings.TabIndex = 9;
+            this.btnStoreSettings.Text = "Store Settings";
+            this.btnStoreSettings.UseVisualStyleBackColor = false;
+            this.btnStoreSettings.Click += new System.EventHandler(this.button7_Click);
+            // 
+            // btnUsersettings
+            // 
+            this.btnUsersettings.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(50)))));
+            this.btnUsersettings.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnUsersettings.FlatAppearance.BorderSize = 0;
+            this.btnUsersettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnUsersettings.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnUsersettings.ForeColor = System.Drawing.Color.White;
+            this.btnUsersettings.Image = ((System.Drawing.Image)(resources.GetObject("btnUsersettings.Image")));
+            this.btnUsersettings.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnUsersettings.Location = new System.Drawing.Point(0, 0);
+            this.btnUsersettings.Name = "btnUsersettings";
+            this.btnUsersettings.Size = new System.Drawing.Size(243, 35);
+            this.btnUsersettings.TabIndex = 10;
+            this.btnUsersettings.Text = "User Settings";
+            this.btnUsersettings.UseVisualStyleBackColor = false;
+            this.btnUsersettings.Click += new System.EventHandler(this.button8_Click);
+            // 
+            // btnSettingsMain
+            // 
+            this.btnSettingsMain.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnSettingsMain.FlatAppearance.BorderSize = 0;
+            this.btnSettingsMain.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSettingsMain.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnSettingsMain.ForeColor = System.Drawing.Color.White;
+            this.btnSettingsMain.Image = global::PosSystem.Properties.Resources.settings;
+            this.btnSettingsMain.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnSettingsMain.Location = new System.Drawing.Point(0, 600);
+            this.btnSettingsMain.Name = "btnSettingsMain";
+            this.btnSettingsMain.Size = new System.Drawing.Size(243, 35);
+            this.btnSettingsMain.TabIndex = 22;
+            this.btnSettingsMain.Text = "Settings";
+            this.btnSettingsMain.UseVisualStyleBackColor = true;
+            this.btnSettingsMain.Click += new System.EventHandler(this.btnSettingsMain_Click);
+            // 
+            // btnPOSMain
+            // 
+            this.btnPOSMain.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnPOSMain.FlatAppearance.BorderSize = 0;
+            this.btnPOSMain.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnPOSMain.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnPOSMain.ForeColor = System.Drawing.Color.White;
+            this.btnPOSMain.Image = global::PosSystem.Properties.Resources.pos;
+            this.btnPOSMain.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnPOSMain.Location = new System.Drawing.Point(0, 565);
+            this.btnPOSMain.Name = "btnPOSMain";
+            this.btnPOSMain.Size = new System.Drawing.Size(243, 35);
+            this.btnPOSMain.TabIndex = 21;
+            this.btnPOSMain.Text = "POS";
+            this.btnPOSMain.UseVisualStyleBackColor = true;
+            this.btnPOSMain.Click += new System.EventHandler(this.btnPOSMain_Click);
+            // 
+            // btnAuditMain
+            // 
+            this.btnAuditMain.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnAuditMain.FlatAppearance.BorderSize = 0;
+            this.btnAuditMain.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnAuditMain.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnAuditMain.ForeColor = System.Drawing.Color.White;
+            this.btnAuditMain.Image = global::PosSystem.Properties.Resources.audit;
+            this.btnAuditMain.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnAuditMain.Location = new System.Drawing.Point(0, 530);
+            this.btnAuditMain.Name = "btnAuditMain";
+            this.btnAuditMain.Size = new System.Drawing.Size(243, 35);
+            this.btnAuditMain.TabIndex = 20;
+            this.btnAuditMain.Text = "Audit";
+            this.btnAuditMain.UseVisualStyleBackColor = true;
+            this.btnAuditMain.Click += new System.EventHandler(this.btnAuditMain_Click);
+            // 
+            // btnSalesHistoryMain
+            // 
+            this.btnSalesHistoryMain.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnSalesHistoryMain.FlatAppearance.BorderSize = 0;
+            this.btnSalesHistoryMain.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSalesHistoryMain.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnSalesHistoryMain.ForeColor = System.Drawing.Color.White;
+            this.btnSalesHistoryMain.Image = global::PosSystem.Properties.Resources.history;
+            this.btnSalesHistoryMain.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnSalesHistoryMain.Location = new System.Drawing.Point(0, 495);
+            this.btnSalesHistoryMain.Name = "btnSalesHistoryMain";
+            this.btnSalesHistoryMain.Size = new System.Drawing.Size(243, 35);
+            this.btnSalesHistoryMain.TabIndex = 8;
+            this.btnSalesHistoryMain.Text = "Sales History";
+            this.btnSalesHistoryMain.UseVisualStyleBackColor = true;
+            this.btnSalesHistoryMain.Click += new System.EventHandler(this.btnSalesHistory_Click);
+            // 
+            // btnRecordsMain
+            // 
+            this.btnRecordsMain.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnRecordsMain.FlatAppearance.BorderSize = 0;
+            this.btnRecordsMain.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnRecordsMain.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnRecordsMain.ForeColor = System.Drawing.Color.White;
+            this.btnRecordsMain.Image = global::PosSystem.Properties.Resources.database;
+            this.btnRecordsMain.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnRecordsMain.Location = new System.Drawing.Point(0, 460);
+            this.btnRecordsMain.Name = "btnRecordsMain";
+            this.btnRecordsMain.Size = new System.Drawing.Size(243, 35);
+            this.btnRecordsMain.TabIndex = 8;
+            this.btnRecordsMain.Text = "Records";
+            this.btnRecordsMain.UseVisualStyleBackColor = true;
+            this.btnRecordsMain.Click += new System.EventHandler(this.button6_Click);
+            // 
+            // panelSubProduct
+            // 
+            this.panelSubProduct.Controls.Add(this.btnManageBrand);
+            this.panelSubProduct.Controls.Add(this.btnManageProduct);
+            this.panelSubProduct.Controls.Add(this.btnManageCategory);
+            this.panelSubProduct.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelSubProduct.Location = new System.Drawing.Point(0, 355);
+            this.panelSubProduct.Name = "panelSubProduct";
+            this.panelSubProduct.Size = new System.Drawing.Size(243, 105);
+            this.panelSubProduct.TabIndex = 0;
+            // 
+            // btnManageBrand
+            // 
+            this.btnManageBrand.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(50)))));
+            this.btnManageBrand.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnManageBrand.FlatAppearance.BorderSize = 0;
+            this.btnManageBrand.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnManageBrand.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnManageBrand.ForeColor = System.Drawing.Color.White;
+            this.btnManageBrand.Image = ((System.Drawing.Image)(resources.GetObject("btnManageBrand.Image")));
+            this.btnManageBrand.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnManageBrand.Location = new System.Drawing.Point(0, 70);
+            this.btnManageBrand.Name = "btnManageBrand";
+            this.btnManageBrand.Size = new System.Drawing.Size(243, 35);
+            this.btnManageBrand.TabIndex = 7;
+            this.btnManageBrand.Text = "Manage Brand";
+            this.btnManageBrand.UseVisualStyleBackColor = false;
+            this.btnManageBrand.Click += new System.EventHandler(this.btnBrand_Click);
+            // 
+            // btnManageProduct
+            // 
+            this.btnManageProduct.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(50)))));
+            this.btnManageProduct.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnManageProduct.FlatAppearance.BorderSize = 0;
+            this.btnManageProduct.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnManageProduct.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnManageProduct.ForeColor = System.Drawing.Color.White;
+            this.btnManageProduct.Image = ((System.Drawing.Image)(resources.GetObject("btnManageProduct.Image")));
+            this.btnManageProduct.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnManageProduct.Location = new System.Drawing.Point(0, 35);
+            this.btnManageProduct.Name = "btnManageProduct";
+            this.btnManageProduct.Size = new System.Drawing.Size(243, 35);
+            this.btnManageProduct.TabIndex = 5;
+            this.btnManageProduct.Text = "Manage Products";
+            this.btnManageProduct.UseVisualStyleBackColor = false;
+            this.btnManageProduct.Click += new System.EventHandler(this.btnProduct_Click);
+            // 
+            // btnManageCategory
+            // 
+            this.btnManageCategory.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(50)))));
+            this.btnManageCategory.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnManageCategory.FlatAppearance.BorderSize = 0;
+            this.btnManageCategory.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnManageCategory.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnManageCategory.ForeColor = System.Drawing.Color.White;
+            this.btnManageCategory.Image = ((System.Drawing.Image)(resources.GetObject("btnManageCategory.Image")));
+            this.btnManageCategory.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnManageCategory.Location = new System.Drawing.Point(0, 0);
+            this.btnManageCategory.Name = "btnManageCategory";
+            this.btnManageCategory.Size = new System.Drawing.Size(243, 35);
+            this.btnManageCategory.TabIndex = 6;
+            this.btnManageCategory.Text = "Manage Category";
+            this.btnManageCategory.UseVisualStyleBackColor = false;
+            this.btnManageCategory.Click += new System.EventHandler(this.button4_Click);
+            // 
+            // btnProductMain
+            // 
+            this.btnProductMain.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnProductMain.FlatAppearance.BorderSize = 0;
+            this.btnProductMain.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnProductMain.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnProductMain.ForeColor = System.Drawing.Color.White;
+            this.btnProductMain.Image = global::PosSystem.Properties.Resources.productdropdownbtn3;
+            this.btnProductMain.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnProductMain.Location = new System.Drawing.Point(0, 320);
+            this.btnProductMain.Name = "btnProductMain";
+            this.btnProductMain.Size = new System.Drawing.Size(243, 35);
+            this.btnProductMain.TabIndex = 17;
+            this.btnProductMain.Text = "Products";
+            this.btnProductMain.UseVisualStyleBackColor = true;
+            this.btnProductMain.Click += new System.EventHandler(this.btnProductMain_Click);
+            // 
+            // panelSubStocks
+            // 
+            this.panelSubStocks.Controls.Add(this.btnStockEntry);
+            this.panelSubStocks.Controls.Add(this.btnStockAdjestment);
+            this.panelSubStocks.Controls.Add(this.btnVendor);
+            this.panelSubStocks.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelSubStocks.Location = new System.Drawing.Point(0, 215);
+            this.panelSubStocks.Name = "panelSubStocks";
+            this.panelSubStocks.Size = new System.Drawing.Size(243, 105);
+            this.panelSubStocks.TabIndex = 19;
+            // 
+            // btnStockEntry
+            // 
+            this.btnStockEntry.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(50)))));
+            this.btnStockEntry.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnStockEntry.FlatAppearance.BorderSize = 0;
+            this.btnStockEntry.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnStockEntry.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnStockEntry.ForeColor = System.Drawing.Color.White;
+            this.btnStockEntry.Image = ((System.Drawing.Image)(resources.GetObject("btnStockEntry.Image")));
+            this.btnStockEntry.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnStockEntry.Location = new System.Drawing.Point(0, 70);
+            this.btnStockEntry.Name = "btnStockEntry";
+            this.btnStockEntry.Size = new System.Drawing.Size(243, 35);
+            this.btnStockEntry.TabIndex = 12;
+            this.btnStockEntry.Text = "Stock Entry";
+            this.btnStockEntry.UseVisualStyleBackColor = false;
+            this.btnStockEntry.Click += new System.EventHandler(this.btnStock_Click);
+            // 
+            // btnStockAdjestment
+            // 
+            this.btnStockAdjestment.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(50)))));
+            this.btnStockAdjestment.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnStockAdjestment.FlatAppearance.BorderSize = 0;
+            this.btnStockAdjestment.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnStockAdjestment.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnStockAdjestment.ForeColor = System.Drawing.Color.White;
+            this.btnStockAdjestment.Image = ((System.Drawing.Image)(resources.GetObject("btnStockAdjestment.Image")));
+            this.btnStockAdjestment.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnStockAdjestment.Location = new System.Drawing.Point(0, 35);
+            this.btnStockAdjestment.Name = "btnStockAdjestment";
+            this.btnStockAdjestment.Size = new System.Drawing.Size(243, 35);
+            this.btnStockAdjestment.TabIndex = 13;
+            this.btnStockAdjestment.Text = "Stock Adjustment";
+            this.btnStockAdjestment.UseVisualStyleBackColor = false;
+            this.btnStockAdjestment.Click += new System.EventHandler(this.button2_Click);
+            // 
+            // btnVendor
+            // 
+            this.btnVendor.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(50)))));
+            this.btnVendor.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnVendor.FlatAppearance.BorderSize = 0;
+            this.btnVendor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnVendor.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnVendor.ForeColor = System.Drawing.Color.White;
+            this.btnVendor.Image = ((System.Drawing.Image)(resources.GetObject("btnVendor.Image")));
+            this.btnVendor.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnVendor.Location = new System.Drawing.Point(0, 0);
+            this.btnVendor.Name = "btnVendor";
+            this.btnVendor.Size = new System.Drawing.Size(243, 35);
+            this.btnVendor.TabIndex = 12;
+            this.btnVendor.Text = "Suppliers";
+            this.btnVendor.UseVisualStyleBackColor = false;
+            this.btnVendor.Click += new System.EventHandler(this.btnVendor_Click);
             // 
             // lblRole
             // 
             this.lblRole.BackColor = System.Drawing.Color.Transparent;
             this.lblRole.Font = new System.Drawing.Font("Franklin Gothic Medium", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblRole.ForeColor = System.Drawing.Color.White;
-            this.lblRole.Location = new System.Drawing.Point(3, 86);
+            this.lblRole.Location = new System.Drawing.Point(3, 104);
             this.lblRole.Name = "lblRole";
             this.lblRole.Size = new System.Drawing.Size(237, 23);
             this.lblRole.TabIndex = 2;
@@ -139,139 +409,11 @@
             this.lblRole.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.lblRole.Click += new System.EventHandler(this.lblRole_Click);
             // 
-            // button8
-            // 
-            this.button8.FlatAppearance.BorderSize = 0;
-            this.button8.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button8.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button8.ForeColor = System.Drawing.Color.White;
-            this.button8.Image = ((System.Drawing.Image)(resources.GetObject("button8.Image")));
-            this.button8.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.button8.Location = new System.Drawing.Point(6, 535);
-            this.button8.Name = "button8";
-            this.button8.Size = new System.Drawing.Size(234, 35);
-            this.button8.TabIndex = 10;
-            this.button8.Text = "User Settings";
-            this.button8.UseVisualStyleBackColor = true;
-            this.button8.Click += new System.EventHandler(this.button8_Click);
-            // 
-            // button7
-            // 
-            this.button7.FlatAppearance.BorderSize = 0;
-            this.button7.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button7.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button7.ForeColor = System.Drawing.Color.White;
-            this.button7.Image = ((System.Drawing.Image)(resources.GetObject("button7.Image")));
-            this.button7.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.button7.Location = new System.Drawing.Point(6, 494);
-            this.button7.Name = "button7";
-            this.button7.Size = new System.Drawing.Size(234, 35);
-            this.button7.TabIndex = 9;
-            this.button7.Text = "Store Settings";
-            this.button7.UseVisualStyleBackColor = true;
-            this.button7.Click += new System.EventHandler(this.button7_Click);
-            // 
-            // btnSalesHistory
-            // 
-            this.btnSalesHistory.FlatAppearance.BorderSize = 0;
-            this.btnSalesHistory.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnSalesHistory.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnSalesHistory.ForeColor = System.Drawing.Color.White;
-            this.btnSalesHistory.Image = ((System.Drawing.Image)(resources.GetObject("btnSalesHistory.Image")));
-            this.btnSalesHistory.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnSalesHistory.Location = new System.Drawing.Point(6, 453);
-            this.btnSalesHistory.Name = "btnSalesHistory";
-            this.btnSalesHistory.Size = new System.Drawing.Size(234, 35);
-            this.btnSalesHistory.TabIndex = 8;
-            this.btnSalesHistory.Text = "Sales History";
-            this.btnSalesHistory.UseVisualStyleBackColor = true;
-            this.btnSalesHistory.Click += new System.EventHandler(this.btnSalesHistory_Click);
-            // 
-            // button6
-            // 
-            this.button6.FlatAppearance.BorderSize = 0;
-            this.button6.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button6.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button6.ForeColor = System.Drawing.Color.White;
-            this.button6.Image = ((System.Drawing.Image)(resources.GetObject("button6.Image")));
-            this.button6.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.button6.Location = new System.Drawing.Point(6, 412);
-            this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(234, 35);
-            this.button6.TabIndex = 8;
-            this.button6.Text = "Records";
-            this.button6.UseVisualStyleBackColor = true;
-            this.button6.Click += new System.EventHandler(this.button6_Click);
-            // 
-            // btnBrand
-            // 
-            this.btnBrand.FlatAppearance.BorderSize = 0;
-            this.btnBrand.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnBrand.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnBrand.ForeColor = System.Drawing.Color.White;
-            this.btnBrand.Image = ((System.Drawing.Image)(resources.GetObject("btnBrand.Image")));
-            this.btnBrand.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnBrand.Location = new System.Drawing.Point(6, 371);
-            this.btnBrand.Name = "btnBrand";
-            this.btnBrand.Size = new System.Drawing.Size(234, 35);
-            this.btnBrand.TabIndex = 7;
-            this.btnBrand.Text = "Manage Brand";
-            this.btnBrand.UseVisualStyleBackColor = true;
-            this.btnBrand.Click += new System.EventHandler(this.btnBrand_Click);
-            // 
-            // button4
-            // 
-            this.button4.FlatAppearance.BorderSize = 0;
-            this.button4.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button4.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button4.ForeColor = System.Drawing.Color.White;
-            this.button4.Image = ((System.Drawing.Image)(resources.GetObject("button4.Image")));
-            this.button4.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.button4.Location = new System.Drawing.Point(6, 330);
-            this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(234, 35);
-            this.button4.TabIndex = 6;
-            this.button4.Text = "Manage Category";
-            this.button4.UseVisualStyleBackColor = true;
-            this.button4.Click += new System.EventHandler(this.button4_Click);
-            // 
-            // btnStock
-            // 
-            this.btnStock.FlatAppearance.BorderSize = 0;
-            this.btnStock.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnStock.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnStock.ForeColor = System.Drawing.Color.White;
-            this.btnStock.Image = ((System.Drawing.Image)(resources.GetObject("btnStock.Image")));
-            this.btnStock.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnStock.Location = new System.Drawing.Point(6, 248);
-            this.btnStock.Name = "btnStock";
-            this.btnStock.Size = new System.Drawing.Size(234, 35);
-            this.btnStock.TabIndex = 12;
-            this.btnStock.Text = "Stock Entry";
-            this.btnStock.UseVisualStyleBackColor = true;
-            this.btnStock.Click += new System.EventHandler(this.btnStock_Click);
-            // 
-            // btnVendor
-            // 
-            this.btnVendor.FlatAppearance.BorderSize = 0;
-            this.btnVendor.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnVendor.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnVendor.ForeColor = System.Drawing.Color.White;
-            this.btnVendor.Image = ((System.Drawing.Image)(resources.GetObject("btnVendor.Image")));
-            this.btnVendor.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnVendor.Location = new System.Drawing.Point(6, 207);
-            this.btnVendor.Name = "btnVendor";
-            this.btnVendor.Size = new System.Drawing.Size(234, 35);
-            this.btnVendor.TabIndex = 12;
-            this.btnVendor.Text = " Vendor";
-            this.btnVendor.UseVisualStyleBackColor = true;
-            this.btnVendor.Click += new System.EventHandler(this.btnVendor_Click);
-            // 
             // lblUserName
             // 
             this.lblUserName.Font = new System.Drawing.Font("Georgia", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblUserName.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(158)))), ((int)(((byte)(132)))));
-            this.lblUserName.Location = new System.Drawing.Point(46, 64);
+            this.lblUserName.Location = new System.Drawing.Point(46, 82);
             this.lblUserName.Name = "lblUserName";
             this.lblUserName.Size = new System.Drawing.Size(150, 29);
             this.lblUserName.TabIndex = 1;
@@ -279,45 +421,84 @@
             this.lblUserName.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.lblUserName.Click += new System.EventHandler(this.lblName_Click);
             // 
-            // btnProduct
+            // btnStockMain
             // 
-            this.btnProduct.FlatAppearance.BorderSize = 0;
-            this.btnProduct.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnProduct.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnProduct.ForeColor = System.Drawing.Color.White;
-            this.btnProduct.Image = ((System.Drawing.Image)(resources.GetObject("btnProduct.Image")));
-            this.btnProduct.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnProduct.Location = new System.Drawing.Point(6, 166);
-            this.btnProduct.Name = "btnProduct";
-            this.btnProduct.Size = new System.Drawing.Size(234, 35);
-            this.btnProduct.TabIndex = 5;
-            this.btnProduct.Text = "Manage Products";
-            this.btnProduct.UseVisualStyleBackColor = true;
-            this.btnProduct.Click += new System.EventHandler(this.btnProduct_Click);
+            this.btnStockMain.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnStockMain.FlatAppearance.BorderSize = 0;
+            this.btnStockMain.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnStockMain.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnStockMain.ForeColor = System.Drawing.Color.White;
+            this.btnStockMain.Image = global::PosSystem.Properties.Resources.btnStockMain;
+            this.btnStockMain.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnStockMain.Location = new System.Drawing.Point(0, 180);
+            this.btnStockMain.Name = "btnStockMain";
+            this.btnStockMain.Size = new System.Drawing.Size(243, 35);
+            this.btnStockMain.TabIndex = 18;
+            this.btnStockMain.Text = "Stocks";
+            this.btnStockMain.UseVisualStyleBackColor = true;
+            this.btnStockMain.Click += new System.EventHandler(this.btnStockMain_Click);
             // 
-            // button1
+            // pictureBox1
             // 
-            this.button1.FlatAppearance.BorderSize = 0;
-            this.button1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button1.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button1.ForeColor = System.Drawing.Color.White;
-            this.button1.Image = ((System.Drawing.Image)(resources.GetObject("button1.Image")));
-            this.button1.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.button1.Location = new System.Drawing.Point(6, 125);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(234, 35);
-            this.button1.TabIndex = 3;
-            this.button1.Text = "Dashboard";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.pictureBox1.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox1.Image")));
+            this.pictureBox1.Location = new System.Drawing.Point(82, 12);
+            this.pictureBox1.Name = "pictureBox1";
+            this.pictureBox1.Size = new System.Drawing.Size(73, 72);
+            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBox1.TabIndex = 15;
+            this.pictureBox1.TabStop = false;
+            // 
+            // btnDashboardMain
+            // 
+            this.btnDashboardMain.Dock = System.Windows.Forms.DockStyle.Top;
+            this.btnDashboardMain.FlatAppearance.BorderSize = 0;
+            this.btnDashboardMain.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnDashboardMain.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnDashboardMain.ForeColor = System.Drawing.Color.White;
+            this.btnDashboardMain.Image = global::PosSystem.Properties.Resources.dashboard;
+            this.btnDashboardMain.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnDashboardMain.Location = new System.Drawing.Point(0, 145);
+            this.btnDashboardMain.Name = "btnDashboardMain";
+            this.btnDashboardMain.Size = new System.Drawing.Size(243, 35);
+            this.btnDashboardMain.TabIndex = 3;
+            this.btnDashboardMain.Text = "Dashboard";
+            this.btnDashboardMain.UseVisualStyleBackColor = true;
+            this.btnDashboardMain.Click += new System.EventHandler(this.button1_Click);
+            // 
+            // panelUserProfile
+            // 
+            this.panelUserProfile.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelUserProfile.Location = new System.Drawing.Point(0, 0);
+            this.panelUserProfile.Name = "panelUserProfile";
+            this.panelUserProfile.Size = new System.Drawing.Size(243, 145);
+            this.panelUserProfile.TabIndex = 16;
+            // 
+            // btnLogOutMain
+            // 
+            this.btnLogOutMain.AutoSize = true;
+            this.btnLogOutMain.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.btnLogOutMain.FlatAppearance.BorderSize = 0;
+            this.btnLogOutMain.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnLogOutMain.Font = new System.Drawing.Font("Bahnschrift", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnLogOutMain.ForeColor = System.Drawing.Color.White;
+            this.btnLogOutMain.Image = global::PosSystem.Properties.Resources.logout;
+            this.btnLogOutMain.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnLogOutMain.Location = new System.Drawing.Point(0, 743);
+            this.btnLogOutMain.Name = "btnLogOutMain";
+            this.btnLogOutMain.Size = new System.Drawing.Size(243, 38);
+            this.btnLogOutMain.TabIndex = 11;
+            this.btnLogOutMain.Text = "Log Out";
+            this.btnLogOutMain.UseVisualStyleBackColor = true;
+            this.btnLogOutMain.Click += new System.EventHandler(this.button9_Click);
             // 
             // panel3
             // 
             this.panel3.BackColor = System.Drawing.Color.White;
+            this.panel3.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.panel3.ForeColor = System.Drawing.Color.Black;
-            this.panel3.Location = new System.Drawing.Point(241, 37);
+            this.panel3.Location = new System.Drawing.Point(260, 36);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(1059, 615);
+            this.panel3.Size = new System.Drawing.Size(1040, 615);
             this.panel3.TabIndex = 2;
             this.panel3.Paint += new System.Windows.Forms.PaintEventHandler(this.panel3_Paint);
             // 
@@ -394,9 +575,9 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(158)))), ((int)(((byte)(132)))));
-            this.ClientSize = new System.Drawing.Size(1300, 650);
+            this.ClientSize = new System.Drawing.Size(1300, 651);
             this.Controls.Add(this.panel3);
-            this.Controls.Add(this.panel2);
+            this.Controls.Add(this.panelSlide);
             this.Controls.Add(this.dataGridView1);
             this.Controls.Add(this.lblTransno);
             this.Controls.Add(this.lblTotal);
@@ -409,8 +590,11 @@
             this.Name = "Form1";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Load += new System.EventHandler(this.Form1_Load);
-            this.panel2.ResumeLayout(false);
-            this.panel2.PerformLayout();
+            this.panelSlide.ResumeLayout(false);
+            this.panelSlide.PerformLayout();
+            this.panelSubSettings.ResumeLayout(false);
+            this.panelSubProduct.ResumeLayout(false);
+            this.panelSubStocks.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.ResumeLayout(false);
@@ -419,22 +603,15 @@
         }
 
         #endregion
-        private System.Windows.Forms.Panel panel2;
-        private System.Windows.Forms.Button button9;
-        private System.Windows.Forms.Button button7;
-        private System.Windows.Forms.Button button6;
-        private System.Windows.Forms.Button btnBrand;
-        private System.Windows.Forms.Button button4;
-        private System.Windows.Forms.Button btnProduct;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Panel panelSlide;
+        private System.Windows.Forms.Button btnLogOutMain;
+        private System.Windows.Forms.Button btnStoreSettings;
+        private System.Windows.Forms.Button btnRecordsMain;
         private System.Windows.Forms.Panel panel3;
-        private System.Windows.Forms.Button btnStock;
         public System.Windows.Forms.Label lblUserName;
-        private System.Windows.Forms.Button button8;
-        private System.Windows.Forms.Button btnSalesHistory;
-        private System.Windows.Forms.Button btnVendor;
+        private System.Windows.Forms.Button btnUsersettings;
+        private System.Windows.Forms.Button btnSalesHistoryMain;
         public System.Windows.Forms.Label lblRole;
-        private System.Windows.Forms.Button button2;
         private System.Windows.Forms.PictureBox pictureBox1;
         //private Guna.UI2.WinForms.Guna2BorderlessForm guna2BorderlessForm1;
         //private Guna.UI2.WinForms.Guna2BorderlessForm guna2BorderlessForm2;
@@ -448,5 +625,22 @@
         public System.Windows.Forms.Label lblSname;
         public System.Windows.Forms.Label lblAddress;
         public System.Windows.Forms.Label lblDiscount;
+        private System.Windows.Forms.Panel panelUserProfile;
+        private System.Windows.Forms.Panel panelSubStocks;
+        private System.Windows.Forms.Button btnStockEntry;
+        private System.Windows.Forms.Button btnStockAdjestment;
+        private System.Windows.Forms.Button btnStockMain;
+        private System.Windows.Forms.Button btnVendor;
+        private System.Windows.Forms.Button btnManageProduct;
+        private System.Windows.Forms.Button btnManageCategory;
+        private System.Windows.Forms.Button btnManageBrand;
+        private System.Windows.Forms.Button btnProductMain;
+        private System.Windows.Forms.Button btnDashboardMain;
+        private System.Windows.Forms.Panel panelSubProduct;
+        private System.Windows.Forms.Button btnAuditMain;
+        private System.Windows.Forms.Button btnPOSMain;
+        private System.Windows.Forms.Button btnSettingsMain;
+        private System.Windows.Forms.Panel panelSubSettings;
+        private System.Windows.Forms.Button btnMaintenanceMain;
     }
 }

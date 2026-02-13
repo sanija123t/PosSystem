@@ -677,6 +677,18 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="pos logo img.ico" />
+    <None Include="Resources\logout.png" />
+    <None Include="Resources\data-recovery.png" />
+    <None Include="Resources\settings.png" />
+    <None Include="Resources\pos.png" />
+    <None Include="Resources\audit.png" />
+    <None Include="Resources\history.png" />
+    <None Include="Resources\database.png" />
+    <None Include="Resources\btnStockMain.png" />
+    <None Include="Resources\dashboard.png" />
+    <None Include="Resources\productdropdownbtn3.png" />
+    <None Include="Resources\productdropdownbtn2.png" />
+    <None Include="Resources\productdropdownbtn.png" />
     <None Include="README.md" />
     <None Include="Resources\Gemini_Generated_Image_8623t88623t88623.png" />
     <None Include="Resources\pos full img.ico" />

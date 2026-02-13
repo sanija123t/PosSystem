@@ -40,12 +40,12 @@ namespace PosSystem
             lblRole.Text = _role;
 
             bool isAdmin = _role == "Administrator";
-            btnBrand.Enabled = isAdmin;
-            button4.Enabled = isAdmin;
-            btnProduct.Enabled = isAdmin;
+            btnManageBrand.Enabled = isAdmin;
+            btnManageCategory.Enabled = isAdmin;
+            btnManageProduct.Enabled = isAdmin;
             btnVendor.Enabled = isAdmin;
-            button8.Enabled = isAdmin;
-            button7.Enabled = isAdmin;
+            btnUsersettings.Enabled = isAdmin;
+            btnStoreSettings.Enabled = isAdmin;
         }
         #endregion
 
@@ -308,10 +308,44 @@ namespace PosSystem
 
         #region Form & Panel Events
         private void guna2ControlBox1_Click(object sender, EventArgs e) => Application.Exit();
-        private void panel2_Paint(object sender, PaintEventArgs e) { }
         private void panel3_Paint(object sender, PaintEventArgs e) { }
         private void lblRole_Click(object sender, EventArgs e) { }
         private void lblName_Click(object sender, EventArgs e) { }
         #endregion
+
+        private void btnStockMain_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnProductMain_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnAuditMain_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnPOSMain_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnSettingsMain_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnMaintenanceMain_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void panel2_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
     }
 }
