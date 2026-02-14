@@ -501,7 +501,7 @@
             this.panel3.ForeColor = System.Drawing.Color.Black;
             this.panel3.Location = new System.Drawing.Point(260, 36);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(1040, 615);
+            this.panel3.Size = new System.Drawing.Size(1066, 615);
             this.panel3.TabIndex = 2;
             this.panel3.Paint += new System.Windows.Forms.PaintEventHandler(this.panel3_Paint);
             // 
@@ -578,7 +578,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(158)))), ((int)(((byte)(132)))));
-            this.ClientSize = new System.Drawing.Size(1300, 651);
+            this.ClientSize = new System.Drawing.Size(1326, 651);
             this.Controls.Add(this.panel3);
             this.Controls.Add(this.panelSlide);
             this.Controls.Add(this.dataGridView1);

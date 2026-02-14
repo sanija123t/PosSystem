@@ -179,7 +179,7 @@ namespace PosSystem
         }
         #endregion
 
-        #region Button Handlers (Old Buttons - Unchanged logic, sound fix applied)
+        #region Button Handlers (Old Buttons - Fixed)
         private void btnBrand_Click(object sender, EventArgs e) => OpenChildForm(new frmBrandList());
 
         private void button4_Click(object sender, EventArgs e)
@@ -198,8 +198,6 @@ namespace PosSystem
 
         private void btnStock_Click(object sender, EventArgs e)
         {
-            // FIX: Prevent Ding sound on dialog open
-            if (e is KeyEventArgs ke) ke.Handled = true;
             var frm = new frmStockin(DBConnection.MyConnection());
             frm.ShowDialog();
         }
@@ -220,23 +218,22 @@ namespace PosSystem
 
         private void button6_Click(object sender, EventArgs e)
         {
+            // FIXED: Check if object is disposed or null to prevent crash
             if (_frmRecords == null || _frmRecords.IsDisposed)
+            {
                 _frmRecords = new frmRecords();
+            }
             OpenChildForm(_frmRecords);
         }
 
         private void btnSalesHistory_Click(object sender, EventArgs e)
         {
-            // FIX: Prevent Ding sound on dialog open
-            if (e is KeyEventArgs ke) ke.Handled = true;
             var frm = new frmSoldItems { suser = _user };
             frm.ShowDialog();
         }
 
         private void button7_Click(object sender, EventArgs e)
         {
-            // FIX: Prevent Ding sound on dialog open
-            if (e is KeyEventArgs ke) ke.Handled = true;
             var frm = new frmStoreSetting();
             frm.LoadRecord();
             frm.ShowDialog();
@@ -250,8 +247,6 @@ namespace PosSystem
 
         private async void button2_Click(object sender, EventArgs e)
         {
-            // FIX: Prevent Ding sound on dialog open
-            if (e is KeyEventArgs ke) ke.Handled = true;
             var frm = new frmAdjustment(this);
             await frm.LoadRecordsAsync();
             frm.txtUser.Text = _user;
@@ -287,8 +282,6 @@ namespace PosSystem
 
         private void btnPOSMain_Click(object sender, EventArgs e)
         {
-            // FIX: Prevent Ding sound on dialog open
-            if (e is KeyEventArgs ke) ke.Handled = true;
             HideSubMenu(); // Cleanup UI before opening POS
             frmPOS frm = new frmPOS(this);
             frm.ShowDialog();
