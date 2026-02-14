@@ -54,225 +54,60 @@ namespace PosSystem
                     {
                         cn.Open();
 
+                        // PRAGMA settings
                         new SQLiteCommand("PRAGMA foreign_keys = ON;", cn).ExecuteNonQuery();
                         new SQLiteCommand("PRAGMA synchronous = NORMAL;", cn).ExecuteNonQuery();
                         new SQLiteCommand("PRAGMA journal_mode = WAL;", cn).ExecuteNonQuery();
                         new SQLiteCommand("PRAGMA temp_store = MEMORY;", cn).ExecuteNonQuery();
                         new SQLiteCommand("PRAGMA cache_size = -20000;", cn).ExecuteNonQuery(); // 20MB cache
 
+                        // CREATE CORE TABLES, TRIGGERS, INDEXES, VIEWS
                         string script = @"
-
--- CORE TABLES
 CREATE TABLE IF NOT EXISTS BrandTbl (id INTEGER PRIMARY KEY AUTOINCREMENT, brand TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS TblCategory (id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS tblStore (store TEXT, address TEXT, phone TEXT);
 CREATE TABLE IF NOT EXISTS tblVat (id INTEGER PRIMARY KEY AUTOINCREMENT, vat REAL DEFAULT 0);
 
 CREATE TABLE IF NOT EXISTS TblProduct1 (
-    pcode TEXT PRIMARY KEY,
-    barcode TEXT,
-    pdesc TEXT NOT NULL,
-    bid INTEGER,
-    cid INTEGER,
-    price REAL DEFAULT 0,
-    cost_price REAL DEFAULT 0,
-    tax_rate REAL DEFAULT 0,
-    sid INTEGER DEFAULT 0,
-    qty INTEGER DEFAULT 0,
-    reorder INTEGER DEFAULT 0,
-    isactive INTEGER DEFAULT 1,
-    FOREIGN KEY (bid) REFERENCES BrandTbl(id),
-    FOREIGN KEY (cid) REFERENCES TblCategory(id)
+    pcode TEXT PRIMARY KEY, barcode TEXT, pdesc TEXT NOT NULL, bid INTEGER, cid INTEGER, 
+    price REAL DEFAULT 0, cost_price REAL DEFAULT 0, tax_rate REAL DEFAULT 0, 
+    sid INTEGER DEFAULT 0, qty INTEGER DEFAULT 0, reorder INTEGER DEFAULT 0, isactive INTEGER DEFAULT 1,
+    FOREIGN KEY (bid) REFERENCES BrandTbl(id), FOREIGN KEY (cid) REFERENCES TblCategory(id)
 );
 
 CREATE TABLE IF NOT EXISTS tblTransaction (
-    transno TEXT PRIMARY KEY,
-    sdate TEXT,
-    subtotal REAL DEFAULT 0,
-    discount REAL DEFAULT 0,
-    vat REAL DEFAULT 0,
-    total REAL DEFAULT 0,
-    payment_type TEXT,
-    cash_tendered REAL DEFAULT 0,
-    cash_change REAL DEFAULT 0,
-    user_id TEXT,
-    status TEXT DEFAULT 'Sold'
-);
-
-CREATE TABLE IF NOT EXISTS tblUser (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    password TEXT,
-    salt TEXT DEFAULT '',
-    role TEXT,
-    name TEXT,
-    isactive INTEGER DEFAULT 1,
-    isdeleted INTEGER DEFAULT 0
+    transno TEXT PRIMARY KEY, sdate TEXT, subtotal REAL DEFAULT 0, discount REAL DEFAULT 0, 
+    vat REAL DEFAULT 0, total REAL DEFAULT 0, payment_type TEXT, cash_tendered REAL DEFAULT 0, 
+    cash_change REAL DEFAULT 0, user_id TEXT, status TEXT DEFAULT 'Sold'
 );
 
 CREATE TABLE IF NOT EXISTS tblCart1 (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    transno TEXT,
-    pcode TEXT,
-    price REAL,
-    qty INTEGER,
-    sdate TEXT,
-    status TEXT DEFAULT 'Pending',
-    disc REAL DEFAULT 0,
-    total REAL DEFAULT 0,
-    user TEXT,
+    id INTEGER PRIMARY KEY AUTOINCREMENT, transno TEXT, pcode TEXT, price REAL, qty INTEGER, 
+    sdate TEXT, status TEXT DEFAULT 'Pending', disc REAL DEFAULT 0, total REAL DEFAULT 0, [user] TEXT,
     FOREIGN KEY (pcode) REFERENCES TblProduct1(pcode),
     FOREIGN KEY (transno) REFERENCES tblTransaction(transno) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS tblAdjustment (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    referenceno TEXT,
-    pcode TEXT,
-    qty INTEGER,
-    action TEXT,
-    remarks TEXT,
-    sdate TEXT,
-    [user] TEXT,
-    FOREIGN KEY (pcode) REFERENCES TblProduct1(pcode)
-);
-
-CREATE TABLE IF NOT EXISTS tblVendor (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    vendor TEXT,
-    address TEXT,
-    contactperson TEXT,
-    telephone TEXT,
-    email TEXT,
-    fax TEXT
-);
-
-CREATE TABLE IF NOT EXISTS tblStockIn (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    refno TEXT,
-    pcode TEXT,
-    qty INTEGER DEFAULT 0,
-    sdate TEXT,
-    stockinby TEXT,
-    vendorid INTEGER,
-    status TEXT DEFAULT 'Pending',
-    FOREIGN KEY (pcode) REFERENCES TblProduct1(pcode),
-    FOREIGN KEY (vendorid) REFERENCES tblVendor(id)
-);
-
 CREATE TABLE IF NOT EXISTS tblCancel (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    transno TEXT, pcode TEXT, price REAL, qty INTEGER, total REAL,
+    id INTEGER PRIMARY KEY AUTOINCREMENT, transno TEXT, pcode TEXT, price REAL, qty INTEGER, total REAL,
     sdate TEXT, voidby TEXT, cancelledby TEXT, reason TEXT, action TEXT
 );
 
--- ========================================
--- ENTERPRISE TABLES (NEW)
--- ========================================
-
-CREATE TABLE IF NOT EXISTS tblAudit(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user TEXT,
-    action TEXT,
-    details TEXT,
-    sdate TEXT
-);
-
-CREATE TABLE IF NOT EXISTS tblProfitLog(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    transno TEXT,
-    pcode TEXT,
-    cost REAL,
-    sell REAL,
-    qty INTEGER,
-    profit REAL,
-    sdate TEXT
-);
-
--- ========================================
--- INDEXES FOR 100K+ PRODUCTS PERFORMANCE
--- ========================================
-
+-- Essential Indexes
 CREATE INDEX IF NOT EXISTS idx_product_barcode ON TblProduct1(barcode);
-CREATE INDEX IF NOT EXISTS idx_product_active ON TblProduct1(isactive);
 CREATE INDEX IF NOT EXISTS idx_cart_transno ON tblCart1(transno);
-CREATE INDEX IF NOT EXISTS idx_cart_pcode ON tblCart1(pcode);
-CREATE INDEX IF NOT EXISTS idx_cart_status ON tblCart1(status);
-CREATE INDEX IF NOT EXISTS idx_trans_date ON tblTransaction(sdate);
-CREATE INDEX IF NOT EXISTS idx_stockin_pcode ON tblStockIn(pcode);
-
--- ========================================
--- TRIGGERS (AUTO PROFIT + AUDIT LOGGING)
--- ========================================
-
-CREATE TRIGGER IF NOT EXISTS trg_after_sale
-AFTER INSERT ON tblCart1
-WHEN NEW.status='Sold'
-BEGIN
-    INSERT INTO tblProfitLog(transno,pcode,cost,sell,qty,profit,sdate)
-    SELECT
-        NEW.transno,
-        NEW.pcode,
-        p.cost_price,
-        NEW.price,
-        NEW.qty,
-        (NEW.price - p.cost_price)*NEW.qty,
-        NEW.sdate
-    FROM TblProduct1 p WHERE p.pcode = NEW.pcode;
-END;
-
-CREATE TRIGGER IF NOT EXISTS trg_user_update
-AFTER UPDATE ON tblUser
-BEGIN
-    INSERT INTO tblAudit(user,action,details,sdate)
-    VALUES(NEW.username,'USER UPDATED','User record modified',datetime('now','localtime'));
-END;
-
-CREATE TRIGGER IF NOT EXISTS trg_product_update
-AFTER UPDATE ON TblProduct1
-BEGIN
-    INSERT INTO tblAudit(user,action,details,sdate)
-    VALUES('SYSTEM','PRODUCT UPDATED','Product '||NEW.pcode||' modified',datetime('now','localtime'));
-END;
-
--- ========================================
--- VIEWS
--- ========================================
-
-DROP VIEW IF EXISTS vwInventory;
-CREATE VIEW vwInventory AS
-SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.cost_price, p.qty, p.reorder, p.isactive
-FROM TblProduct1 p
-LEFT JOIN BrandTbl b ON b.id = p.bid
-LEFT JOIN TblCategory c ON c.id = p.cid;
-
-DROP VIEW IF EXISTS vwCriticalItems;
-CREATE VIEW vwCriticalItems AS
-SELECT * FROM vwInventory WHERE qty <= reorder AND isactive = 1;
-
-DROP VIEW IF EXISTS vwSoldItems;
-CREATE VIEW vwSoldItems AS
-SELECT c.id, c.transno, c.pcode, p.pdesc, c.price, c.qty, c.disc, c.total, c.sdate, c.status, c.user
-FROM tblCart1 c
-INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
-
-DROP VIEW IF EXISTS vwProfitDaily;
-CREATE VIEW vwProfitDaily AS
-SELECT DATE(sdate) AS day, SUM(profit) AS total_profit
-FROM tblProfitLog
-GROUP BY DATE(sdate);
-
-DROP VIEW IF EXISTS vwProfitProducts;
-CREATE VIEW vwProfitProducts AS
-SELECT pcode, SUM(qty) sold_qty, SUM(profit) profit
-FROM tblProfitLog
-GROUP BY pcode;
-
 ";
 
                         using (var cm = new SQLiteCommand(script, cn))
                             cm.ExecuteNonQuery();
 
+                        // ===============================
+                        // VERSIONING AND MIGRATION SYSTEM
+                        // ===============================
+                        EnsureVersioning(cn);   // Make sure tblDBVersion exists
+                        MigrateDatabase(cn);    // Run migrations if needed
+
+                        // FIX SCHEMA & SEED DATA
                         FixSchema(cn);
                         SeedData(cn);
                     }
@@ -286,6 +121,91 @@ GROUP BY pcode;
             }
         }
 
+        // ===============================
+        // VERSIONING METHODS
+        // ===============================
+        private static void EnsureVersioning(SQLiteConnection cn)
+        {
+            new SQLiteCommand("CREATE TABLE IF NOT EXISTS tblDBVersion (version INTEGER);", cn).ExecuteNonQuery();
+
+            using var cmd = new SQLiteCommand("SELECT COUNT(*) FROM tblDBVersion;", cn);
+            if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+                new SQLiteCommand("INSERT INTO tblDBVersion (version) VALUES (1);", cn).ExecuteNonQuery(); // initial version
+        }
+
+        private static int GetDBVersion(SQLiteConnection cn)
+        {
+            using var cmd = new SQLiteCommand("SELECT version FROM tblDBVersion LIMIT 1;", cn);
+            var result = cmd.ExecuteScalar();
+            if (result == null || result == DBNull.Value)
+                return 1;
+            return Convert.ToInt32(result);
+        }
+
+        private static void SetDBVersion(SQLiteConnection cn, int version)
+        {
+            new SQLiteCommand($"UPDATE tblDBVersion SET version={version};", cn).ExecuteNonQuery();
+        }
+
+        private static void MigrateDatabase(SQLiteConnection cn)
+        {
+            int dbVersion = GetDBVersion(cn);
+
+            // ================================
+            // Version 2: Add tblUser.role column if missing
+            // ================================
+            if (dbVersion < 2)
+            {
+                if (!ColumnExists(cn, "tblUser", "role"))
+                    new SQLiteCommand("ALTER TABLE tblUser ADD COLUMN role TEXT;", cn).ExecuteNonQuery();
+
+                SetDBVersion(cn, 2);
+            }
+
+            // ================================
+            // Version 3: Add tblCancel.total column if missing
+            // ================================
+            if (dbVersion < 3)
+            {
+                if (!ColumnExists(cn, "tblCancel", "total"))
+                    new SQLiteCommand("ALTER TABLE tblCancel ADD COLUMN total REAL DEFAULT 0;", cn).ExecuteNonQuery();
+
+                SetDBVersion(cn, 3);
+            }
+
+            // ================================
+            // Version 4: Optional: standardize vwSoldItems (user vs cashier) safely
+            // ================================
+            if (dbVersion < 4)
+            {
+                using (var tr = cn.BeginTransaction())
+                {
+                    new SQLiteCommand("DROP VIEW IF EXISTS vwSoldItems;", cn, tr).ExecuteNonQuery();
+                    new SQLiteCommand(@"
+                        CREATE VIEW IF NOT EXISTS vwSoldItems AS
+                        SELECT c.id, c.transno, c.pcode, p.pdesc, c.price, c.qty, c.disc, c.total, c.sdate, c.status, c.user
+                        FROM tblCart1 c
+                        INNER JOIN TblProduct1 p ON c.pcode = p.pcode;
+                    ", cn, tr).ExecuteNonQuery();
+                    tr.Commit();
+                }
+
+                SetDBVersion(cn, 4);
+            }
+
+            // ================================
+            // Version 5: Example future migration
+            // ================================
+            if (dbVersion < 5)
+            {
+                // Future migrations go here
+                // SetDBVersion(cn, 5);
+            }
+        }
+
+        // ===============================
+        // EXISTING FIX SCHEMA & HELPERS
+        // ===============================
         private static void FixSchema(SQLiteConnection cn)
         {
             string[,] updates = {
@@ -335,6 +255,11 @@ GROUP BY pcode;
                     ins.ExecuteNonQuery();
                 }
             }
+
+            // Ensure tblStore has at least one row
+            using (var cmd = new SQLiteCommand("SELECT COUNT(*) FROM tblStore;", cn))
+                if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
+                    new SQLiteCommand("INSERT INTO tblStore (store,address,phone) VALUES ('Default Store','Default Address','0000000000');", cn).ExecuteNonQuery();
         }
 
         // DASHBOARD

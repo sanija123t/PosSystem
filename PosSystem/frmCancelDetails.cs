@@ -32,6 +32,7 @@ namespace PosSystem
 
         private readonly frmSoldItems f;
         private decimal unitPrice = 0; // original sold price
+        private bool _isSaving = false; // async-safe flag
 
         public frmCancelDetails(frmSoldItems frm, decimal soldPrice = 0)
         {
@@ -75,6 +76,9 @@ namespace PosSystem
 
         private async void btnSave_Click(object sender, EventArgs e)
         {
+            if (_isSaving) return; // prevent re-entry
+            _isSaving = true;
+
             btnSave.Enabled = false;
             this.Cursor = Cursors.WaitCursor;
 
@@ -111,28 +115,37 @@ namespace PosSystem
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                     return;
 
+                bool saveSuccess = false;
+
                 // 🔹 Ask admin approval via frmVoid
                 using (frmVoid voidForm = new frmVoid())
                 {
                     voidForm.CancelAction = cbAction.Text.Trim();
                     voidForm.CancelQty = cancelQty;
                     voidForm.CancelReason = txtReason.Text.Trim();
+                    voidForm.ProductCode = txtPcode.Text;
+                    voidForm.CartId = txtID.Text;
+                    voidForm.Price = unitPrice;
+                    voidForm.CancelledBy = txtVoidBy.Text;
                     voidForm.SoldItemForm = f;
 
                     voidForm.ShowDialog();
 
-                    // If approval not granted, stop
-                    if (!voidForm.Approved)
+                    saveSuccess = voidForm.SaveSuccess;
+
+                    if (!saveSuccess)
                     {
-                        MessageBox.Show("Cancellation not approved by admin.", "Access Denied", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show("Cancellation was not completed or approved by admin.", "Access Denied", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                 }
 
-                await RefreshList();
+                // Async-safe refresh list
+                if (f != null)
+                    await f.LoadSoldItemsAsync();
 
-                // Export PDF only if cancel approved
-                ExportCancelDetailsToPDF();
+                // Export PDF after completion
+                await Task.Run(() => ExportCancelDetailsToPDF());
 
                 Dispose();
             }
@@ -144,13 +157,8 @@ namespace PosSystem
             {
                 this.Cursor = Cursors.Default;
                 btnSave.Enabled = true;
+                _isSaving = false; // reset async flag
             }
-        }
-
-        public async Task RefreshList()
-        {
-            if (f != null)
-                await f.LoadSoldItemsAsync();
         }
 
         private void frmCancelDetails_KeyDown(object sender, KeyEventArgs e)
@@ -185,21 +193,35 @@ namespace PosSystem
 
         private void AutoFillByID(string id)
         {
-            using (SQLiteConnection con = new SQLiteConnection(f.ConnectionString))
+            using (SQLiteConnection con = new SQLiteConnection(DBConnection.MyConnection()))
             {
                 con.Open();
-                using (SQLiteCommand cmd = new SQLiteCommand("SELECT * FROM SoldItems WHERE ID=@id", con))
+                using (SQLiteCommand cmd = new SQLiteCommand("SELECT * FROM vwSoldItems WHERE id=@id LIMIT 1", con))
                 {
                     cmd.Parameters.AddWithValue("@id", id);
                     using (SQLiteDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            txtPcode.Text = reader["Pcode"].ToString();
-                            txtDesc.Text = reader["Description"].ToString();
-                            txtQty.Text = reader["Qty"].ToString();
-                            txtPrice.Text = reader["Price"].ToString();
-                            unitPrice = Convert.ToDecimal(reader["Price"]);
+                            txtID.Text = reader["id"].ToString();
+                            txtPcode.Text = reader["pcode"].ToString();
+                            txtDesc.Text = reader["pdesc"].ToString();
+                            txtQty.Text = reader["qty"].ToString();
+                            txtPrice.Text = reader["price"].ToString();
+
+                            if (!decimal.TryParse(reader["price"].ToString(), out unitPrice))
+                                unitPrice = 0;
+
+                            PerformCalculation();
+                        }
+                        else
+                        {
+                            MessageBox.Show("No sold record found.", "Search", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            txtPcode.Clear();
+                            txtDesc.Clear();
+                            txtQty.Clear();
+                            txtPrice.Clear();
+                            txtTotal.Text = "0.00";
                         }
                     }
                 }
@@ -208,21 +230,35 @@ namespace PosSystem
 
         private void AutoFillByPcode(string pcode)
         {
-            using (SQLiteConnection con = new SQLiteConnection(f.ConnectionString))
+            using (SQLiteConnection con = new SQLiteConnection(DBConnection.MyConnection()))
             {
                 con.Open();
-                using (SQLiteCommand cmd = new SQLiteCommand("SELECT * FROM SoldItems WHERE Pcode=@pcode", con))
+                using (SQLiteCommand cmd = new SQLiteCommand("SELECT * FROM vwSoldItems WHERE pcode=@pcode LIMIT 1", con))
                 {
                     cmd.Parameters.AddWithValue("@pcode", pcode);
                     using (SQLiteDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            txtID.Text = reader["ID"].ToString();
-                            txtDesc.Text = reader["Description"].ToString();
-                            txtQty.Text = reader["Qty"].ToString();
-                            txtPrice.Text = reader["Price"].ToString();
-                            unitPrice = Convert.ToDecimal(reader["Price"]);
+                            txtID.Text = reader["id"].ToString();
+                            txtPcode.Text = reader["pcode"].ToString();
+                            txtDesc.Text = reader["pdesc"].ToString();
+                            txtQty.Text = reader["qty"].ToString();
+                            txtPrice.Text = reader["price"].ToString();
+
+                            if (!decimal.TryParse(reader["price"].ToString(), out unitPrice))
+                                unitPrice = 0;
+
+                            PerformCalculation();
+                        }
+                        else
+                        {
+                            MessageBox.Show("No sold record found.", "Search", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            txtID.Clear();
+                            txtDesc.Clear();
+                            txtQty.Clear();
+                            txtPrice.Clear();
+                            txtTotal.Text = "0.00";
                         }
                     }
                 }
@@ -237,25 +273,33 @@ namespace PosSystem
         {
             try
             {
-                string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), $"Cancel_{txtID.Text}_{DateTime.Now:yyyyMMddHHmmss}.pdf");
-                Document doc = new Document(PageSize.A4);
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "POS_Cancellations");
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+                string path = Path.Combine(folder, $"Void_{txtID.Text}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+
+                Document doc = new Document(PageSize.A4, 25, 25, 30, 30);
                 PdfWriter.GetInstance(doc, new FileStream(path, FileMode.Create));
                 doc.Open();
 
-                doc.Add(new Paragraph("Cancel Details Report"));
-                doc.Add(new Paragraph($"ID: {txtID.Text}"));
-                doc.Add(new Paragraph($"Pcode: {txtPcode.Text}"));
-                doc.Add(new Paragraph($"Description: {txtDesc.Text}"));
-                doc.Add(new Paragraph($"Qty Sold: {txtQty.Text}"));
-                doc.Add(new Paragraph($"Qty Cancel: {txtCancelQty.Text}"));
-                doc.Add(new Paragraph($"Unit Price: {txtPrice.Text}"));
-                doc.Add(new Paragraph($"Total Refund: {txtTotal.Text}"));
-                doc.Add(new Paragraph($"Action: {cbAction.Text}"));
-                doc.Add(new Paragraph($"Reason: {txtReason.Text}"));
-                doc.Add(new Paragraph($"Voided By: {txtVoidBy.Text}"));
-                doc.Close();
+                var titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 18);
+                var standardFont = FontFactory.GetFont(FontFactory.HELVETICA, 12);
 
-                MessageBox.Show($"PDF Exported Successfully to Desktop:\n{path}", "PDF Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                doc.Add(new Paragraph("VOIDED TRANSACTION REPORT", titleFont));
+                doc.Add(new Paragraph($"Date generated: {DateTime.Now:f}", standardFont));
+                doc.Add(new Paragraph("---------------------------------------------------------"));
+                doc.Add(new Paragraph($"Cart Item ID (tblCart1): {txtID.Text}", standardFont));
+                doc.Add(new Paragraph($"Product: [{txtPcode.Text}] {txtDesc.Text}", standardFont));
+                doc.Add(new Paragraph($"Original Sold Qty: {txtQty.Text}", standardFont));
+                doc.Add(new Paragraph($"Voided Qty: {txtCancelQty.Text}", standardFont));
+                doc.Add(new Paragraph($"Unit Price: {txtPrice.Text}", standardFont));
+                doc.Add(new Paragraph($"Refund Amount: {txtTotal.Text}", standardFont));
+                doc.Add(new Paragraph($"Action (Restored Stock?): {cbAction.Text}", standardFont));
+                doc.Add(new Paragraph($"Reason: {txtReason.Text}", standardFont));
+                doc.Add(new Paragraph($"Authorized By: {txtVoidBy.Text}", standardFont));
+
+                doc.Close();
+                MessageBox.Show($"Void Record Exported:\n{path}", "PDF Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
