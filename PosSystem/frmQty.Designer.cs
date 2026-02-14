@@ -29,6 +29,7 @@ namespace PosSystem
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmQty));
             this.txtQty = new System.Windows.Forms.TextBox();
             this.btnOK = new System.Windows.Forms.Button();
             this.SuspendLayout();
@@ -70,6 +71,7 @@ namespace PosSystem
             this.Controls.Add(this.btnOK);
             this.Controls.Add(this.txtQty);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "frmQty";

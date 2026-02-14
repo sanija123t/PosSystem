@@ -63,6 +63,7 @@ namespace PosSystem
             this.label11 = new System.Windows.Forms.Label();
             this.tabPage3 = new System.Windows.Forms.TabPage();
             this.panel3 = new System.Windows.Forms.Panel();
+            this.btndeluser = new System.Windows.Forms.Button();
             this.dataGridViewActive = new System.Windows.Forms.DataGridView();
             this.colName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.isactive = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -74,7 +75,6 @@ namespace PosSystem
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.txtuser2 = new System.Windows.Forms.TextBox();
             this.label9 = new System.Windows.Forms.Label();
-            this.btndeluser = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.panel2.SuspendLayout();
@@ -422,6 +422,21 @@ namespace PosSystem
             this.panel3.Size = new System.Drawing.Size(994, 499);
             this.panel3.TabIndex = 0;
             // 
+            // btndeluser
+            // 
+            this.btndeluser.BackColor = System.Drawing.Color.Maroon;
+            this.btndeluser.FlatAppearance.BorderSize = 0;
+            this.btndeluser.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btndeluser.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btndeluser.ForeColor = System.Drawing.Color.White;
+            this.btndeluser.Location = new System.Drawing.Point(535, 95);
+            this.btndeluser.Name = "btndeluser";
+            this.btndeluser.Size = new System.Drawing.Size(75, 30);
+            this.btndeluser.TabIndex = 32;
+            this.btndeluser.Text = "Delete";
+            this.btndeluser.UseVisualStyleBackColor = false;
+            this.btndeluser.Click += new System.EventHandler(this.btndeluser_Click);
+            // 
             // dataGridViewActive
             // 
             this.dataGridViewActive.AllowUserToAddRows = false;
@@ -552,21 +567,6 @@ namespace PosSystem
             this.label9.TabIndex = 5;
             this.label9.Text = "User Name";
             // 
-            // btndeluser
-            // 
-            this.btndeluser.BackColor = System.Drawing.Color.Maroon;
-            this.btndeluser.FlatAppearance.BorderSize = 0;
-            this.btndeluser.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btndeluser.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btndeluser.ForeColor = System.Drawing.Color.White;
-            this.btndeluser.Location = new System.Drawing.Point(535, 95);
-            this.btndeluser.Name = "btndeluser";
-            this.btndeluser.Size = new System.Drawing.Size(75, 30);
-            this.btndeluser.TabIndex = 32;
-            this.btndeluser.Text = "Delete";
-            this.btndeluser.UseVisualStyleBackColor = false;
-            this.btndeluser.Click += new System.EventHandler(this.btndeluser_Click);
-            // 
             // frmUserAccount
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
@@ -578,6 +578,7 @@ namespace PosSystem
             this.Controls.Add(this.panel1);
             this.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Name = "frmUserAccount";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

@@ -31,6 +31,7 @@ namespace PosSystem
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmVendor));
             this.panel1 = new System.Windows.Forms.Panel();
+            this.lblD = new System.Windows.Forms.Label();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
@@ -48,7 +49,6 @@ namespace PosSystem
             this.btnSave = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.txtTelephone = new System.Windows.Forms.TextBox();
-            this.lblD = new System.Windows.Forms.Label();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.SuspendLayout();
@@ -63,6 +63,16 @@ namespace PosSystem
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(745, 38);
             this.panel1.TabIndex = 1;
+            // 
+            // lblD
+            // 
+            this.lblD.AutoSize = true;
+            this.lblD.Location = new System.Drawing.Point(488, 10);
+            this.lblD.Name = "lblD";
+            this.lblD.Size = new System.Drawing.Size(59, 20);
+            this.lblD.TabIndex = 9;
+            this.lblD.Text = "Vendor";
+            this.lblD.Visible = false;
             // 
             // pictureBox2
             // 
@@ -226,16 +236,6 @@ namespace PosSystem
             this.txtTelephone.Size = new System.Drawing.Size(444, 27);
             this.txtTelephone.TabIndex = 3;
             // 
-            // lblD
-            // 
-            this.lblD.AutoSize = true;
-            this.lblD.Location = new System.Drawing.Point(488, 10);
-            this.lblD.Name = "lblD";
-            this.lblD.Size = new System.Drawing.Size(59, 20);
-            this.lblD.TabIndex = 9;
-            this.lblD.Text = "Vendor";
-            this.lblD.Visible = false;
-            // 
             // frmVendor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
@@ -261,6 +261,7 @@ namespace PosSystem
             this.Controls.Add(this.panel1);
             this.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Name = "frmVendor";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

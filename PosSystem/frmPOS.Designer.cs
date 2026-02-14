@@ -61,6 +61,9 @@
             this.label10 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
             this.panel5 = new System.Windows.Forms.Panel();
+            this.lblPhone = new System.Windows.Forms.Label();
+            this.lblAddress = new System.Windows.Forms.Label();
+            this.lblSname = new System.Windows.Forms.Label();
             this.LblUser = new System.Windows.Forms.Label();
             this.lblName = new System.Windows.Forms.Label();
             this.lblDisplayTotal = new System.Windows.Forms.Label();
@@ -85,9 +88,6 @@
             this.dataGridViewImageColumn2 = new System.Windows.Forms.DataGridViewImageColumn();
             this.dataGridViewImageColumn3 = new System.Windows.Forms.DataGridViewImageColumn();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
-            this.lblAddress = new System.Windows.Forms.Label();
-            this.lblSname = new System.Windows.Forms.Label();
-            this.lblPhone = new System.Windows.Forms.Label();
             this.panel1.SuspendLayout();
             this.panel3.SuspendLayout();
             this.panel6.SuspendLayout();
@@ -421,6 +421,39 @@
             this.panel5.Size = new System.Drawing.Size(1188, 60);
             this.panel5.TabIndex = 2;
             // 
+            // lblPhone
+            // 
+            this.lblPhone.AutoSize = true;
+            this.lblPhone.Location = new System.Drawing.Point(879, 11);
+            this.lblPhone.Name = "lblPhone";
+            this.lblPhone.Size = new System.Drawing.Size(51, 20);
+            this.lblPhone.TabIndex = 23;
+            this.lblPhone.Text = "label4";
+            this.lblPhone.Visible = false;
+            this.lblPhone.Click += new System.EventHandler(this.lblPhone_Click);
+            // 
+            // lblAddress
+            // 
+            this.lblAddress.AutoSize = true;
+            this.lblAddress.Location = new System.Drawing.Point(755, 29);
+            this.lblAddress.Name = "lblAddress";
+            this.lblAddress.Size = new System.Drawing.Size(51, 20);
+            this.lblAddress.TabIndex = 22;
+            this.lblAddress.Text = "label4";
+            this.lblAddress.Visible = false;
+            this.lblAddress.Click += new System.EventHandler(this.lblAddress_Click);
+            // 
+            // lblSname
+            // 
+            this.lblSname.AutoSize = true;
+            this.lblSname.Location = new System.Drawing.Point(812, 29);
+            this.lblSname.Name = "lblSname";
+            this.lblSname.Size = new System.Drawing.Size(51, 20);
+            this.lblSname.TabIndex = 21;
+            this.lblSname.Text = "label4";
+            this.lblSname.Visible = false;
+            this.lblSname.Click += new System.EventHandler(this.lblSname_Click);
+            // 
             // LblUser
             // 
             this.LblUser.AutoSize = true;
@@ -686,39 +719,6 @@
             this.pictureBox2.TabIndex = 5;
             this.pictureBox2.TabStop = false;
             // 
-            // lblAddress
-            // 
-            this.lblAddress.AutoSize = true;
-            this.lblAddress.Location = new System.Drawing.Point(755, 29);
-            this.lblAddress.Name = "lblAddress";
-            this.lblAddress.Size = new System.Drawing.Size(51, 20);
-            this.lblAddress.TabIndex = 22;
-            this.lblAddress.Text = "label4";
-            this.lblAddress.Visible = false;
-            this.lblAddress.Click += new System.EventHandler(this.lblAddress_Click);
-            // 
-            // lblSname
-            // 
-            this.lblSname.AutoSize = true;
-            this.lblSname.Location = new System.Drawing.Point(812, 29);
-            this.lblSname.Name = "lblSname";
-            this.lblSname.Size = new System.Drawing.Size(51, 20);
-            this.lblSname.TabIndex = 21;
-            this.lblSname.Text = "label4";
-            this.lblSname.Visible = false;
-            this.lblSname.Click += new System.EventHandler(this.lblSname_Click);
-            // 
-            // lblPhone
-            // 
-            this.lblPhone.AutoSize = true;
-            this.lblPhone.Location = new System.Drawing.Point(879, 11);
-            this.lblPhone.Name = "lblPhone";
-            this.lblPhone.Size = new System.Drawing.Size(51, 20);
-            this.lblPhone.TabIndex = 23;
-            this.lblPhone.Text = "label4";
-            this.lblPhone.Visible = false;
-            this.lblPhone.Click += new System.EventHandler(this.lblPhone_Click);
-            // 
             // frmPOS
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
@@ -735,6 +735,7 @@
             this.Controls.Add(this.panel1);
             this.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Name = "frmPOS";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
