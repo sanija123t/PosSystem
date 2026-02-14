@@ -110,6 +110,37 @@ CREATE INDEX IF NOT EXISTS idx_cart_transno ON tblCart1(transno);
                         // FIX SCHEMA & SEED DATA
                         FixSchema(cn);
                         SeedData(cn);
+
+                        // ===============================
+                        // INVENTORY AUTOMATION
+                        // ===============================
+                        using (var tr = cn.BeginTransaction())
+                        {
+                            // 1. Updated vwCriticalItems: includes Brand and Category names
+                            new SQLiteCommand("DROP VIEW IF EXISTS vwCriticalItems;", cn, tr).ExecuteNonQuery();
+                            new SQLiteCommand(@"
+                                CREATE VIEW IF NOT EXISTS vwCriticalItems AS
+                                SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.qty, p.reorder
+                                FROM TblProduct1 p
+                                LEFT JOIN BrandTbl b ON p.bid = b.id
+                                LEFT JOIN TblCategory c ON p.cid = c.id
+                                WHERE p.qty <= p.reorder AND p.isactive = 1;", cn, tr).ExecuteNonQuery();
+
+                            // 2. Updated trg_after_sale: fires only when status changes from Pending -> Sold
+                            new SQLiteCommand("DROP TRIGGER IF EXISTS trg_after_sale;", cn, tr).ExecuteNonQuery();
+                            new SQLiteCommand(@"
+                                CREATE TRIGGER trg_after_sale
+                                AFTER UPDATE ON tblCart1
+                                FOR EACH ROW
+                                WHEN NEW.status = 'Sold' AND OLD.status = 'Pending'
+                                BEGIN
+                                    UPDATE TblProduct1
+                                    SET qty = qty - NEW.qty
+                                    WHERE pcode = NEW.pcode;
+                                END;", cn, tr).ExecuteNonQuery();
+
+                            tr.Commit();
+                        }
                     }
 
                     _initialized = true;
@@ -151,31 +182,20 @@ CREATE INDEX IF NOT EXISTS idx_cart_transno ON tblCart1(transno);
         {
             int dbVersion = GetDBVersion(cn);
 
-            // ================================
-            // Version 2: Add tblUser.role column if missing
-            // ================================
             if (dbVersion < 2)
             {
                 if (!ColumnExists(cn, "tblUser", "role"))
                     new SQLiteCommand("ALTER TABLE tblUser ADD COLUMN role TEXT;", cn).ExecuteNonQuery();
-
                 SetDBVersion(cn, 2);
             }
 
-            // ================================
-            // Version 3: Add tblCancel.total column if missing
-            // ================================
             if (dbVersion < 3)
             {
                 if (!ColumnExists(cn, "tblCancel", "total"))
                     new SQLiteCommand("ALTER TABLE tblCancel ADD COLUMN total REAL DEFAULT 0;", cn).ExecuteNonQuery();
-
                 SetDBVersion(cn, 3);
             }
 
-            // ================================
-            // Version 4: Optional: standardize vwSoldItems (user vs cashier) safely
-            // ================================
             if (dbVersion < 4)
             {
                 using (var tr = cn.BeginTransaction())
@@ -189,16 +209,12 @@ CREATE INDEX IF NOT EXISTS idx_cart_transno ON tblCart1(transno);
                     ", cn, tr).ExecuteNonQuery();
                     tr.Commit();
                 }
-
                 SetDBVersion(cn, 4);
             }
 
-            // ================================
-            // Version 5: Example future migration
-            // ================================
             if (dbVersion < 5)
             {
-                // Future migrations go here
+                // Future migrations
                 // SetDBVersion(cn, 5);
             }
         }
@@ -256,7 +272,6 @@ CREATE INDEX IF NOT EXISTS idx_cart_transno ON tblCart1(transno);
                 }
             }
 
-            // Ensure tblStore has at least one row
             using (var cmd = new SQLiteCommand("SELECT COUNT(*) FROM tblStore;", cn))
                 if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
                     new SQLiteCommand("INSERT INTO tblStore (store,address,phone) VALUES ('Default Store','Default Address','0000000000');", cn).ExecuteNonQuery();
