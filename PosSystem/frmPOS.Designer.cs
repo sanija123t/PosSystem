@@ -46,6 +46,10 @@
             this.btnSearch = new System.Windows.Forms.Button();
             this.btnTrans = new System.Windows.Forms.Button();
             this.panel3 = new System.Windows.Forms.Panel();
+            this.comboBoxprinter = new System.Windows.Forms.ComboBox();
+            this.button1 = new System.Windows.Forms.Button();
+            this.textBoxbarcode = new System.Windows.Forms.TextBox();
+            this.btnscanbarcode = new System.Windows.Forms.Button();
             this.label16 = new System.Windows.Forms.Label();
             this.lblDate = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
@@ -63,20 +67,21 @@
             this.panel5 = new System.Windows.Forms.Panel();
             this.lblPhone = new System.Windows.Forms.Label();
             this.lblAddress = new System.Windows.Forms.Label();
-            this.LblUser = new System.Windows.Forms.Label();
+            this.lblSname = new System.Windows.Forms.Label();
             this.lblName = new System.Windows.Forms.Label();
             this.lblDisplayTotal = new System.Windows.Forms.Label();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
+            this.LblUser = new System.Windows.Forms.Label();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.Column1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column8 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column3 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Column4 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ColRemove = new System.Windows.Forms.DataGridViewImageColumn();
             this.Column5 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.collAdd = new System.Windows.Forms.DataGridViewImageColumn();
             this.Delete = new System.Windows.Forms.DataGridViewImageColumn();
+            this.Column4 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column7 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column6 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.panel2 = new System.Windows.Forms.Panel();
@@ -87,8 +92,6 @@
             this.dataGridViewImageColumn2 = new System.Windows.Forms.DataGridViewImageColumn();
             this.dataGridViewImageColumn3 = new System.Windows.Forms.DataGridViewImageColumn();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
-            this.btnscanbarcode = new System.Windows.Forms.Button();
-            this.lblSname = new System.Windows.Forms.Label();
             this.panel1.SuspendLayout();
             this.panel3.SuspendLayout();
             this.panel6.SuspendLayout();
@@ -176,7 +179,7 @@
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(247, 39);
             this.btnCancel.TabIndex = 4;
-            this.btnCancel.Text = " [F5] Cancel Sales";
+            this.btnCancel.Text = " [F5] Print/Reprint";
             this.btnCancel.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
             this.btnCancel.UseVisualStyleBackColor = false;
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
@@ -260,6 +263,9 @@
             // panel3
             // 
             this.panel3.BackColor = System.Drawing.Color.White;
+            this.panel3.Controls.Add(this.comboBoxprinter);
+            this.panel3.Controls.Add(this.button1);
+            this.panel3.Controls.Add(this.textBoxbarcode);
             this.panel3.Controls.Add(this.btnscanbarcode);
             this.panel3.Controls.Add(this.label16);
             this.panel3.Controls.Add(this.lblDate);
@@ -270,6 +276,52 @@
             this.panel3.Name = "panel3";
             this.panel3.Size = new System.Drawing.Size(934, 89);
             this.panel3.TabIndex = 1;
+            // 
+            // comboBoxprinter
+            // 
+            this.comboBoxprinter.FormattingEnabled = true;
+            this.comboBoxprinter.Location = new System.Drawing.Point(800, 5);
+            this.comboBoxprinter.Name = "comboBoxprinter";
+            this.comboBoxprinter.Size = new System.Drawing.Size(121, 28);
+            this.comboBoxprinter.TabIndex = 20;
+            // 
+            // button1
+            // 
+            this.button1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(38)))), ((int)(((byte)(38)))));
+            this.button1.FlatAppearance.BorderSize = 0;
+            this.button1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.button1.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.button1.ForeColor = System.Drawing.Color.White;
+            this.button1.Location = new System.Drawing.Point(306, 51);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(75, 30);
+            this.button1.TabIndex = 19;
+            this.button1.Text = "Done";
+            this.button1.UseVisualStyleBackColor = false;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
+            // textBoxbarcode
+            // 
+            this.textBoxbarcode.Location = new System.Drawing.Point(140, 52);
+            this.textBoxbarcode.Name = "textBoxbarcode";
+            this.textBoxbarcode.Size = new System.Drawing.Size(160, 27);
+            this.textBoxbarcode.TabIndex = 18;
+            this.textBoxbarcode.TextChanged += new System.EventHandler(this.textBoxbarcode_TextChanged);
+            // 
+            // btnscanbarcode
+            // 
+            this.btnscanbarcode.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(38)))), ((int)(((byte)(38)))));
+            this.btnscanbarcode.FlatAppearance.BorderSize = 0;
+            this.btnscanbarcode.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnscanbarcode.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnscanbarcode.ForeColor = System.Drawing.Color.White;
+            this.btnscanbarcode.Location = new System.Drawing.Point(387, 51);
+            this.btnscanbarcode.Name = "btnscanbarcode";
+            this.btnscanbarcode.Size = new System.Drawing.Size(75, 30);
+            this.btnscanbarcode.TabIndex = 17;
+            this.btnscanbarcode.Text = "Scan";
+            this.btnscanbarcode.UseVisualStyleBackColor = false;
+            this.btnscanbarcode.Click += new System.EventHandler(this.btnscanbarcode_Click);
             // 
             // label16
             // 
@@ -415,6 +467,7 @@
             // 
             // panel5
             // 
+            this.panel5.AccessibleRole = System.Windows.Forms.AccessibleRole.Cursor;
             this.panel5.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(37)))), ((int)(((byte)(38)))));
             this.panel5.Controls.Add(this.lblPhone);
             this.panel5.Controls.Add(this.lblAddress);
@@ -451,18 +504,16 @@
             this.lblAddress.Visible = false;
             this.lblAddress.Click += new System.EventHandler(this.lblAddress_Click);
             // 
-            // LblUser
+            // lblSname
             // 
-            this.LblUser.AutoSize = true;
-            this.LblUser.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic))), System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.LblUser.ForeColor = System.Drawing.Color.Black;
-            this.LblUser.Location = new System.Drawing.Point(686, 11);
-            this.LblUser.Name = "LblUser";
-            this.LblUser.Size = new System.Drawing.Size(119, 20);
-            this.LblUser.TabIndex = 3;
-            this.LblUser.Text = "JAYAWI STORES";
-            this.LblUser.Visible = false;
-            this.LblUser.Click += new System.EventHandler(this.LblUser_Click);
+            this.lblSname.AutoSize = true;
+            this.lblSname.Location = new System.Drawing.Point(711, 9);
+            this.lblSname.Name = "lblSname";
+            this.lblSname.Size = new System.Drawing.Size(51, 20);
+            this.lblSname.TabIndex = 21;
+            this.lblSname.Text = "label4";
+            this.lblSname.Visible = false;
+            this.lblSname.Click += new System.EventHandler(this.lblSname_Click);
             // 
             // lblName
             // 
@@ -499,10 +550,25 @@
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
+            // LblUser
+            // 
+            this.LblUser.AutoSize = true;
+            this.LblUser.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic))), System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.LblUser.ForeColor = System.Drawing.Color.Black;
+            this.LblUser.Location = new System.Drawing.Point(686, 11);
+            this.LblUser.Name = "LblUser";
+            this.LblUser.Size = new System.Drawing.Size(119, 20);
+            this.LblUser.TabIndex = 3;
+            this.LblUser.Text = "JAYAWI STORES";
+            this.LblUser.Visible = false;
+            this.LblUser.Click += new System.EventHandler(this.LblUser_Click);
+            // 
             // dataGridView1
             // 
             this.dataGridView1.AllowUserToAddRows = false;
             this.dataGridView1.AllowUserToDeleteRows = false;
+            this.dataGridView1.AllowUserToResizeColumns = false;
+            this.dataGridView1.AllowUserToResizeRows = false;
             this.dataGridView1.BackgroundColor = System.Drawing.Color.White;
             dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
             dataGridViewCellStyle1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(38)))), ((int)(((byte)(38)))));
@@ -512,17 +578,17 @@
             dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
             dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
             this.dataGridView1.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
-            this.dataGridView1.ColumnHeadersHeight = 30;
+            this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.Column1,
             this.Column2,
             this.Column8,
             this.Column3,
-            this.Column4,
             this.ColRemove,
             this.Column5,
             this.collAdd,
             this.Delete,
+            this.Column4,
             this.Column7,
             this.Column6});
             dataGridViewCellStyle6.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
@@ -547,15 +613,15 @@
             // 
             // Column1
             // 
-            this.Column1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.Column1.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.Column1.HeaderText = "#";
             this.Column1.Name = "Column1";
             this.Column1.ReadOnly = true;
-            this.Column1.Width = 43;
+            this.Column1.Width = 40;
             // 
             // Column2
             // 
-            this.Column2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.Column2.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.Column2.HeaderText = "ID";
             this.Column2.Name = "Column2";
             this.Column2.ReadOnly = true;
@@ -568,6 +634,7 @@
             this.Column8.Name = "Column8";
             this.Column8.ReadOnly = true;
             this.Column8.Visible = false;
+            this.Column8.Width = 78;
             // 
             // Column3
             // 
@@ -576,31 +643,21 @@
             this.Column3.Name = "Column3";
             this.Column3.ReadOnly = true;
             // 
-            // Column4
-            // 
-            this.Column4.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
-            this.Column4.DefaultCellStyle = dataGridViewCellStyle2;
-            this.Column4.HeaderText = "PRICE";
-            this.Column4.Name = "Column4";
-            this.Column4.ReadOnly = true;
-            this.Column4.Width = 73;
-            // 
             // ColRemove
             // 
-            this.ColRemove.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.ColRemove.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.ColRemove.HeaderText = "";
             this.ColRemove.Image = ((System.Drawing.Image)(resources.GetObject("ColRemove.Image")));
             this.ColRemove.Name = "ColRemove";
             this.ColRemove.ReadOnly = true;
             this.ColRemove.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.ColRemove.Width = 5;
+            this.ColRemove.Width = 30;
             // 
             // Column5
             // 
-            this.Column5.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
-            this.Column5.DefaultCellStyle = dataGridViewCellStyle3;
+            this.Column5.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            this.Column5.DefaultCellStyle = dataGridViewCellStyle2;
             this.Column5.HeaderText = "QTY";
             this.Column5.Name = "Column5";
             this.Column5.ReadOnly = true;
@@ -608,40 +665,52 @@
             // 
             // collAdd
             // 
-            this.collAdd.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.collAdd.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.collAdd.HeaderText = "";
             this.collAdd.Image = ((System.Drawing.Image)(resources.GetObject("collAdd.Image")));
             this.collAdd.Name = "collAdd";
             this.collAdd.ReadOnly = true;
             this.collAdd.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.collAdd.Width = 5;
+            this.collAdd.Width = 30;
             // 
             // Delete
             // 
-            this.Delete.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.Delete.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.Delete.HeaderText = "";
             this.Delete.Image = ((System.Drawing.Image)(resources.GetObject("Delete.Image")));
             this.Delete.Name = "Delete";
             this.Delete.ReadOnly = true;
-            this.Delete.Width = 5;
+            this.Delete.Width = 30;
+            // 
+            // Column4
+            // 
+            this.Column4.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
+            this.Column4.DefaultCellStyle = dataGridViewCellStyle3;
+            this.Column4.HeaderText = "PRICE";
+            this.Column4.Name = "Column4";
+            this.Column4.ReadOnly = true;
+            this.Column4.Width = 150;
             // 
             // Column7
             // 
+            this.Column7.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
             this.Column7.DefaultCellStyle = dataGridViewCellStyle4;
             this.Column7.HeaderText = "DISCOUNT";
             this.Column7.Name = "Column7";
             this.Column7.ReadOnly = true;
+            this.Column7.Width = 150;
             // 
             // Column6
             // 
-            this.Column6.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.Column6.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             dataGridViewCellStyle5.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleRight;
             this.Column6.DefaultCellStyle = dataGridViewCellStyle5;
             this.Column6.HeaderText = "TOTAL";
             this.Column6.Name = "Column6";
             this.Column6.ReadOnly = true;
-            this.Column6.Width = 75;
+            this.Column6.Width = 180;
             // 
             // panel2
             // 
@@ -716,39 +785,12 @@
             this.pictureBox2.TabIndex = 5;
             this.pictureBox2.TabStop = false;
             // 
-            // btnscanbarcode
-            // 
-            this.btnscanbarcode.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(38)))), ((int)(((byte)(38)))));
-            this.btnscanbarcode.FlatAppearance.BorderSize = 0;
-            this.btnscanbarcode.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnscanbarcode.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnscanbarcode.ForeColor = System.Drawing.Color.White;
-            this.btnscanbarcode.Location = new System.Drawing.Point(143, 52);
-            this.btnscanbarcode.Name = "btnscanbarcode";
-            this.btnscanbarcode.Size = new System.Drawing.Size(75, 30);
-            this.btnscanbarcode.TabIndex = 17;
-            this.btnscanbarcode.Text = "Scan";
-            this.btnscanbarcode.UseVisualStyleBackColor = false;
-            this.btnscanbarcode.Click += new System.EventHandler(this.btnscanbarcode_Click);
-            // 
-            // lblSname
-            // 
-            this.lblSname.AutoSize = true;
-            this.lblSname.Location = new System.Drawing.Point(711, 9);
-            this.lblSname.Name = "lblSname";
-            this.lblSname.Size = new System.Drawing.Size(51, 20);
-            this.lblSname.TabIndex = 21;
-            this.lblSname.Text = "label4";
-            this.lblSname.Visible = false;
-            this.lblSname.Click += new System.EventHandler(this.lblSname_Click);
-            // 
             // frmPOS
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(1184, 581);
-            this.ControlBox = false;
             this.Controls.Add(this.pictureBox2);
             this.Controls.Add(this.panel2);
             this.Controls.Add(this.dataGridView1);
@@ -762,6 +804,7 @@
             this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.Name = "frmPOS";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.Text = "POS";
             this.Load += new System.EventHandler(this.frmPOS_Load);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.frmPOS_KeyDown);
             this.panel1.ResumeLayout(false);
@@ -822,20 +865,23 @@
         private System.Windows.Forms.DataGridViewImageColumn dataGridViewImageColumn3;
         public System.Windows.Forms.Label lblName;
         public System.Windows.Forms.Label LblUser;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column1;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column2;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column8;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column3;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column4;
-        private System.Windows.Forms.DataGridViewImageColumn ColRemove;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column5;
-        private System.Windows.Forms.DataGridViewImageColumn collAdd;
-        private System.Windows.Forms.DataGridViewImageColumn Delete;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column7;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column6;
         public System.Windows.Forms.Label lblPhone;
         public System.Windows.Forms.Label lblAddress;
         public System.Windows.Forms.Button btnscanbarcode;
         public System.Windows.Forms.Label lblSname;
+        private System.Windows.Forms.TextBox textBoxbarcode;
+        public System.Windows.Forms.Button button1;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column1;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column2;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column8;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column3;
+        private System.Windows.Forms.DataGridViewImageColumn ColRemove;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column5;
+        private System.Windows.Forms.DataGridViewImageColumn collAdd;
+        private System.Windows.Forms.DataGridViewImageColumn Delete;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column4;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column7;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column6;
+        private System.Windows.Forms.ComboBox comboBoxprinter;
     }
 }
