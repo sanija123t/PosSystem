@@ -391,5 +391,30 @@ namespace PosSystem
         {
 
         }
+
+        private void lblTotal_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblDiscount_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblVat_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblVatable_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnscanbarcode_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

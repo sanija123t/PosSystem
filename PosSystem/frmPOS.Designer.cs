@@ -63,7 +63,6 @@
             this.panel5 = new System.Windows.Forms.Panel();
             this.lblPhone = new System.Windows.Forms.Label();
             this.lblAddress = new System.Windows.Forms.Label();
-            this.lblSname = new System.Windows.Forms.Label();
             this.LblUser = new System.Windows.Forms.Label();
             this.lblName = new System.Windows.Forms.Label();
             this.lblDisplayTotal = new System.Windows.Forms.Label();
@@ -88,6 +87,8 @@
             this.dataGridViewImageColumn2 = new System.Windows.Forms.DataGridViewImageColumn();
             this.dataGridViewImageColumn3 = new System.Windows.Forms.DataGridViewImageColumn();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
+            this.btnscanbarcode = new System.Windows.Forms.Button();
+            this.lblSname = new System.Windows.Forms.Label();
             this.panel1.SuspendLayout();
             this.panel3.SuspendLayout();
             this.panel6.SuspendLayout();
@@ -259,6 +260,7 @@
             // panel3
             // 
             this.panel3.BackColor = System.Drawing.Color.White;
+            this.panel3.Controls.Add(this.btnscanbarcode);
             this.panel3.Controls.Add(this.label16);
             this.panel3.Controls.Add(this.lblDate);
             this.panel3.Controls.Add(this.label5);
@@ -342,6 +344,7 @@
             this.lblVat.TabIndex = 1;
             this.lblVat.Text = "0.00";
             this.lblVat.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblVat.Click += new System.EventHandler(this.lblVat_Click);
             // 
             // lblVatable
             // 
@@ -351,6 +354,7 @@
             this.lblVatable.TabIndex = 1;
             this.lblVatable.Text = "0.00";
             this.lblVatable.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblVatable.Click += new System.EventHandler(this.lblVatable_Click);
             // 
             // lblDiscount
             // 
@@ -360,6 +364,7 @@
             this.lblDiscount.TabIndex = 1;
             this.lblDiscount.Text = "0.00";
             this.lblDiscount.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblDiscount.Click += new System.EventHandler(this.lblDiscount_Click);
             // 
             // lblTotal
             // 
@@ -369,6 +374,7 @@
             this.lblTotal.TabIndex = 1;
             this.lblTotal.Text = "0.00";
             this.lblTotal.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblTotal.Click += new System.EventHandler(this.lblTotal_Click);
             // 
             // label12
             // 
@@ -413,11 +419,11 @@
             this.panel5.Controls.Add(this.lblPhone);
             this.panel5.Controls.Add(this.lblAddress);
             this.panel5.Controls.Add(this.lblSname);
-            this.panel5.Controls.Add(this.LblUser);
             this.panel5.Controls.Add(this.lblName);
             this.panel5.Controls.Add(this.lblDisplayTotal);
             this.panel5.Controls.Add(this.label1);
             this.panel5.Controls.Add(this.pictureBox1);
+            this.panel5.Controls.Add(this.LblUser);
             this.panel5.Location = new System.Drawing.Point(-4, -2);
             this.panel5.Name = "panel5";
             this.panel5.Size = new System.Drawing.Size(1188, 60);
@@ -426,7 +432,7 @@
             // lblPhone
             // 
             this.lblPhone.AutoSize = true;
-            this.lblPhone.Location = new System.Drawing.Point(879, 11);
+            this.lblPhone.Location = new System.Drawing.Point(711, 11);
             this.lblPhone.Name = "lblPhone";
             this.lblPhone.Size = new System.Drawing.Size(51, 20);
             this.lblPhone.TabIndex = 23;
@@ -437,7 +443,7 @@
             // lblAddress
             // 
             this.lblAddress.AutoSize = true;
-            this.lblAddress.Location = new System.Drawing.Point(755, 29);
+            this.lblAddress.Location = new System.Drawing.Point(711, 9);
             this.lblAddress.Name = "lblAddress";
             this.lblAddress.Size = new System.Drawing.Size(51, 20);
             this.lblAddress.TabIndex = 22;
@@ -445,23 +451,12 @@
             this.lblAddress.Visible = false;
             this.lblAddress.Click += new System.EventHandler(this.lblAddress_Click);
             // 
-            // lblSname
-            // 
-            this.lblSname.AutoSize = true;
-            this.lblSname.Location = new System.Drawing.Point(812, 29);
-            this.lblSname.Name = "lblSname";
-            this.lblSname.Size = new System.Drawing.Size(51, 20);
-            this.lblSname.TabIndex = 21;
-            this.lblSname.Text = "label4";
-            this.lblSname.Visible = false;
-            this.lblSname.Click += new System.EventHandler(this.lblSname_Click);
-            // 
             // LblUser
             // 
             this.LblUser.AutoSize = true;
             this.LblUser.Font = new System.Drawing.Font("Segoe UI Semibold", 11.25F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic))), System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.LblUser.ForeColor = System.Drawing.Color.White;
-            this.LblUser.Location = new System.Drawing.Point(565, 29);
+            this.LblUser.ForeColor = System.Drawing.Color.Black;
+            this.LblUser.Location = new System.Drawing.Point(686, 11);
             this.LblUser.Name = "LblUser";
             this.LblUser.Size = new System.Drawing.Size(119, 20);
             this.LblUser.TabIndex = 3;
@@ -476,9 +471,9 @@
             this.lblName.ForeColor = System.Drawing.Color.White;
             this.lblName.Location = new System.Drawing.Point(120, 29);
             this.lblName.Name = "lblName";
-            this.lblName.Size = new System.Drawing.Size(119, 20);
+            this.lblName.Size = new System.Drawing.Size(53, 20);
             this.lblName.TabIndex = 2;
-            this.lblName.Text = "JAYAWI STORES";
+            this.lblName.Text = "STORE";
             this.lblName.Click += new System.EventHandler(this.lblName_Click);
             // 
             // lblDisplayTotal
@@ -721,6 +716,32 @@
             this.pictureBox2.TabIndex = 5;
             this.pictureBox2.TabStop = false;
             // 
+            // btnscanbarcode
+            // 
+            this.btnscanbarcode.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(38)))), ((int)(((byte)(38)))));
+            this.btnscanbarcode.FlatAppearance.BorderSize = 0;
+            this.btnscanbarcode.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnscanbarcode.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnscanbarcode.ForeColor = System.Drawing.Color.White;
+            this.btnscanbarcode.Location = new System.Drawing.Point(143, 52);
+            this.btnscanbarcode.Name = "btnscanbarcode";
+            this.btnscanbarcode.Size = new System.Drawing.Size(75, 30);
+            this.btnscanbarcode.TabIndex = 17;
+            this.btnscanbarcode.Text = "Scan";
+            this.btnscanbarcode.UseVisualStyleBackColor = false;
+            this.btnscanbarcode.Click += new System.EventHandler(this.btnscanbarcode_Click);
+            // 
+            // lblSname
+            // 
+            this.lblSname.AutoSize = true;
+            this.lblSname.Location = new System.Drawing.Point(711, 9);
+            this.lblSname.Name = "lblSname";
+            this.lblSname.Size = new System.Drawing.Size(51, 20);
+            this.lblSname.TabIndex = 21;
+            this.lblSname.Text = "label4";
+            this.lblSname.Visible = false;
+            this.lblSname.Click += new System.EventHandler(this.lblSname_Click);
+            // 
             // frmPOS
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
@@ -814,6 +835,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Column6;
         public System.Windows.Forms.Label lblPhone;
         public System.Windows.Forms.Label lblAddress;
+        public System.Windows.Forms.Button btnscanbarcode;
         public System.Windows.Forms.Label lblSname;
     }
 }
