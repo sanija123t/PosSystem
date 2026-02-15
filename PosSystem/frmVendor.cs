@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Data;
 using System.Data.SQLite;
-using System.Runtime.InteropServices; // Required for Draggable Logic
+using System.Drawing; // Added for UI coloring
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -9,13 +10,11 @@ namespace PosSystem
 {
     public partial class frmVendor : Form
     {
-        // --- DRAGGABLE LOGIC (WinAPI) ---
+        #region DRAGGABLE LOGIC
         [DllImport("user32.dll")]
         public static extern bool ReleaseCapture();
-
         [DllImport("user32.dll")]
         public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
-
         public const int WM_NCLBUTTONDOWN = 0xA1;
         public const int HT_CAPTION = 0x2;
 
@@ -27,7 +26,7 @@ namespace PosSystem
                 SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
             }
         }
-        // -------------------------------
+        #endregion
 
         private readonly frm_VendorList f;
 
@@ -35,119 +34,140 @@ namespace PosSystem
         {
             InitializeComponent();
             this.f = f;
+            SetupUX();
         }
 
-        // SAVE (ASYNC + SAFE)
-        private async void button1_Click(object sender, EventArgs e)
+        private void SetupUX()
         {
-            // ✅ UX VALIDATION (added only)
-            if (string.IsNullOrWhiteSpace(txtVendor.Text))
+            // Attach Focus events for visual feedback
+            foreach (Control ctrl in this.Controls)
             {
-                MessageBox.Show("Vendor Name is required!",
-                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (ctrl is TextBox)
+                {
+                    ctrl.Enter += (s, e) => ctrl.BackColor = Color.LightYellow;
+                    ctrl.Leave += (s, e) => ctrl.BackColor = Color.White;
+                    // Move to next control on Enter key
+                    ctrl.KeyDown += (s, e) => {
+                        if (e.KeyCode == Keys.Enter)
+                        {
+                            this.SelectNextControl((Control)s, true, true, true, true);
+                            e.SuppressKeyPress = true;
+                        }
+                    };
+                }
+            }
+        }
+
+        private async void btnSave_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtVendor.Text) || string.IsNullOrWhiteSpace(txtVendorID.Text))
+            {
+                MessageBox.Show("Vendor ID and Name are required fields.", "UX Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-
-            if (!string.IsNullOrWhiteSpace(txtEmail.Text) && !txtEmail.Text.Contains("@"))
-            {
-                MessageBox.Show("Please enter a valid email address!",
-                    "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            // ✅ END UX VALIDATION
-
-            if (!ConfirmAction("Save this record?")) return;
-
-            ToggleButtons(false);
 
             try
             {
                 using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     await cn.OpenAsync();
+                    using (SQLiteCommand checkCmd = new SQLiteCommand("SELECT COUNT(*) FROM tblVendor WHERE id = @id", cn))
+                    {
+                        checkCmd.Parameters.AddWithValue("@id", txtVendorID.Text.Trim());
+                        if (Convert.ToInt32(await checkCmd.ExecuteScalarAsync()) > 0)
+                        {
+                            MessageBox.Show("This Vendor ID is already registered.", "Duplicate Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+
+                    if (!ConfirmAction("Are you sure you want to save this new vendor?")) return;
 
                     using (SQLiteCommand cm = new SQLiteCommand(
-                        @"INSERT INTO tblVendor
-                          (vendor, address, contactperson, telephone, email, fax)
-                          VALUES
-                          (@vendor, @address, @contactperson, @telephone, @email, @fax)", cn))
+                        @"INSERT INTO tblVendor (id, vendor, address, contactperson, telephone, email, fax)
+                          VALUES (@id, @vendor, @address, @contactperson, @telephone, @email, @fax)", cn))
                     {
+                        cm.Parameters.AddWithValue("@id", txtVendorID.Text.Trim());
                         BindParameters(cm);
                         await cm.ExecuteNonQueryAsync();
                     }
                 }
 
-                MessageBox.Show("Record has been successfully saved.",
-                    "POS System", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
+                MessageBox.Show("Vendor successfully saved!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Clear();
-                f.LoadRecords(); // backward-compatible
+                f.LoadRecords();
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Warning",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-            finally
-            {
-                ToggleButtons(true);
-            }
+            catch (Exception ex) { MessageBox.Show(ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
-        // UPDATE (ASYNC + SAFE)
         private async void btnUpdate_Click(object sender, EventArgs e)
         {
-            if (!ConfirmAction("Update this record?")) return;
-
-            ToggleButtons(false);
+            if (!ConfirmAction("Update existing vendor information?")) return;
 
             try
             {
                 using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
                 {
                     await cn.OpenAsync();
-
                     using (SQLiteCommand cm = new SQLiteCommand(
-                        @"UPDATE tblVendor SET
-                          vendor = @vendor,
-                          address = @address,
-                          contactperson = @contactperson,
-                          telephone = @telephone,
-                          email = @email,
-                          fax = @fax
-                          WHERE id = @id", cn))
+                        @"UPDATE tblVendor SET vendor=@vendor, address=@address, contactperson=@contactperson, 
+                          telephone=@telephone, email=@email, fax=@fax WHERE id=@id", cn))
                     {
+                        cm.Parameters.AddWithValue("@id", txtVendorID.Text.Trim());
                         BindParameters(cm);
-                        cm.Parameters.AddWithValue("@id", lblD.Text);
-
                         await cm.ExecuteNonQueryAsync();
                     }
                 }
-
-                MessageBox.Show("Record has been successfully updated.",
-                    "POS System", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
+                MessageBox.Show("Vendor details updated successfully.", "Update", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Clear();
                 f.LoadRecords();
                 this.Dispose();
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Warning",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-            finally
-            {
-                ToggleButtons(true);
-            }
+            catch (Exception ex) { MessageBox.Show(ex.Message, "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
-        // DESIGNER SAFE
-        private void frmVendor_Load(object sender, EventArgs e)
+        private async void txtVendorID_TextChanged(object sender, EventArgs e)
         {
-        }
+            if (string.IsNullOrWhiteSpace(txtVendorID.Text))
+            {
+                btnUpdate.Enabled = false;
+                btnSave.Enabled = true;
+                return;
+            }
 
-        // 🔐 Shared helpers (elite pattern, no redesign)
+            try
+            {
+                using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
+                {
+                    await cn.OpenAsync();
+                    using (SQLiteCommand cm = new SQLiteCommand("SELECT * FROM tblVendor WHERE id = @id", cn))
+                    {
+                        cm.Parameters.AddWithValue("@id", txtVendorID.Text.Trim());
+                        using (var dr = await cm.ExecuteReaderAsync())
+                        {
+                            if (await dr.ReadAsync())
+                            {
+                                txtVendor.Text = dr["vendor"].ToString();
+                                txtAddress.Text = dr["address"].ToString();
+                                txtContactPreson.Text = dr["contactperson"].ToString();
+                                txtTelephone.Text = dr["telephone"].ToString();
+                                txtEmail.Text = dr["email"].ToString();
+                                txtFax.Text = dr["fax"].ToString();
+
+                                btnSave.Enabled = false;
+                                btnUpdate.Enabled = true;
+                            }
+                            else
+                            {
+                                btnSave.Enabled = true;
+                                btnUpdate.Enabled = false;
+                            }
+                        }
+                    }
+                }
+            }
+            catch { /* Silent log for typing UX */ }
+        }
 
         private void BindParameters(SQLiteCommand cm)
         {
@@ -161,33 +181,37 @@ namespace PosSystem
 
         private bool ConfirmAction(string message)
         {
-            return MessageBox.Show(message, "Confirm",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
-        }
-
-        private void ToggleButtons(bool enabled)
-        {
-            btnSave.Enabled = enabled;
-            btnUpdate.Enabled = enabled;
+            return MessageBox.Show(message, "Confirm Action", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
         }
 
         public void Clear()
         {
-            txtVendor.Clear();
-            txtAddress.Clear();
-            txtContactPreson.Clear();
-            txtTelephone.Clear();
-            txtEmail.Clear();
-            txtFax.Clear();
-
-            txtVendor.Focus();
+            foreach (Control c in this.Controls) if (c is TextBox) ((TextBox)c).Clear();
             btnSave.Enabled = true;
             btnUpdate.Enabled = false;
+            txtVendorID.Focus();
         }
 
-        private void pictureBox2_Click(object sender, EventArgs e)
+        private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.Dispose();
+            if (ConfirmAction("Discard all unsaved changes and clear the form?")) Clear();
+        }
+
+        private void pictureBox2_Click(object sender, EventArgs e) => this.Dispose();
+        // --- Junk Handlers to satisfy Designer.cs references ---
+        private void frmVendor_Load(object sender, EventArgs e) { }
+        private void txtVendor_TextChanged(object sender, EventArgs e) { }
+        private void txtAddress_TextChanged(object sender, EventArgs e) { }
+        private void txtContactPreson_TextChanged(object sender, EventArgs e) { }
+        private void txtTelephone_TextChanged(object sender, EventArgs e) { }
+        private void txtEmail_TextChanged(object sender, EventArgs e) { }
+        private void txtFax_TextChanged(object sender, EventArgs e) { }
+        private void button1_Click(object sender, EventArgs e) => btnSave_Click(sender, e);
+
+        // Data input validation for numeric fields
+        private void txtTelephone_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar) && (e.KeyChar != '+')) e.Handled = true;
         }
     }
 }

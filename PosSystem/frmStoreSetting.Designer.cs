@@ -31,7 +31,6 @@ namespace PosSystem
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmStoreSetting));
             this.panel1 = new System.Windows.Forms.Panel();
-            this.pictureBox2 = new System.Windows.Forms.PictureBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.txtStore = new System.Windows.Forms.TextBox();
@@ -42,29 +41,16 @@ namespace PosSystem
             this.label4 = new System.Windows.Forms.Label();
             this.txtPhone = new System.Windows.Forms.TextBox();
             this.panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.SuspendLayout();
             // 
             // panel1
             // 
             this.panel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(158)))), ((int)(((byte)(132)))));
-            this.panel1.Controls.Add(this.pictureBox2);
             this.panel1.Controls.Add(this.label2);
             this.panel1.Location = new System.Drawing.Point(0, 0);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(553, 38);
             this.panel1.TabIndex = 1;
-            // 
-            // pictureBox2
-            // 
-            this.pictureBox2.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox2.Image")));
-            this.pictureBox2.Location = new System.Drawing.Point(519, 5);
-            this.pictureBox2.Name = "pictureBox2";
-            this.pictureBox2.Size = new System.Drawing.Size(24, 24);
-            this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
-            this.pictureBox2.TabIndex = 3;
-            this.pictureBox2.TabStop = false;
-            this.pictureBox2.Click += new System.EventHandler(this.pictureBox2_Click);
             // 
             // label2
             // 
@@ -92,6 +78,7 @@ namespace PosSystem
             this.txtStore.Name = "txtStore";
             this.txtStore.Size = new System.Drawing.Size(358, 27);
             this.txtStore.TabIndex = 3;
+            this.txtStore.TextChanged += new System.EventHandler(this.txtStore_TextChanged);
             // 
             // label3
             // 
@@ -108,6 +95,7 @@ namespace PosSystem
             this.txtAddress.Name = "txtAddress";
             this.txtAddress.Size = new System.Drawing.Size(358, 27);
             this.txtAddress.TabIndex = 3;
+            this.txtAddress.TextChanged += new System.EventHandler(this.txtAddress_TextChanged);
             // 
             // button3
             // 
@@ -122,6 +110,7 @@ namespace PosSystem
             this.button3.TabIndex = 18;
             this.button3.Text = "Cancel";
             this.button3.UseVisualStyleBackColor = false;
+            this.button3.Click += new System.EventHandler(this.button3_Click);
             // 
             // btnSave
             // 
@@ -153,6 +142,7 @@ namespace PosSystem
             this.txtPhone.Name = "txtPhone";
             this.txtPhone.Size = new System.Drawing.Size(358, 27);
             this.txtPhone.TabIndex = 3;
+            this.txtPhone.TextChanged += new System.EventHandler(this.txtPhone_TextChanged);
             // 
             // frmStoreSetting
             // 
@@ -160,7 +150,6 @@ namespace PosSystem
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(549, 231);
-            this.ControlBox = false;
             this.Controls.Add(this.button3);
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.txtPhone);
@@ -179,7 +168,6 @@ namespace PosSystem
             this.Load += new System.EventHandler(this.frmStoreSetting_Load);
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -188,7 +176,6 @@ namespace PosSystem
         #endregion
 
         private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.PictureBox pictureBox2;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label3;

@@ -282,6 +282,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DatabaseLoader.cs" />
     <Compile Include="DataSet1.cs">
       <DependentUpon>DataSet1.xsd</DependentUpon>
     </Compile>
@@ -495,6 +496,7 @@
     <Compile Include="frmVoid.Designer.cs">
       <DependentUpon>frmVoid.cs</DependentUpon>
     </Compile>
+    <Compile Include="GridFormatter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UserRepositoryV2.cs" />
@@ -649,7 +651,9 @@
       <DependentUpon>DataSet1.xsd</DependentUpon>
     </None>
     <None Include="license.md" />
-    <None Include="OpenTK.dll.config" />
+    <None Include="OpenTK.dll.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
     <None Include="PosSystem_TemporaryKey.pfx" />
     <None Include="Properties\app.manifest" />

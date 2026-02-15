@@ -32,7 +32,6 @@ namespace PosSystem
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmVendor));
             this.panel1 = new System.Windows.Forms.Panel();
             this.lblD = new System.Windows.Forms.Label();
-            this.pictureBox2 = new System.Windows.Forms.PictureBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.txtVendor = new System.Windows.Forms.TextBox();
@@ -49,15 +48,15 @@ namespace PosSystem
             this.btnSave = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.txtTelephone = new System.Windows.Forms.TextBox();
+            this.VendorID = new System.Windows.Forms.Label();
+            this.txtVendorID = new System.Windows.Forms.TextBox();
             this.panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.SuspendLayout();
             // 
             // panel1
             // 
             this.panel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(20)))), ((int)(((byte)(158)))), ((int)(((byte)(132)))));
             this.panel1.Controls.Add(this.lblD);
-            this.panel1.Controls.Add(this.pictureBox2);
             this.panel1.Controls.Add(this.label2);
             this.panel1.Location = new System.Drawing.Point(-3, 0);
             this.panel1.Name = "panel1";
@@ -73,17 +72,6 @@ namespace PosSystem
             this.lblD.TabIndex = 9;
             this.lblD.Text = "Vendor";
             this.lblD.Visible = false;
-            // 
-            // pictureBox2
-            // 
-            this.pictureBox2.Image = ((System.Drawing.Image)(resources.GetObject("pictureBox2.Image")));
-            this.pictureBox2.Location = new System.Drawing.Point(625, 3);
-            this.pictureBox2.Name = "pictureBox2";
-            this.pictureBox2.Size = new System.Drawing.Size(24, 24);
-            this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
-            this.pictureBox2.TabIndex = 3;
-            this.pictureBox2.TabStop = false;
-            this.pictureBox2.Click += new System.EventHandler(this.pictureBox2_Click);
             // 
             // label2
             // 
@@ -111,6 +99,7 @@ namespace PosSystem
             this.txtVendor.Name = "txtVendor";
             this.txtVendor.Size = new System.Drawing.Size(444, 27);
             this.txtVendor.TabIndex = 3;
+            this.txtVendor.TextChanged += new System.EventHandler(this.txtVendor_TextChanged);
             // 
             // label3
             // 
@@ -127,6 +116,7 @@ namespace PosSystem
             this.txtAddress.Name = "txtAddress";
             this.txtAddress.Size = new System.Drawing.Size(444, 27);
             this.txtAddress.TabIndex = 3;
+            this.txtAddress.TextChanged += new System.EventHandler(this.txtAddress_TextChanged);
             // 
             // label4
             // 
@@ -143,6 +133,7 @@ namespace PosSystem
             this.txtContactPreson.Name = "txtContactPreson";
             this.txtContactPreson.Size = new System.Drawing.Size(444, 27);
             this.txtContactPreson.TabIndex = 3;
+            this.txtContactPreson.TextChanged += new System.EventHandler(this.txtContactPreson_TextChanged);
             // 
             // label5
             // 
@@ -159,6 +150,7 @@ namespace PosSystem
             this.txtEmail.Name = "txtEmail";
             this.txtEmail.Size = new System.Drawing.Size(444, 27);
             this.txtEmail.TabIndex = 3;
+            this.txtEmail.TextChanged += new System.EventHandler(this.txtEmail_TextChanged);
             // 
             // label6
             // 
@@ -173,8 +165,9 @@ namespace PosSystem
             // 
             this.txtFax.Location = new System.Drawing.Point(154, 224);
             this.txtFax.Name = "txtFax";
-            this.txtFax.Size = new System.Drawing.Size(444, 27);
+            this.txtFax.Size = new System.Drawing.Size(159, 27);
             this.txtFax.TabIndex = 3;
+            this.txtFax.TextChanged += new System.EventHandler(this.txtFax_TextChanged);
             // 
             // btnCancel
             // 
@@ -189,6 +182,7 @@ namespace PosSystem
             this.btnCancel.TabIndex = 8;
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = false;
+            this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
             // 
             // btnUpdate
             // 
@@ -235,6 +229,24 @@ namespace PosSystem
             this.txtTelephone.Name = "txtTelephone";
             this.txtTelephone.Size = new System.Drawing.Size(444, 27);
             this.txtTelephone.TabIndex = 3;
+            this.txtTelephone.TextChanged += new System.EventHandler(this.txtTelephone_TextChanged);
+            // 
+            // VendorID
+            // 
+            this.VendorID.AutoSize = true;
+            this.VendorID.Location = new System.Drawing.Point(346, 227);
+            this.VendorID.Name = "VendorID";
+            this.VendorID.Size = new System.Drawing.Size(74, 20);
+            this.VendorID.TabIndex = 9;
+            this.VendorID.Text = "VendorID";
+            // 
+            // txtVendorID
+            // 
+            this.txtVendorID.Location = new System.Drawing.Point(435, 224);
+            this.txtVendorID.Name = "txtVendorID";
+            this.txtVendorID.Size = new System.Drawing.Size(163, 27);
+            this.txtVendorID.TabIndex = 10;
+            this.txtVendorID.TextChanged += new System.EventHandler(this.txtVendorID_TextChanged);
             // 
             // frmVendor
             // 
@@ -242,7 +254,8 @@ namespace PosSystem
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(648, 314);
-            this.ControlBox = false;
+            this.Controls.Add(this.txtVendorID);
+            this.Controls.Add(this.VendorID);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnUpdate);
             this.Controls.Add(this.btnSave);
@@ -268,7 +281,6 @@ namespace PosSystem
             this.Load += new System.EventHandler(this.frmVendor_Load);
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -277,7 +289,6 @@ namespace PosSystem
         #endregion
 
         private System.Windows.Forms.Panel panel1;
-        private System.Windows.Forms.PictureBox pictureBox2;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label3;
@@ -295,5 +306,7 @@ namespace PosSystem
         public System.Windows.Forms.TextBox txtEmail;
         public System.Windows.Forms.TextBox txtFax;
         public System.Windows.Forms.TextBox txtTelephone;
+        private System.Windows.Forms.Label VendorID;
+        public System.Windows.Forms.TextBox txtVendorID;
     }
 }

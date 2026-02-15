@@ -68,6 +68,16 @@ CREATE TABLE IF NOT EXISTS TblCategory (id INTEGER PRIMARY KEY AUTOINCREMENT, ca
 CREATE TABLE IF NOT EXISTS tblStore (store TEXT, address TEXT, phone TEXT);
 CREATE TABLE IF NOT EXISTS tblVat (id INTEGER PRIMARY KEY AUTOINCREMENT, vat REAL DEFAULT 0);
 
+CREATE TABLE IF NOT EXISTS tblVendor (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+    vendor TEXT, 
+    address TEXT, 
+    contactperson TEXT, 
+    telephone TEXT, 
+    email TEXT, 
+    fax TEXT
+);
+
 CREATE TABLE IF NOT EXISTS TblProduct1 (
     pcode TEXT PRIMARY KEY, barcode TEXT, pdesc TEXT NOT NULL, bid INTEGER, cid INTEGER, 
     price REAL DEFAULT 0, cost_price REAL DEFAULT 0, tax_rate REAL DEFAULT 0, 

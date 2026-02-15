@@ -33,19 +33,26 @@
             this.label8 = new System.Windows.Forms.Label();
             this.txtUser = new System.Windows.Forms.TextBox();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.btnSave = new System.Windows.Forms.Button();
+            this.txtSearch = new MetroFramework.Controls.MetroTextBox();
             this.Column1 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column2 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Colum8 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Column4 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column3 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Column4 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column5 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column6 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Column7 = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.ActionSelect = new System.Windows.Forms.DataGridViewButtonColumn();
-            this.btnSave = new System.Windows.Forms.Button();
-            this.txtSearch = new MetroFramework.Controls.MetroTextBox();
+            this.Colum8 = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colSelect = new System.Windows.Forms.DataGridViewButtonColumn();
+            this.btnPrePage = new System.Windows.Forms.Panel();
+            this.panel3 = new System.Windows.Forms.Panel();
+            this.panel4 = new System.Windows.Forms.Panel();
+            this.panel5 = new System.Windows.Forms.Panel();
+            this.btnNextPage = new System.Windows.Forms.Panel();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            this.btnPrePage.SuspendLayout();
+            this.panel4.SuspendLayout();
             this.SuspendLayout();
             // 
             // panel1
@@ -197,63 +204,30 @@
             // dataGridView1
             // 
             this.dataGridView1.AllowUserToAddRows = false;
+            this.dataGridView1.AllowUserToDeleteRows = false;
+            this.dataGridView1.AllowUserToResizeColumns = false;
             this.dataGridView1.BackgroundColor = System.Drawing.Color.White;
             this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.Column1,
             this.Column2,
-            this.Colum8,
-            this.Column4,
             this.Column3,
+            this.Column4,
             this.Column5,
             this.Column6,
             this.Column7,
-            this.ActionSelect});
+            this.Colum8,
+            this.colSelect});
+            this.dataGridView1.EditMode = System.Windows.Forms.DataGridViewEditMode.EditProgrammatically;
             this.dataGridView1.EnableHeadersVisualStyles = false;
             this.dataGridView1.Location = new System.Drawing.Point(6, 81);
+            this.dataGridView1.MultiSelect = false;
             this.dataGridView1.Name = "dataGridView1";
+            this.dataGridView1.ReadOnly = true;
+            this.dataGridView1.RowHeadersVisible = false;
             this.dataGridView1.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dataGridView1.Size = new System.Drawing.Size(889, 309);
             this.dataGridView1.TabIndex = 2;
             this.dataGridView1.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridView1_CellContentClick);
-            // 
-            // Column1
-            // 
-            this.Column1.Name = "Column1";
-            // 
-            // Column2
-            // 
-            this.Column2.Name = "Column2";
-            // 
-            // Colum8
-            // 
-            this.Colum8.Name = "Colum8";
-            // 
-            // Column4
-            // 
-            this.Column4.Name = "Column4";
-            // 
-            // Column3
-            // 
-            this.Column3.Name = "Column3";
-            // 
-            // Column5
-            // 
-            this.Column5.Name = "Column5";
-            // 
-            // Column6
-            // 
-            this.Column6.Name = "Column6";
-            // 
-            // Column7
-            // 
-            this.Column7.Name = "Column7";
-            // 
-            // ActionSelect
-            // 
-            this.ActionSelect.HeaderText = "Select";
-            this.ActionSelect.Name = "ActionSelect";
-            this.ActionSelect.Text = "Select";
-            this.ActionSelect.UseColumnTextForButtonValue = true;
             // 
             // btnSave
             // 
@@ -302,12 +276,108 @@
             this.txtSearch.Click += new System.EventHandler(this.txtSearch_Click);
             this.txtSearch.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtSearch_KeyPress);
             // 
+            // Column1
+            // 
+            this.Column1.HeaderText = "#";
+            this.Column1.Name = "Column1";
+            this.Column1.ReadOnly = true;
+            // 
+            // Column2
+            // 
+            this.Column2.HeaderText = "PCODE";
+            this.Column2.Name = "Column2";
+            this.Column2.ReadOnly = true;
+            // 
+            // Column3
+            // 
+            this.Column3.HeaderText = "BARCODE";
+            this.Column3.Name = "Column3";
+            this.Column3.ReadOnly = true;
+            // 
+            // Column4
+            // 
+            this.Column4.HeaderText = "DESCRIPTION";
+            this.Column4.Name = "Column4";
+            this.Column4.ReadOnly = true;
+            // 
+            // Column5
+            // 
+            this.Column5.HeaderText = "BRAND";
+            this.Column5.Name = "Column5";
+            this.Column5.ReadOnly = true;
+            // 
+            // Column6
+            // 
+            this.Column6.HeaderText = "CATEGORY";
+            this.Column6.Name = "Column6";
+            this.Column6.ReadOnly = true;
+            // 
+            // Column7
+            // 
+            this.Column7.HeaderText = "PRICE";
+            this.Column7.Name = "Column7";
+            this.Column7.ReadOnly = true;
+            // 
+            // Colum8
+            // 
+            this.Colum8.HeaderText = "STOCK QTY";
+            this.Colum8.Name = "Colum8";
+            this.Colum8.ReadOnly = true;
+            // 
+            // Select
+            // 
+            this.colSelect.HeaderText = "Select";
+            this.colSelect.Name = "colSelect";
+            this.colSelect.ReadOnly = true;
+            this.colSelect.Text = "Select";
+            this.colSelect.UseColumnTextForButtonValue = true;
+            // 
+            // btnPrePage
+            // 
+            this.btnPrePage.Controls.Add(this.panel4);
+            this.btnPrePage.Controls.Add(this.panel3);
+            this.btnPrePage.Location = new System.Drawing.Point(848, 56);
+            this.btnPrePage.Name = "btnPrePage";
+            this.btnPrePage.Size = new System.Drawing.Size(20, 20);
+            this.btnPrePage.TabIndex = 18;
+            // 
+            // panel3
+            // 
+            this.panel3.Location = new System.Drawing.Point(28, -1);
+            this.panel3.Name = "panel3";
+            this.panel3.Size = new System.Drawing.Size(15, 15);
+            this.panel3.TabIndex = 19;
+            // 
+            // panel4
+            // 
+            this.panel4.Controls.Add(this.panel5);
+            this.panel4.Location = new System.Drawing.Point(26, -1);
+            this.panel4.Name = "panel4";
+            this.panel4.Size = new System.Drawing.Size(15, 15);
+            this.panel4.TabIndex = 20;
+            // 
+            // panel5
+            // 
+            this.panel5.Location = new System.Drawing.Point(28, -1);
+            this.panel5.Name = "panel5";
+            this.panel5.Size = new System.Drawing.Size(15, 15);
+            this.panel5.TabIndex = 19;
+            // 
+            // btnNextPage
+            // 
+            this.btnNextPage.Location = new System.Drawing.Point(873, 56);
+            this.btnNextPage.Name = "btnNextPage";
+            this.btnNextPage.Size = new System.Drawing.Size(20, 20);
+            this.btnNextPage.TabIndex = 19;
+            // 
             // frmAdjustment
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(899, 555);
+            this.Controls.Add(this.btnNextPage);
+            this.Controls.Add(this.btnPrePage);
             this.Controls.Add(this.txtSearch);
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.dataGridView1);
@@ -334,6 +404,8 @@
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            this.btnPrePage.ResumeLayout(false);
+            this.panel4.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -366,15 +438,19 @@
         private System.Windows.Forms.DataGridView dataGridView1;
         public System.Windows.Forms.Button btnSave;
         public MetroFramework.Controls.MetroTextBox txtSearch;
-
         private System.Windows.Forms.DataGridViewTextBoxColumn Column1;
         private System.Windows.Forms.DataGridViewTextBoxColumn Column2;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Colum8;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Column4;
         private System.Windows.Forms.DataGridViewTextBoxColumn Column3;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Column4;
         private System.Windows.Forms.DataGridViewTextBoxColumn Column5;
         private System.Windows.Forms.DataGridViewTextBoxColumn Column6;
         private System.Windows.Forms.DataGridViewTextBoxColumn Column7;
-        private System.Windows.Forms.DataGridViewButtonColumn ActionSelect; // renamed
+        private System.Windows.Forms.DataGridViewTextBoxColumn Colum8;
+        private System.Windows.Forms.DataGridViewButtonColumn colSelect;
+        private System.Windows.Forms.Panel btnPrePage;
+        private System.Windows.Forms.Panel panel4;
+        private System.Windows.Forms.Panel panel5;
+        private System.Windows.Forms.Panel panel3;
+        private System.Windows.Forms.Panel btnNextPage;
     }
 }
