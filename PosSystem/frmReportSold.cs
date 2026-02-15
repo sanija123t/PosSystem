@@ -67,7 +67,7 @@ namespace PosSystem
         {
             try
             {
-                DataSet1 ds = new DataSet1();
+                DataTable dt = new DataTable();
                 ReportDataSource rptDS;
 
                 // Path to the RDLC file in the Debug/Release folder
@@ -109,14 +109,11 @@ namespace PosSystem
                         cmd.Parameters.AddWithValue("@status", STATUS_SOLD);
                         cmd.Parameters.AddWithValue("@dateFrom", f.dateTimePicker1.Value.ToString("yyyy-MM-dd"));
                         cmd.Parameters.AddWithValue("@dateTo", f.dateTimePicker2.Value.ToString("yyyy-MM-dd"));
-
-                        // Handles the "All Cashier" filter logic
                         cmd.Parameters.AddWithValue("@cashier", (f.cbCashier.Text == "All Cashier" || string.IsNullOrEmpty(f.cbCashier.Text)) ? DBNull.Value : f.cbCashier.Text);
 
                         using (var da = new SQLiteDataAdapter(cmd))
                         {
-                            // Runs the data fill on a background thread to keep UI responsive
-                            await Task.Run(() => da.Fill(ds.Tables["dtSoldReport"]));
+                            await Task.Run(() => da.Fill(dt));
                         }
                     }
                 }
@@ -129,7 +126,7 @@ namespace PosSystem
                 reportViewer1.LocalReport.SetParameters(new ReportParameter[] { pDate, pCashier, pHeader });
 
                 // Link the processed data table to the RDLC's "DataSet1"
-                rptDS = new ReportDataSource("DataSet1", ds.Tables["dtSoldReport"]);
+                rptDS = new ReportDataSource("DataSet1", dt);
                 reportViewer1.LocalReport.DataSources.Add(rptDS);
 
                 // Set up the view mode
@@ -143,8 +140,6 @@ namespace PosSystem
             {
                 MessageBox.Show("An error occurred while generating the report: " + ex.Message, "Report Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
-
         }
         #endregion
     }

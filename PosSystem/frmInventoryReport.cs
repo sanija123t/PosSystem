@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Microsoft.Reporting.WinForms;
+using System;
+using System.Data;
 using System.Data.SQLite;
-using System.Windows.Forms;
 using System.Runtime.InteropServices; // Added for draggable logic
-using Microsoft.Reporting.WinForms;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace PosSystem
 {
@@ -44,54 +46,44 @@ namespace PosSystem
         // PUBLIC REPORT METHODS
         // ================================
 
-        public void LoadSoldItems(string sql, string param)
+        public async void LoadSoldItems(string sql, string param)
         {
-            var ds = new DataSet1();
-            FillDataSet(ds.Tables["dtSoldItem"], sql);
-
-            SetReport("Bill\\ReportSold.rdlc", ds.Tables["dtSoldItem"],
+            DataTable dt = await LoadDataTableAsync(sql);
+            SetReport("Bill\\ReportSold.rdlc", dt,
                       new ReportParameter("pDate", param));
         }
 
-        public void LoadTopSelling(string sql, string param, string header)
+        public async void LoadTopSelling(string sql, string param, string header)
         {
-            var ds = new DataSet1();
-            FillDataSet(ds.Tables["dtTopSelling"], sql);
-
-            SetReport("Bill\\ReportTop.rdlc", ds.Tables["dtTopSelling"],
+            DataTable dt = await LoadDataTableAsync(sql);
+            SetReport("Bill\\ReportTop.rdlc", dt,
                       new ReportParameter("pDate", param),
                       new ReportParameter("pHeader", header));
         }
 
-        public void LoadReport()
+        public async void LoadReport()
         {
-            var ds = new DataSet1();
-            // FIXED: Changed TblCatecory to TblCategory to match database truth
             string query = @"
                 SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.qty, p.reorder
                 FROM TblProduct1 AS p
                 INNER JOIN BrandTbl AS b ON p.bid = b.id
                 INNER JOIN TblCategory AS c ON p.cid = c.id";
 
-            FillDataSet(ds.Tables["dtInventory"], query);
-            SetReport("Bill\\Report3.rdlc", ds.Tables["dtInventory"]);
+            DataTable dt = await LoadDataTableAsync(query);
+            SetReport("Bill\\Report3.rdlc", dt);
         }
 
-        public void LoadStockReport(string sql, string param)
+        public async void LoadStockReport(string sql, string param)
         {
-            var ds = new DataSet1();
-            FillDataSet(ds.Tables["dtStockin"], sql);
-
-            SetReport("Bill\\ReportStock.rdlc", ds.Tables["dtStockin"],
+            DataTable dt = await LoadDataTableAsync(sql);
+            SetReport("Bill\\ReportStock.rdlc", dt,
                       new ReportParameter("pDate", param));
         }
 
-        public void LoadCancelReport(string sql, string param)
+        public async void LoadCancelReport(string sql, string param)
         {
-            var ds = new DataSet1();
-            FillDataSet(ds.Tables["dtCancel"], sql);
-
-            SetReport("Bill\\ReportCancel.rdlc", ds.Tables["dtCancel"],
+            DataTable dt = await LoadDataTableAsync(sql);
+            SetReport("Bill\\ReportCancel.rdlc", dt,
                       new ReportParameter("pDate", param));
         }
 
@@ -99,25 +91,28 @@ namespace PosSystem
         // PRIVATE HELPERS
         // ================================
 
-        private void FillDataSet(System.Data.DataTable table, string sql)
+        private async Task<DataTable> LoadDataTableAsync(string sql)
         {
+            DataTable dt = new DataTable();
             try
             {
                 using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                 using (var da = new SQLiteDataAdapter(sql, cn))
                 {
                     cn.Open();
-                    table.Clear();
-                    da.Fill(table);
+                    dt.Clear();
+                    da.FillSchema(dt, SchemaType.Source);
+                    da.Fill(dt);
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+            return dt;
         }
 
-        private void SetReport(string rdlcPath, System.Data.DataTable table, params ReportParameter[] parameters)
+        private void SetReport(string rdlcPath, DataTable table, params ReportParameter[] parameters)
         {
             try
             {

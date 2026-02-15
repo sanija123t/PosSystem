@@ -71,13 +71,9 @@ namespace PosSystem
 
                 // 1. Create the Barcode instance
                 BarcodeStandard.Barcode b = new BarcodeStandard.Barcode();
-
-                // FIXED: SkiaSharp version doesn't use System.Drawing.Font here.
-                // We enable the label via IncludeLabel.
                 b.IncludeLabel = true;
 
                 // 2. Encode using Code128 (Elite Resolution: 300x150)
-                // Using SkiaSharp colors directly to avoid conversion errors
                 var barcodeImage = b.Encode(Type.Code128, barcodeData, SkiaSharp.SKColors.Black, SkiaSharp.SKColors.White, 300, 150);
 
                 // 3. Convert Skia Image to WinForms Image
@@ -98,7 +94,6 @@ namespace PosSystem
                         int count = (int)number.Value;
                         for (int i = 0; i < count; i++)
                         {
-                            // Mapping to your existing DataSet columns
                             this.dataSet11.dtBarcode.AdddtBarcodeRow(barcodeData, barcodeBytes);
                         }
                     }
@@ -112,7 +107,6 @@ namespace PosSystem
 
                 if (dialogResult == DialogResult.Yes)
                 {
-                    // Pass the data to your print form
                     frmPrint FRM = new frmPrint(this.dataSet11.dtBarcode);
                     FRM.ShowDialog();
                 }
@@ -129,7 +123,6 @@ namespace PosSystem
         // --------------------------------------------------------------------------------------
         private void txtBarcod_TextChanged(object sender, EventArgs e)
         {
-            // ENFORCE: International Standard length for typical labels (Code 128)
             if (txtBarcod.Text.Length > 25)
             {
                 txtBarcod.Text = txtBarcod.Text.Substring(0, 25);
@@ -139,7 +132,6 @@ namespace PosSystem
 
         private void number_ValueChanged(object sender, EventArgs e)
         {
-            // Logic handled by Control Properties (Min/Max), but safety check remains
             if (number.Value < MIN_STICKERS) number.Value = MIN_STICKERS;
             if (number.Value > MAX_STICKERS) number.Value = MAX_STICKERS;
         }

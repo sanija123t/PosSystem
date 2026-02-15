@@ -1,6 +1,7 @@
 ﻿using Microsoft.Reporting.WinForms;
 using System;
 using System.Data;
+using System.Data.SQLite;
 using System.IO;
 using System.Runtime.InteropServices; // Added for draggable functionality
 using System.Windows.Forms;
@@ -29,18 +30,38 @@ namespace PosSystem
         }
         // -------------------------------
 
-        private DataSet1.dtBarcodeDataTable _barcode;
+        private DataTable _barcode;
 
-        public frmPrint(DataSet1.dtBarcodeDataTable barcode)
+        public frmPrint(DataTable barcode)
         {
             InitializeComponent();
             _barcode = barcode;
+        }
+
+        public frmPrint()
+        {
+            InitializeComponent();
         }
 
         private void frmPrint_Load(object sender, EventArgs e)
         {
             try
             {
+                // Load barcode table dynamically if not supplied
+                if (_barcode == null)
+                {
+                    using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
+                    {
+                        cn.Open();
+                        _barcode = new DataTable();
+                        using (var da = new SQLiteDataAdapter("SELECT * FROM tblCart1", cn))
+                        {
+                            da.FillSchema(_barcode, SchemaType.Source);
+                            da.Fill(_barcode);
+                        }
+                    }
+                }
+
                 // Build report path safely
                 string reportPath = Path.Combine(Application.StartupPath, "Bill", "ReportBarcode.rdlc");
 
@@ -58,7 +79,7 @@ namespace PosSystem
                 reportViewer1.LocalReport.DataSources.Clear();
 
                 // Add the barcode data table as the report data source
-                ReportDataSource rds = new ReportDataSource("DataSet1", (DataTable)_barcode);
+                ReportDataSource rds = new ReportDataSource("DataSet1", _barcode);
                 reportViewer1.LocalReport.DataSources.Add(rds);
 
                 // Configure viewer display

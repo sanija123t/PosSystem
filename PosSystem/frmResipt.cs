@@ -58,7 +58,7 @@ namespace PosSystem
                 reportViewer1.LocalReport.ReportPath = reportFile;
                 reportViewer1.LocalReport.DataSources.Clear();
 
-                DataSet1 ds = new DataSet1();
+                DataTable dtSold = new DataTable();
                 string transno = fPOS != null ? fPOS.lblTransno.Text : f1.lblTransno.Text;
 
                 // Fetch data from SQLite off the UI thread
@@ -67,9 +67,6 @@ namespace PosSystem
                     using (var cn = new SQLiteConnection(DBConnection.MyConnection()))
                     {
                         cn.Open();
-
-                        // ⚡ Optimization: create index in SQLite for faster queries:
-                        // CREATE INDEX idx_transno ON tblCart1(transno);
 
                         string sql = @"SELECT c.id, c.transno, c.pcode, c.price, c.qty, c.disc, 
                                               (c.price * c.qty) as total, c.sdate, c.status, p.pdesc
@@ -83,7 +80,8 @@ namespace PosSystem
 
                             using (var da = new SQLiteDataAdapter(cmd))
                             {
-                                da.Fill(ds.Tables["dtSold"]);
+                                da.FillSchema(dtSold, SchemaType.Source);
+                                da.Fill(dtSold);
                             }
                         }
                     }
@@ -105,7 +103,7 @@ namespace PosSystem
 
                 reportViewer1.LocalReport.SetParameters(parameters);
 
-                var rds = new ReportDataSource("DataSet1", ds.Tables["dtSold"]);
+                var rds = new ReportDataSource("DataSet1", dtSold);
                 reportViewer1.LocalReport.DataSources.Add(rds);
 
                 reportViewer1.SetDisplayMode(DisplayMode.PrintLayout);
