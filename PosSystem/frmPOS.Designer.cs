@@ -92,6 +92,7 @@
             this.dataGridViewImageColumn2 = new System.Windows.Forms.DataGridViewImageColumn();
             this.dataGridViewImageColumn3 = new System.Windows.Forms.DataGridViewImageColumn();
             this.pictureBox2 = new System.Windows.Forms.PictureBox();
+            this.btnReprint = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             this.panel3.SuspendLayout();
             this.panel6.SuspendLayout();
@@ -179,7 +180,7 @@
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(247, 39);
             this.btnCancel.TabIndex = 4;
-            this.btnCancel.Text = " [F5] Print/Reprint";
+            this.btnCancel.Text = " [F5] Clear/Cancel";
             this.btnCancel.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
             this.btnCancel.UseVisualStyleBackColor = false;
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
@@ -263,6 +264,7 @@
             // panel3
             // 
             this.panel3.BackColor = System.Drawing.Color.White;
+            this.panel3.Controls.Add(this.btnReprint);
             this.panel3.Controls.Add(this.comboBoxprinter);
             this.panel3.Controls.Add(this.button1);
             this.panel3.Controls.Add(this.textBoxbarcode);
@@ -785,6 +787,20 @@
             this.pictureBox2.TabIndex = 5;
             this.pictureBox2.TabStop = false;
             // 
+            // btnReprint
+            // 
+            this.btnReprint.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(37)))), ((int)(((byte)(38)))), ((int)(((byte)(38)))));
+            this.btnReprint.FlatAppearance.BorderSize = 0;
+            this.btnReprint.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnReprint.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnReprint.ForeColor = System.Drawing.Color.White;
+            this.btnReprint.Location = new System.Drawing.Point(719, 5);
+            this.btnReprint.Name = "btnReprint";
+            this.btnReprint.Size = new System.Drawing.Size(75, 30);
+            this.btnReprint.TabIndex = 21;
+            this.btnReprint.Text = "Reprint";
+            this.btnReprint.UseVisualStyleBackColor = false;
+            // 
             // frmPOS
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
@@ -883,5 +899,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Column7;
         private System.Windows.Forms.DataGridViewTextBoxColumn Column6;
         private System.Windows.Forms.ComboBox comboBoxprinter;
+        public System.Windows.Forms.Button btnReprint;
     }
 }

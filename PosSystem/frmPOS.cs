@@ -295,7 +295,7 @@ namespace PosSystem
             else if (e.KeyCode == Keys.F2) { if (CheckTransaction()) btnSearch.PerformClick(); }
             else if (e.KeyCode == Keys.F3) { if (CheckTransaction()) btnDiscount.PerformClick(); }
             else if (e.KeyCode == Keys.F4 || e.KeyCode == Keys.Enter) btnSattle.PerformClick();
-            else if (e.KeyCode == Keys.F5) PrintThermalBill(lastPrintedTransNo);
+            else if (e.KeyCode == Keys.F5) btnCancel.PerformClick(); // REMAPPED F5
             else if (e.KeyCode == Keys.F6) btnSales.PerformClick();
             else if (e.KeyCode == Keys.F8) btnscanbarcode.PerformClick();
             else if (e.KeyCode == Keys.F10) btnClose.PerformClick();
@@ -318,7 +318,20 @@ namespace PosSystem
                 lastPrintedTransNo = lblTransno.Text;
                 KickDrawer();
                 PrintThermalBill(lastPrintedTransNo);
+                isTransactionStarted = false;
+                lblTransno.Text = "000000000000";
+                LoadCart();
             }
+        }
+
+        private void btnReprint_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(lastPrintedTransNo))
+            {
+                MessageBox.Show("No recent transaction to reprint.", stitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            PrintThermalBill(lastPrintedTransNo);
         }
 
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
@@ -352,7 +365,7 @@ namespace PosSystem
         }
         #endregion
 
-        #region MISSING HANDLERS (Fixes CS1061 Designer Errors)
+        #region MISSING HANDLERS
         private void button1_Click(object sender, EventArgs e)
         {
             if (!CheckTransaction()) return;
@@ -360,7 +373,40 @@ namespace PosSystem
             textBoxbarcode.Clear();
             textBoxbarcode.Focus();
         }
-        private void btnCancel_Click(object sender, EventArgs e) { if (MessageBox.Show("Clear cart?", stitle, MessageBoxButtons.YesNo) == DialogResult.Yes) { /* Clear logic */ } }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            // NEW LOGIC: If no transaction is active, open past details
+            if (!isTransactionStarted || lblTransno.Text == "000000000000")
+            {
+                // Passing null and 0 to satisfy 'frmCancelDetails(frmSoldItems, decimal)'
+                frmCancelDetails frm = new frmCancelDetails(null, 0);
+                frm.ShowDialog();
+                return;
+            }
+
+            // Logic for active transaction cart clearing
+            if (dataGridView1.Rows.Count == 0) return;
+
+            if (MessageBox.Show("Are you sure you want to clear all items from the cart?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                try
+                {
+                    using (SQLiteConnection cn = new SQLiteConnection(DBConnection.MyConnection()))
+                    {
+                        cn.Open();
+                        using (SQLiteCommand cmd = new SQLiteCommand("DELETE FROM tblCart1 WHERE transno=@t AND status='Pending'", cn))
+                        {
+                            cmd.Parameters.AddWithValue("@t", lblTransno.Text);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                    LoadCart();
+                }
+                catch (Exception ex) { LogError("ClearCart", ex); }
+            }
+        }
+
         private void btnDiscount_Click(object sender, EventArgs e) { /* Add discount logic */ }
         private void btnSales_Click(object sender, EventArgs e) { btnSalesHistory_Click(sender, e); }
         private void btnscanbarcode_Click(object sender, EventArgs e) { textBoxbarcode.Focus(); }
