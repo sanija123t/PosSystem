@@ -381,5 +381,15 @@ namespace PosSystem
         private void lblSname_Click(object sender, EventArgs e) { }
         private void lblPhone_Click(object sender, EventArgs e) { }
         #endregion
+
+        private void lblTransno_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblDate_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

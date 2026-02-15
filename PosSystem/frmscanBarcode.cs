@@ -6,153 +6,249 @@ using System.Drawing;
 using System.Windows.Forms;
 using ZXing;
 using System.Diagnostics;
+using System.Linq;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Threading;
 
 namespace PosSystem
 {
     public partial class frmscanBarcode : Form
     {
-        frmProduct f; // Parent form to update the barcode textbox
-        FilterInfoCollection FilterInfoCollection;
-        VideoCaptureDevice videoCaptureDevice;
+        private readonly frmProduct _parentProductForm;
+        private FilterInfoCollection _filterInfoCollection;
+        private VideoCaptureDevice _videoCaptureDevice;
+        private readonly BarcodeReader _barcodeReader = new BarcodeReader();
+        private readonly Stopwatch _decodeTimer = new Stopwatch();
 
-        // Barcode reader
-        BarcodeReader reader = new BarcodeReader();
+        private const int DecodeIntervalMs = 100; // Increased for stability
+        private string _lastScannedText = string.Empty;
+        private DateTime _lastScanTime = DateTime.MinValue;
+        private readonly int _debounceMs = 1200;
 
-        // Throttle decoding
-        Stopwatch decodeTimer = new Stopwatch();
-        const int DecodeInterval = 200; // milliseconds
+        private volatile bool _isStopping = false;
+        private readonly object _syncLock = new object(); // Prevents overlapping start/stop
 
-        bool barcodeDetected = false;
+        private static string _lastSelectedCamera = null;
+        private static string _lastSelectedMP = "Auto-Safe";
+
+        private readonly Pen _redLaserPen = new Pen(Color.Red, 2);
+        private readonly Pen _guidePen = new Pen(Color.LimeGreen, 3);
 
         public frmscanBarcode(frmProduct frm)
         {
             InitializeComponent();
-            f = frm;
+            _parentProductForm = frm;
+            pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+            pictureBox.Paint += PictureBox_Paint;
+            ConfigureScanner();
+        }
 
-            // Optimize for Retail Barcodes
-            reader.Options.PossibleFormats = new List<BarcodeFormat> {
-                BarcodeFormat.EAN_13,
-                BarcodeFormat.EAN_8,
-                BarcodeFormat.UPC_A,
-                BarcodeFormat.CODE_128
+        private void ConfigureScanner()
+        {
+            _barcodeReader.AutoRotate = false;
+            _barcodeReader.Options = new ZXing.Common.DecodingOptions
+            {
+                PossibleFormats = new List<BarcodeFormat> { BarcodeFormat.EAN_13, BarcodeFormat.UPC_A, BarcodeFormat.CODE_128 },
+                TryHarder = false,
+                PureBarcode = false
             };
-            reader.Options.TryHarder = true; // High accuracy
-            reader.AutoRotate = true;       // Scan even if sideways
         }
 
         private void frmscanBarcode_Load(object sender, EventArgs e)
         {
-            // Populate available cameras
-            FilterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-            foreach (FilterInfo device in FilterInfoCollection)
-                cbCamara.Items.Add(device.Name);
+            // Setup Status Dot
+            GraphicsPath gp = new GraphicsPath();
+            gp.AddEllipse(0, 0, pnlStatus.Width, pnlStatus.Height);
+            pnlStatus.Region = new Region(gp);
+            UpdateStatusLight(false);
 
-            if (cbCamara.Items.Count > 0)
-                cbCamara.SelectedIndex = 0;
-            else
-                MessageBox.Show("No camera detected.", "System Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            try
+            {
+                _filterInfoCollection = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+                cbCamara.Items.Clear();
+                foreach (FilterInfo device in _filterInfoCollection) cbCamara.Items.Add(device.Name);
 
-            decodeTimer.Start();
+                metroComboBoxMPlevel.Items.Clear();
+                metroComboBoxMPlevel.Items.AddRange(new object[] { "Auto-Safe", "0.5 MP", "2 MP", "5 MP", "MAX" });
+
+                if (!string.IsNullOrEmpty(_lastSelectedCamera) && cbCamara.Items.Contains(_lastSelectedCamera))
+                    cbCamara.SelectedIndex = cbCamara.Items.IndexOf(_lastSelectedCamera);
+                else if (cbCamara.Items.Count > 0) cbCamara.SelectedIndex = 0;
+
+                metroComboBoxMPlevel.SelectedItem = _lastSelectedMP;
+                _decodeTimer.Start();
+            }
+            catch { }
         }
 
-        private void btnStart_Click(object sender, EventArgs e)
+        private void UpdateStatusLight(bool isReady)
         {
-            StartCamera();
-        }
-
-        private void btnReStart_Click(object sender, EventArgs e)
-        {
-            barcodeDetected = false; // Reset flag
-            StartCamera();           // Restart camera and scanning
+            if (pnlStatus.IsDisposed) return;
+            if (pnlStatus.InvokeRequired) { pnlStatus.BeginInvoke(new Action(() => UpdateStatusLight(isReady))); return; }
+            pnlStatus.BackColor = isReady ? Color.LimeGreen : Color.Red;
         }
 
         private void StartCamera()
         {
-            if (videoCaptureDevice != null && videoCaptureDevice.IsRunning) return;
-
-            try
+            lock (_syncLock)
             {
-                videoCaptureDevice = new VideoCaptureDevice(FilterInfoCollection[cbCamara.SelectedIndex].MonikerString);
-                videoCaptureDevice.NewFrame += VideoCaptureDevice_NewFrame;
-                videoCaptureDevice.Start();
+                if (cbCamara.SelectedIndex < 0) return;
 
-                btnStart.Enabled = false;
+                try
+                {
+                    StopCamera(); // Ensure full cleanup first
+                    Thread.Sleep(150); // Pause for driver reset
+
+                    _isStopping = false;
+                    _videoCaptureDevice = new VideoCaptureDevice(_filterInfoCollection[cbCamara.SelectedIndex].MonikerString);
+
+                    // Hardware Safety Check
+                    var capabilities = _videoCaptureDevice.VideoCapabilities;
+                    if (capabilities.Length == 0) throw new Exception("Camera reports no capabilities.");
+
+                    _videoCaptureDevice.VideoResolution = SelectResolution(_videoCaptureDevice);
+                    _videoCaptureDevice.NewFrame += VideoCaptureDevice_NewFrame;
+                    _videoCaptureDevice.Start();
+
+                    btnStart.Enabled = false;
+                    UpdateStatusLight(true);
+                }
+                catch (Exception ex)
+                {
+                    UpdateStatusLight(false);
+                    MessageBox.Show($"Hardware Error: {ex.Message}");
+                }
             }
-            catch (Exception ex)
+        }
+
+        private VideoCapabilities SelectResolution(VideoCaptureDevice device)
+        {
+            var caps = device.VideoCapabilities;
+            long targetPixels;
+            switch (_lastSelectedMP)
             {
-                MessageBox.Show("Unable to start camera: " + ex.Message, "Camera Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                case "0.5 MP": targetPixels = 500000; break;
+                case "2 MP": targetPixels = 2000000; break;
+                case "5 MP": targetPixels = 5000000; break;
+                case "MAX": return caps.OrderByDescending(c => c.FrameSize.Width * c.FrameSize.Height).First();
+                default: targetPixels = 921600; break;
             }
+            return caps.OrderBy(c => Math.Abs(((long)c.FrameSize.Width * c.FrameSize.Height) - targetPixels)).First();
         }
 
         private void VideoCaptureDevice_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
-            using (Bitmap bitmap = (Bitmap)eventArgs.Frame.Clone())
+            if (_isStopping || IsDisposed) return;
+
+            try
             {
-                // Throttle decoding to reduce CPU usage
-                if (!barcodeDetected && decodeTimer.ElapsedMilliseconds >= DecodeInterval)
+                // CRITICAL: Clone frame to 24bpp to disconnect from hardware memory
+                using (Bitmap frame = (Bitmap)eventArgs.Frame.Clone())
                 {
-                    decodeTimer.Restart();
-                    var result = reader.Decode(bitmap);
-                    if (result != null)
+                    if (_decodeTimer.ElapsedMilliseconds >= DecodeIntervalMs)
                     {
-                        barcodeDetected = true;
-                        UpdateParentBarcode(result.Text);
+                        _decodeTimer.Restart();
+                        Bitmap processingCopy = (Bitmap)frame.Clone();
+                        ThreadPool.QueueUserWorkItem(delegate { ProcessFrame(processingCopy); });
+                    }
+                    UpdatePreview(frame);
+                }
+            }
+            catch { /* Hardware buffer collision ignored */ }
+        }
+
+        private void ProcessFrame(Bitmap frame)
+        {
+            using (frame)
+            {
+                try
+                {
+                    int cropW = (int)(frame.Width * 0.8);
+                    int cropH = (int)(frame.Height * 0.4);
+                    Rectangle zone = new Rectangle((frame.Width - cropW) / 2, (frame.Height - cropH) / 2, cropW, cropH);
+
+                    using (Bitmap sub = frame.Clone(zone, PixelFormat.Format24bppRgb))
+                    {
+                        var result = _barcodeReader.Decode(sub);
+                        if (result != null && !string.IsNullOrEmpty(result.Text))
+                        {
+                            this.BeginInvoke(new Action(() => FinalizeScan(result.Text)));
+                        }
                     }
                 }
-
-                // Update camera preview safely
-                pictureBox.Invoke(new MethodInvoker(() =>
-                {
-                    if (pictureBox.Image != null) pictureBox.Image.Dispose();
-                    pictureBox.Image = (Bitmap)bitmap.Clone();
-                }));
+                catch { }
             }
         }
 
-        private void UpdateParentBarcode(string barcode)
+        private void UpdatePreview(Bitmap bitmap)
         {
-            if (f != null && f.txtBarcode != null)
+            if (pictureBox.IsDisposed) return;
+            pictureBox.BeginInvoke(new MethodInvoker(() =>
             {
-                f.txtBarcode.Invoke(new MethodInvoker(() =>
+                try
                 {
-                    f.txtBarcode.Text = barcode;
-                }));
-            }
+                    var oldImage = pictureBox.Image;
+                    pictureBox.Image = (Bitmap)bitmap.Clone();
+                    oldImage?.Dispose();
+                }
+                catch { }
+            }));
+        }
 
-            // Optional: beep on successful scan
+        private void FinalizeScan(string code)
+        {
+            if (code == _lastScannedText && (DateTime.Now - _lastScanTime).TotalMilliseconds < _debounceMs) return;
+
+            _lastScannedText = code;
+            _lastScanTime = DateTime.Now;
+
+            if (_parentProductForm?.txtBarcode != null) _parentProductForm.txtBarcode.Text = code;
             System.Media.SystemSounds.Beep.Play();
+        }
 
-            // Stop camera after success
-            StopCamera();
+        private void PictureBox_Paint(object sender, PaintEventArgs e)
+        {
+            if (_videoCaptureDevice == null || _isStopping) return;
+            Graphics g = e.Graphics;
+            int w = pictureBox.Width, h = pictureBox.Height;
+            Rectangle targetRect = new Rectangle(w / 4, h / 3, w / 2, h / 3);
+            g.DrawRectangle(_guidePen, targetRect);
+            int laserY = (h / 2) + (int)(Math.Sin(DateTime.Now.Millisecond * 0.01) * (h / 6));
+            g.DrawLine(_redLaserPen, targetRect.Left + 5, laserY, targetRect.Right - 5, laserY);
+            pictureBox.Invalidate();
         }
 
         private void StopCamera()
         {
-            if (videoCaptureDevice != null && videoCaptureDevice.IsRunning)
+            _isStopping = true;
+            UpdateStatusLight(false);
+
+            if (_videoCaptureDevice != null)
             {
-                videoCaptureDevice.SignalToStop();
-                videoCaptureDevice.WaitForStop();
-                videoCaptureDevice.NewFrame -= VideoCaptureDevice_NewFrame;
-                videoCaptureDevice = null;
+                _videoCaptureDevice.NewFrame -= VideoCaptureDevice_NewFrame;
+                if (_videoCaptureDevice.IsRunning)
+                {
+                    _videoCaptureDevice.SignalToStop();
+                    _videoCaptureDevice.WaitForStop(); // Wait for thread to die
+                }
+                _videoCaptureDevice = null;
             }
-            btnStart.Invoke(new MethodInvoker(() => btnStart.Enabled = true));
+
+            // Force memory cleanup for 4K frames
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            btnStart.Enabled = true;
         }
 
-        private void frmscanBarcode_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            StopCamera();
+        private void frmscanBarcode_FormClosing(object sender, FormClosingEventArgs e) => StopCamera();
+        private void btnStart_Click(object sender, EventArgs e) => StartCamera();
+        private void pictureBox2_Click(object sender, EventArgs e) => this.Close();
 
-            // Dispose preview image to free memory
-            if (pictureBox.Image != null)
-            {
-                pictureBox.Image.Dispose();
-                pictureBox.Image = null;
-            }
-        }
-
-        private void pictureBox2_Click(object sender, EventArgs e)
+        private void metroComboBoxMPlevel_SelectedIndexChanged(object sender, EventArgs e)
         {
-            this.Close(); // Close form when clicking 'X' or custom close button
+            _lastSelectedMP = metroComboBoxMPlevel.SelectedItem.ToString();
+            if (_videoCaptureDevice != null && _videoCaptureDevice.IsRunning) StartCamera();
         }
     }
 }

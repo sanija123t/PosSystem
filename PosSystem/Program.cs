@@ -21,9 +21,8 @@ namespace PosSystem
                 // 2. RUN DATABASE PATCH (Adds new columns like cost_price, tax_rate, etc.)
                 UpdateDatabaseSchema();
 
-                // 3. Start with the Login Form for security
-                // Change back to new Form1() if you want to bypass login during development
-                Application.Run(new frmUserLogin());
+                // 3. Start directly with the main form, bypassing login
+                Application.Run(new Form1()); // <-- Login bypassed here
             }
             catch (Exception ex)
             {

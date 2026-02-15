@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Printing;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace PosSystem
 {
@@ -14,12 +15,30 @@ namespace PosSystem
     {
         private readonly string stitle = "PosSystem";
         private System.Windows.Forms.Timer searchDelayTimer;
-        private bool _isLoading = false;
 
-        // Windows Printing Objects
+        // Use int for Interlocked operations (0 = false, 1 = true)
+        private int _isInventoryLoading = 0;
+        private int _isCancelLoading = 0;
+        private int _isStockLoading = 0;
+
+        private string _lastInventorySearch = string.Empty;
+        private string _lastCancelSearch = string.Empty;
+
+        private CancellationTokenSource _inventoryCts;
+        private CancellationTokenSource _cancelCts;
+        private CancellationTokenSource _stockCts;
+
+        // Static Font Cache to optimize GDI performance and prevent leaks
+        private static readonly Font hFont = new Font("Segoe UI", 9, FontStyle.Bold);
+        private static readonly Font cFont = new Font("Segoe UI", 8, FontStyle.Regular);
+        private static readonly Font titleFont = new Font("Segoe UI", 16, FontStyle.Bold);
+        private static readonly Font dateFont = new Font("Segoe UI", 8);
+        private static readonly Pen gridPen = new Pen(Color.Gray, 1);
+
         private PrintDocument printDoc = new PrintDocument();
         private PrintPreviewDialog previewDlg = new PrintPreviewDialog();
         private DataGridView dgvToPrint;
+        private int checkRow = 0;
 
         public frmRecords()
         {
@@ -29,11 +48,11 @@ namespace PosSystem
             printDoc.PrintPage += new PrintPageEventHandler(PrintDocument_PrintPage);
         }
 
-        // --- OPTIMIZATION: SAFE UI BATCH INVOKER ---
+        // Fixed UI Helper to prevent invocation on disposed handle
         private void UI(Action a)
         {
-            if (IsDisposed) return;
-            if (InvokeRequired) Invoke(a);
+            if (IsDisposed || !IsHandleCreated) return;
+            if (InvokeRequired) BeginInvoke(a);
             else a();
         }
 
@@ -44,24 +63,31 @@ namespace PosSystem
             searchDelayTimer.Tick += (s, e) =>
             {
                 searchDelayTimer.Stop();
-                if (_isLoading) return;
-
                 if (tabControl1.SelectedTab.Name == "tabPageInventory" || tabControl1.SelectedTab.Text == "Inventory List")
+                {
                     _ = LoadInventoryAsync();
+                }
                 else if (tabControl1.SelectedTab.Name == "tabPageCancelled" || tabControl1.SelectedTab.Text == "Cancelled Order")
+                {
                     _ = LoadCancelledOrdersAsync();
+                }
             };
+        }
+
+        private void TriggerSearch()
+        {
+            searchDelayTimer.Stop();
+            searchDelayTimer.Start();
         }
 
         private void frmRecords_Load(object sender, EventArgs e)
         {
-            // Note: Ensure these controls (cdTopSelling, cbCriticle) exist in your designer
             try
             {
                 if (cdTopSelling.Items.Count > 0) cdTopSelling.SelectedIndex = 0;
                 if (cbCriticle.Items.Count > 0) cbCriticle.SelectedIndex = 0;
             }
-            catch { }
+            catch (Exception ex) { MessageBox.Show(ex.Message, stitle); }
 
             LoadCategoryFilter(cbCategory);
             LoadCategoryFilter(cbcategoryinventorysearch);
@@ -85,16 +111,13 @@ namespace PosSystem
                 }
                 combo.SelectedIndex = 0;
             }
-            catch { }
+            catch (Exception ex) { MessageBox.Show(ex.Message, stitle); }
         }
 
         private async Task LoadAllAsync()
         {
-            if (_isLoading) return;
             try
             {
-                _isLoading = true;
-                // Loading all data in parallel for speed
                 await Task.WhenAll(
                     LoadStockHistoryAsync(),
                     LoadInventoryAsync(),
@@ -102,10 +125,6 @@ namespace PosSystem
                 ).ConfigureAwait(false);
             }
             catch (Exception ex) { Console.WriteLine("Error: " + ex.Message); }
-            finally
-            {
-                _isLoading = false;
-            }
         }
 
         private void SetDataGridViewFormats()
@@ -133,17 +152,26 @@ namespace PosSystem
 
         public async Task LoadStockHistoryAsync()
         {
-            string d1 = "", d2 = "";
+            if (Interlocked.CompareExchange(ref _isStockLoading, 1, 0) != 0) return;
+
+            _stockCts?.Cancel();
+            _stockCts?.Dispose();
+            _stockCts = new CancellationTokenSource();
+            var token = _stockCts.Token;
+
+            DateTime d1 = dateTimePicker8.Value.Date;
+            DateTime d2 = dateTimePicker7.Value.Date;
+
             UI(() => {
+                dataGridView6.SuspendLayout();
                 dataGridView6.Rows.Clear();
-                d1 = dateTimePicker8.Value.ToString("yyyy-MM-dd");
-                d2 = dateTimePicker7.Value.ToString("yyyy-MM-dd");
+                dataGridView6.ResumeLayout();
             });
 
             try
             {
                 using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
+                await cn.OpenAsync(token);
                 string sql = @"SELECT s.id, s.refno, s.pcode, p.pdesc, s.qty, s.sdate, s.stockinby 
                                FROM tblStockIn s 
                                INNER JOIN TblProduct1 p ON s.pcode = p.pcode 
@@ -151,100 +179,138 @@ namespace PosSystem
                                ORDER BY s.sdate DESC";
 
                 using var cmd = new SQLiteCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@d1", d1);
-                cmd.Parameters.AddWithValue("@d2", d2);
+                cmd.CommandTimeout = 5;
+                cmd.Parameters.Add("@d1", DbType.Date).Value = d1;
+                cmd.Parameters.Add("@d2", DbType.Date).Value = d2;
 
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync(token);
                 int i = 0;
                 var rows = new List<object[]>();
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync(token))
                 {
                     rows.Add(new object[] { ++i, reader["id"], reader["refno"], reader["pcode"], reader["pdesc"], reader["qty"], reader["sdate"], reader["stockinby"] });
                 }
 
-                UI(() => {
-                    foreach (var row in rows) dataGridView6.Rows.Add(row);
-                });
+                if (!token.IsCancellationRequested) UI(() => { foreach (var row in rows) dataGridView6.Rows.Add(row); });
             }
-            catch (Exception ex) { MessageBox.Show(ex.Message, stitle, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { MessageBox.Show(ex.Message, stitle); }
+            finally { Interlocked.Exchange(ref _isStockLoading, 0); }
         }
 
         public async Task LoadInventoryAsync()
         {
-            string search = ""; string cat = "";
+            string currentSearch = textboxinventorysearch.Text + cbcategoryinventorysearch.Text;
+            if (currentSearch == _lastInventorySearch && _isInventoryLoading == 1) return;
+
+            if (Interlocked.CompareExchange(ref _isInventoryLoading, 1, 0) != 0) return;
+
+            _inventoryCts?.Cancel();
+            _inventoryCts?.Dispose();
+            _inventoryCts = new CancellationTokenSource();
+            var token = _inventoryCts.Token;
+
+            string search = textboxinventorysearch.Text + "%";
+            string cat = cbcategoryinventorysearch.Text;
+
             UI(() => {
+                dataGridView4.SuspendLayout();
                 dataGridView4.Rows.Clear();
-                search = textboxinventorysearch.Text + "%";
-                cat = cbcategoryinventorysearch.Text;
+                dataGridView4.ResumeLayout();
             });
 
             try
             {
                 using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
+                await cn.OpenAsync(token);
                 string sql = "SELECT p.pcode, p.barcode, p.pdesc, b.brand, c.category, p.price, p.reorder, p.qty FROM TblProduct1 p LEFT JOIN BrandTbl b ON p.bid=b.id LEFT JOIN TblCategory c ON p.cid=c.id WHERE (p.pdesc LIKE @search OR p.pcode LIKE @search)";
                 if (cat != "All Categories") sql += " AND c.category=@category";
 
                 using var cmd = new SQLiteCommand(sql, cn);
+                cmd.CommandTimeout = 5;
                 cmd.Parameters.AddWithValue("@search", search);
                 if (cat != "All Categories") cmd.Parameters.AddWithValue("@category", cat);
 
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync(token);
                 int i = 0;
                 var rows = new List<object[]>();
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync(token))
                 {
                     rows.Add(new object[] { ++i, reader["pcode"], reader["barcode"], reader["pdesc"], reader["brand"], reader["category"], reader["price"], reader["reorder"], reader["qty"] });
                 }
 
-                UI(() => {
-                    foreach (var row in rows) dataGridView4.Rows.Add(row);
-                });
+                if (!token.IsCancellationRequested)
+                {
+                    UI(() => { foreach (var row in rows) dataGridView4.Rows.Add(row); });
+                    _lastInventorySearch = currentSearch;
+                }
             }
-            catch { }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { MessageBox.Show(ex.Message, stitle); }
+            finally { Interlocked.Exchange(ref _isInventoryLoading, 0); }
         }
 
         public async Task LoadCancelledOrdersAsync()
         {
-            string d1 = "", d2 = "", tn = "";
+            string currentSearch = textsearchTransNo.Text + dateTimePicker5.Value + dateTimePicker6.Value;
+            if (currentSearch == _lastCancelSearch && _isCancelLoading == 1) return;
+
+            if (Interlocked.CompareExchange(ref _isCancelLoading, 1, 0) != 0) return;
+
+            _cancelCts?.Cancel();
+            _cancelCts?.Dispose();
+            _cancelCts = new CancellationTokenSource();
+            var token = _cancelCts.Token;
+
+            DateTime d1 = dateTimePicker5.Value.Date;
+            DateTime d2 = dateTimePicker6.Value.Date;
+            string tn = textsearchTransNo.Text + "%";
+
             UI(() => {
+                dataGridView5.SuspendLayout();
                 dataGridView5.Rows.Clear();
-                d1 = dateTimePicker5.Value.ToString("yyyy-MM-dd");
-                d2 = dateTimePicker6.Value.ToString("yyyy-MM-dd");
-                tn = textsearchTransNo.Text + "%";
+                dataGridView5.ResumeLayout();
             });
 
             try
             {
                 using var cn = new SQLiteConnection(DBConnection.MyConnection());
-                await cn.OpenAsync();
+                await cn.OpenAsync(token);
                 string sql = @"SELECT c.transno, c.pcode, p.pdesc, c.price, c.qty, c.total, c.sdate, c.voidby, c.cancelledby, c.reason 
                                FROM tblCancel c 
                                LEFT JOIN TblProduct1 p ON c.pcode = p.pcode 
                                WHERE c.sdate BETWEEN @d1 AND @d2 AND c.transno LIKE @tn";
 
                 using var cmd = new SQLiteCommand(sql, cn);
-                cmd.Parameters.AddWithValue("@d1", d1);
-                cmd.Parameters.AddWithValue("@d2", d2);
+                cmd.CommandTimeout = 5;
+                cmd.Parameters.Add("@d1", DbType.Date).Value = d1;
+                cmd.Parameters.Add("@d2", DbType.Date).Value = d2;
                 cmd.Parameters.AddWithValue("@tn", tn);
 
-                using var reader = await cmd.ExecuteReaderAsync();
+                using var reader = await cmd.ExecuteReaderAsync(token);
                 int i = 0;
                 var rows = new List<object[]>();
-                while (await reader.ReadAsync())
+                while (await reader.ReadAsync(token))
                 {
                     rows.Add(new object[] { ++i, reader["transno"], reader["pcode"], reader["pdesc"], reader["price"], reader["qty"], reader["total"], reader["sdate"], reader["voidby"], reader["cancelledby"], reader["reason"], "Print Slip" });
                 }
 
-                UI(() => {
-                    foreach (var row in rows) dataGridView5.Rows.Add(row);
-                });
+                if (!token.IsCancellationRequested)
+                {
+                    UI(() => { foreach (var row in rows) dataGridView5.Rows.Add(row); });
+                    _lastCancelSearch = currentSearch;
+                }
             }
-            catch { }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { MessageBox.Show(ex.Message, stitle); }
+            finally { Interlocked.Exchange(ref _isCancelLoading, 0); }
         }
         #endregion
 
         #region Event Handlers
+        private void textboxinventorysearch_TextChanged(object sender, EventArgs e) => TriggerSearch();
+        private void textsearchTransNo_TextChanged(object sender, EventArgs e) => TriggerSearch();
+
         private void linkLabel8_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { _ = LoadStockHistoryAsync(); }
 
         private void linkLabel_PrintStock_Click(object sender, LinkLabelLinkClickedEventArgs e)
@@ -258,17 +324,17 @@ namespace PosSystem
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { PrintGrid(dataGridView4, false); }
         private void linkLabel10_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { PrintGrid(dataGridView5, true); }
 
-        // --- FIXING MISSING METHODS TO CLEAR COMPILER ERRORS ---
-        private void linkLabel7_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { /* Add logic if needed */ }
-        private void linkLabel4_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { /* Add logic if needed */ }
-        private void linkLabel6_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { /* Add logic if needed */ }
-        private void linkLabel3_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { /* Add logic if needed */ }
+        private void linkLabel7_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel4_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel6_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
+        private void linkLabel3_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { }
 
         private void dataGridView5_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
-            // Logic for "Print Slip" in Cancelled Orders
+            if (e.RowIndex < 0) return;
+
             string colName = dataGridView5.Columns[e.ColumnIndex].Name;
-            if (colName == "Print Slip") // Ensure your column is named exactly this or use index
+            if (colName == "Print Slip")
             {
                 // Logic to call PrintCancellationInvoice
             }
@@ -276,13 +342,18 @@ namespace PosSystem
 
         private void PrintGrid(DataGridView dgv, bool isLandscape)
         {
-            if (dgv == null) return;
+            if (dgv == null || dgv.Rows.Count == 0) return;
             dgvToPrint = dgv;
+            checkRow = 0;
             printDoc.DefaultPageSettings.Landscape = isLandscape;
             printDoc.DefaultPageSettings.Margins = new Margins(30, 30, 30, 30);
-            previewDlg.Document = printDoc;
-            previewDlg.WindowState = FormWindowState.Maximized;
-            previewDlg.ShowDialog();
+
+            using (var dlg = new PrintPreviewDialog())
+            {
+                dlg.Document = printDoc;
+                dlg.WindowState = FormWindowState.Maximized;
+                dlg.ShowDialog();
+            }
         }
         #endregion
 
@@ -291,50 +362,65 @@ namespace PosSystem
         {
             if (dgvToPrint == null) return;
             Graphics g = e.Graphics;
-            int x = e.MarginBounds.Left;
-            int y = e.MarginBounds.Top;
-            int cellHeight = 28;
-            Font hFont = new Font("Segoe UI", 9, FontStyle.Bold);
-            Font cFont = new Font("Segoe UI", 8, FontStyle.Regular);
-            Pen gridPen = new Pen(Color.Gray, 1);
+            float x = e.MarginBounds.Left;
+            float y = e.MarginBounds.Top;
+            float cellHeight = 28;
 
             string reportName = "REPORT";
             if (dgvToPrint == dataGridView5) reportName = "CANCELLED ORDERS HISTORY";
             if (dgvToPrint == dataGridView6) reportName = "STOCK IN HISTORY";
 
-            g.DrawString(reportName, new Font("Segoe UI", 16, FontStyle.Bold), Brushes.DarkSlateGray, x, y);
-            g.DrawString("Printed on: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm"), new Font("Segoe UI", 8), Brushes.Black, x, y + 25);
+            g.DrawString(reportName, titleFont, Brushes.DarkSlateGray, x, y);
+            g.DrawString("Printed on: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm"), dateFont, Brushes.Black, x, y + 25);
             y += 60;
 
-            int curX = x;
+            float totalGridWidth = 0;
+            foreach (DataGridViewColumn col in dgvToPrint.Columns)
+                if (col.Visible && col.HeaderText != "Print Slip" && col.HeaderText != "ACTION") totalGridWidth += col.Width;
+
+            if (totalGridWidth == 0) return;
+
+            float scale = (float)e.MarginBounds.Width / totalGridWidth;
+
+            float curX = x;
             foreach (DataGridViewColumn col in dgvToPrint.Columns)
             {
                 if (col.Visible && col.HeaderText != "Print Slip" && col.HeaderText != "ACTION")
                 {
-                    g.FillRectangle(Brushes.LightGray, curX, y, col.Width, cellHeight);
-                    g.DrawRectangle(Pens.Black, curX, y, col.Width, cellHeight);
-                    g.DrawString(col.HeaderText, hFont, Brushes.Black, new RectangleF(curX + 2, y + 5, col.Width - 4, cellHeight));
-                    curX += col.Width;
+                    float pWidth = col.Width * scale;
+                    g.FillRectangle(Brushes.LightGray, curX, y, pWidth, cellHeight);
+                    g.DrawRectangle(Pens.Black, curX, y, pWidth, cellHeight);
+                    g.DrawString(col.HeaderText, hFont, Brushes.Black, new RectangleF(curX + 2, y + 5, pWidth - 4, cellHeight));
+                    curX += pWidth;
                 }
             }
             y += cellHeight;
 
-            foreach (DataGridViewRow row in dgvToPrint.Rows)
+            for (int i = checkRow; i < dgvToPrint.Rows.Count; i++)
             {
+                DataGridViewRow row = dgvToPrint.Rows[i];
                 curX = x;
                 foreach (DataGridViewCell cell in row.Cells)
                 {
                     if (cell.OwningColumn.Visible && cell.OwningColumn.HeaderText != "Print Slip" && cell.OwningColumn.HeaderText != "ACTION")
                     {
-                        g.DrawRectangle(gridPen, curX, y, cell.OwningColumn.Width, cellHeight);
+                        float pWidth = cell.OwningColumn.Width * scale;
+                        g.DrawRectangle(gridPen, curX, y, pWidth, cellHeight);
                         string val = cell.Value?.ToString() ?? "";
-                        g.DrawString(val, cFont, Brushes.Black, new RectangleF(curX + 2, y + 5, cell.OwningColumn.Width - 4, cellHeight));
-                        curX += cell.OwningColumn.Width;
+                        g.DrawString(val, cFont, Brushes.Black, new RectangleF(curX + 2, y + 5, pWidth - 4, cellHeight));
+                        curX += pWidth;
                     }
                 }
                 y += cellHeight;
-                if (y > e.MarginBounds.Bottom - 20) { e.HasMorePages = true; return; }
+                checkRow++;
+
+                if (y > e.MarginBounds.Bottom - 20)
+                {
+                    e.HasMorePages = true;
+                    return;
+                }
             }
+            checkRow = 0;
         }
 
         public void PrintCancellationInvoice(string transno, string pcode, string pdesc, string price, string qty, string total, string user, string reason, string date)
@@ -348,19 +434,30 @@ namespace PosSystem
                 using var dr = cmd.ExecuteReader();
                 if (dr.Read()) { store = dr["store"].ToString().ToUpper(); addr = dr["address"].ToString(); }
             }
-            catch { }
+            catch (Exception ex) { MessageBox.Show(ex.Message, stitle); }
 
             PrintDocument doc = new PrintDocument();
             doc.PrintPage += (s, ev) => {
                 Graphics g = ev.Graphics;
                 float x = ev.MarginBounds.Left; float y = ev.MarginBounds.Top;
-                g.DrawString(store, new Font("Arial", 18, FontStyle.Bold), Brushes.Black, x, y);
-                y += 30; g.DrawString(addr, new Font("Arial", 9), Brushes.Black, x, y);
-                y += 40; g.DrawString($"VOID INVOICE: {transno}", new Font("Arial", 11, FontStyle.Bold), Brushes.Red, x, y);
-                y += 25; g.DrawString($"Item: {pdesc} | Qty: {qty} | Total: {total}", new Font("Arial", 10), Brushes.Black, x, y);
-                y += 30; g.DrawString($"Reason: {reason}", new Font("Arial", 9, FontStyle.Italic), Brushes.Black, x, y);
+                using Font sFont = new Font("Arial", 18, FontStyle.Bold);
+                using Font aFont = new Font("Arial", 9);
+                using Font vFont = new Font("Arial", 11, FontStyle.Bold);
+                using Font rFont = new Font("Arial", 9, FontStyle.Italic);
+
+                g.DrawString(store, sFont, Brushes.Black, x, y);
+                y += 30; g.DrawString(addr, aFont, Brushes.Black, x, y);
+                y += 40; g.DrawString($"VOID INVOICE: {transno}", vFont, Brushes.Red, x, y);
+                y += 25; g.DrawString($"Item: {pdesc} | Qty: {qty} | Total: {total}", aFont, Brushes.Black, x, y);
+                y += 30; g.DrawString($"Reason: {reason}", rFont, Brushes.Black, x, y);
             };
-            new PrintPreviewDialog { Document = doc, WindowState = FormWindowState.Maximized }.ShowDialog();
+
+            using (var dlg = new PrintPreviewDialog())
+            {
+                dlg.Document = doc;
+                dlg.WindowState = FormWindowState.Maximized;
+                dlg.ShowDialog();
+            }
         }
         #endregion
 

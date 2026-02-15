@@ -286,6 +286,7 @@
             this.lblDate.Size = new System.Drawing.Size(121, 20);
             this.lblDate.TabIndex = 1;
             this.lblDate.Text = "00000000000000";
+            this.lblDate.Click += new System.EventHandler(this.lblDate_Click);
             // 
             // label5
             // 
@@ -305,6 +306,7 @@
             this.lblTransno.Size = new System.Drawing.Size(121, 20);
             this.lblTransno.TabIndex = 1;
             this.lblTransno.Text = "00000000000000";
+            this.lblTransno.Click += new System.EventHandler(this.lblTransno_Click);
             // 
             // label3
             // 
