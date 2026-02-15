@@ -354,13 +354,9 @@ namespace PosSystem
         private void btnSalesHistory_Click(object sender, EventArgs e)
         {
             frmSoldItems frm = new frmSoldItems();
-            try
-            {
-                frm.GetType().GetProperty("dt1")?.SetValue(frm, DateTime.Now);
-                frm.GetType().GetProperty("dt2")?.SetValue(frm, DateTime.Now);
-                frm.GetType().GetField("_user")?.SetValue(frm, LblUser.Text);
-            }
-            catch { }
+            frm.dt1.Value = DateTime.Now;
+            frm.dt2.Value = DateTime.Now;
+            frm._user = LblUser.Text;
             frm.ShowDialog();
         }
         #endregion
@@ -376,16 +372,13 @@ namespace PosSystem
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            // NEW LOGIC: If no transaction is active, open past details
             if (!isTransactionStarted || lblTransno.Text == "000000000000")
             {
-                // Passing null and 0 to satisfy 'frmCancelDetails(frmSoldItems, decimal)'
                 frmCancelDetails frm = new frmCancelDetails(null, 0);
                 frm.ShowDialog();
                 return;
             }
 
-            // Logic for active transaction cart clearing
             if (dataGridView1.Rows.Count == 0) return;
 
             if (MessageBox.Show("Are you sure you want to clear all items from the cart?", stitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
@@ -408,7 +401,10 @@ namespace PosSystem
         }
 
         private void btnDiscount_Click(object sender, EventArgs e) { /* Add discount logic */ }
-        private void btnSales_Click(object sender, EventArgs e) { btnSalesHistory_Click(sender, e); }
+        private void btnSales_Click(object sender, EventArgs e)
+        {
+            btnSalesHistory_Click(sender, e);
+        }
         private void btnscanbarcode_Click(object sender, EventArgs e) { textBoxbarcode.Focus(); }
         private void btnSearch_Click(object sender, EventArgs e) { /* Search Logic */ }
         private void dataGridView1_SelectionChanged(object sender, EventArgs e) { }

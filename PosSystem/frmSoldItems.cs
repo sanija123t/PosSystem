@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
 using System.Drawing;
+using System.Drawing.Printing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -11,13 +12,7 @@ namespace PosSystem
 {
     public partial class frmSoldItems : Form
     {
-        #region Private Fields & Constants
-
-        public string suser;
-        private const string STATUS_SOLD = "Sold"; // Standardized to match tblCart1 status
-        private readonly string _dbPath = DBConnection.MyConnection();
-        private readonly string _appTitle = "POS System";
-
+        #region Win32 API
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
         [DllImport("user32.dll")]
@@ -25,28 +20,40 @@ namespace PosSystem
 
         private const int WM_NCLBUTTONDOWN = 0xA1;
         private const int HT_CAPTION = 0x2;
-
         #endregion
 
-        #region Public Properties
+        #region Fields
+        private readonly string _dbPath = DBConnection.MyConnection();
+        private readonly string _appTitle = "POS System";
+        private const string STATUS_SOLD = "Sold";
 
-        // ✅ Fix for Cancel Form
-        public string ConnectionString => _dbPath;
+        public string _user;
 
+        // Printing Objects
+        PrintDocument printDoc = new PrintDocument();
+        PrintPreviewDialog previewDlg = new PrintPreviewDialog();
+        #endregion
+
+        #region Public Properties (Bridges)
+        public string suser { get => _user; set => _user = value; }
+        public DateTimePicker dt1 => dateTimePicker1;
+        public DateTimePicker dt2 => dateTimePicker2;
         #endregion
 
         public frmSoldItems()
         {
             InitializeComponent();
             InitializeDefaults();
+
+            // Attach Print Event
+            printDoc.PrintPage += new PrintPageEventHandler(printDoc_PrintPage);
         }
 
         private void InitializeDefaults()
         {
-            dateTimePicker1.Value = DateTime.Now;
-            dateTimePicker2.Value = DateTime.Now;
-            lblTotal1.Text = "0.00";
-            lblTotal1.TextAlign = ContentAlignment.MiddleRight;
+            if (dateTimePicker1 != null) dateTimePicker1.Value = DateTime.Now;
+            if (dateTimePicker2 != null) dateTimePicker2.Value = DateTime.Now;
+            if (lblTotal1 != null) lblTotal1.Text = "0.00";
         }
 
         private async void frmSoldItems_Load(object sender, EventArgs e)
@@ -62,10 +69,10 @@ namespace PosSystem
             }
         }
 
-        #region Core Data Logic
-
         public async Task LoadSoldItemsAsync()
         {
+            if (dataGridView1 == null) return;
+
             dataGridView1.Rows.Clear();
             decimal runningTotal = 0;
             int recordCount = 0;
@@ -78,35 +85,31 @@ namespace PosSystem
                 using (var cn = new SQLiteConnection(_dbPath))
                 {
                     await cn.OpenAsync();
-
                     string sql = @"
                         SELECT c.id, c.transno, c.pcode, p.pdesc, 
-                               c.price, c.qty, c.disc, 
-                               c.total AS net_total
+                               c.price, c.qty, c.disc, c.total
                         FROM tblCart1 AS c
                         INNER JOIN TblProduct1 AS p ON c.pcode = p.pcode
                         WHERE c.status = @status 
                         AND c.sdate BETWEEN @date1 AND @date2";
 
-                    if (cbCashier.Text != "All Cashier" && !string.IsNullOrWhiteSpace(cbCashier.Text))
-                        sql += " AND c.cashier = @cashier";
+                    bool filterByCashier = cbCashier.Text != "All Cashier" && !string.IsNullOrWhiteSpace(cbCashier.Text);
+                    if (filterByCashier) sql += " AND c.cashier = @cashier";
 
                     using (var cmd = new SQLiteCommand(sql, cn))
                     {
                         cmd.Parameters.AddWithValue("@status", STATUS_SOLD);
                         cmd.Parameters.AddWithValue("@date1", dateFrom);
                         cmd.Parameters.AddWithValue("@date2", dateTo);
-
-                        if (cbCashier.Text != "All Cashier" && !string.IsNullOrWhiteSpace(cbCashier.Text))
-                            cmd.Parameters.AddWithValue("@cashier", cbCashier.Text);
+                        if (filterByCashier) cmd.Parameters.AddWithValue("@cashier", cbCashier.Text);
 
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
                             while (await reader.ReadAsync())
                             {
                                 recordCount++;
-                                decimal netTotal = Convert.ToDecimal(reader["net_total"]);
-                                runningTotal += netTotal;
+                                decimal total = Convert.ToDecimal(reader["total"]);
+                                runningTotal += total;
 
                                 dataGridView1.Rows.Add(
                                     recordCount,
@@ -117,7 +120,7 @@ namespace PosSystem
                                     Convert.ToDecimal(reader["price"]).ToString("#,##0.00"),
                                     reader["qty"],
                                     Convert.ToDecimal(reader["disc"]).ToString("#,##0.00"),
-                                    netTotal.ToString("#,##0.00")
+                                    total.ToString("#,##0.00")
                                 );
                             }
                         }
@@ -127,87 +130,108 @@ namespace PosSystem
             }
             catch (Exception ex)
             {
-                HandleError("Data Load Error", ex);
+                HandleError("Load Error", ex);
             }
         }
 
         private async Task LoadCashierAsync()
         {
-            try
+            if (cbCashier == null) return;
+            cbCashier.Items.Clear();
+            cbCashier.Items.Add("All Cashier");
+            using (var cn = new SQLiteConnection(_dbPath))
             {
-                cbCashier.Items.Clear();
-                cbCashier.Items.Add("All Cashier");
-
-                using (var cn = new SQLiteConnection(_dbPath))
+                await cn.OpenAsync();
+                using (var cmd = new SQLiteCommand("SELECT username FROM tblUser ORDER BY username ASC", cn))
+                using (var reader = await cmd.ExecuteReaderAsync())
                 {
-                    await cn.OpenAsync();
-
-                    string sql = "SELECT username FROM tblUser ORDER BY username ASC";
-
-                    using (var cmd = new SQLiteCommand(sql, cn))
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            cbCashier.Items.Add(reader["username"].ToString());
-                        }
-                    }
+                    while (await reader.ReadAsync()) cbCashier.Items.Add(reader["username"].ToString());
                 }
-                cbCashier.SelectedIndex = 0;
             }
-            catch (Exception ex)
-            {
-                HandleError("Cashier List Error", ex);
-            }
+            if (cbCashier.Items.Count > 0) cbCashier.SelectedIndex = 0;
         }
 
-        #endregion
-
-        #region Event Handlers
-
-        private async void FilterCriteria_Changed(object sender, EventArgs e)
+        private void btnSave_Click(object sender, EventArgs e)
         {
-            await LoadSoldItemsAsync();
+            // Trigger Windows Print Preview directly
+            previewDlg.Document = printDoc;
+            previewDlg.WindowState = FormWindowState.Maximized;
+            previewDlg.ShowDialog();
+        }
+
+        // The Windows Print Preview Rendering Logic
+        private void printDoc_PrintPage(object sender, PrintPageEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            Font fRegular = new Font("Arial", 9);
+            Font fBold = new Font("Arial", 9, FontStyle.Bold);
+            Font fHeader = new Font("Arial", 14, FontStyle.Bold);
+            float y = 50;
+            float x = 50;
+
+            // Header
+            g.DrawString("DAILY SOLD ITEMS REPORT", fHeader, Brushes.Black, x, y);
+            y += 30;
+            g.DrawString($"Period: {dateTimePicker1.Value.ToShortDateString()} - {dateTimePicker2.Value.ToShortDateString()}", fRegular, Brushes.Black, x, y);
+            y += 20;
+            g.DrawString($"Cashier: {cbCashier.Text}", fRegular, Brushes.Black, x, y);
+            y += 40;
+
+            // Table Header
+            g.DrawString("Description", fBold, Brushes.Black, x, y);
+            g.DrawString("Price", fBold, Brushes.Black, x + 250, y);
+            g.DrawString("Qty", fBold, Brushes.Black, x + 350, y);
+            g.DrawString("Total", fBold, Brushes.Black, x + 450, y);
+            y += 20;
+            g.DrawLine(Pens.Black, x, y, x + 550, y);
+            y += 10;
+
+            // Rows from DataGridView
+            foreach (DataGridViewRow row in dataGridView1.Rows)
+            {
+                if (row.Cells[4].Value == null) continue;
+                g.DrawString(row.Cells[4].Value.ToString(), fRegular, Brushes.Black, x, y); // Desc
+                g.DrawString(row.Cells[5].Value.ToString(), fRegular, Brushes.Black, x + 250, y); // Price
+                g.DrawString(row.Cells[6].Value.ToString(), fRegular, Brushes.Black, x + 350, y); // Qty
+                g.DrawString(row.Cells[8].Value.ToString(), fRegular, Brushes.Black, x + 450, y); // Total
+                y += 20;
+
+                if (y > e.PageBounds.Height - 100)
+                {
+                    e.HasMorePages = true;
+                    return;
+                }
+            }
+
+            y += 20;
+            g.DrawLine(Pens.Black, x, y, x + 550, y);
+            y += 10;
+            g.DrawString($"GRAND TOTAL: {lblTotal1.Text}", fHeader, Brushes.Black, x + 300, y);
         }
 
         private void dataGridView1_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
-
             string colName = dataGridView1.Columns[e.ColumnIndex].Name;
+
             if (colName == "ColCancel")
             {
-                OpenCancelDetails(e.RowIndex);
+                var row = dataGridView1.Rows[e.RowIndex];
+                frmCancelDetails f = new frmCancelDetails(this);
+                f.txtID.Text = row.Cells[1].Value.ToString();
+                f.txtTransno.Text = row.Cells[2].Value.ToString();
+                f.txtPcode.Text = row.Cells[3].Value.ToString();
+                f.txtDesc.Text = row.Cells[4].Value.ToString();
+                f.txtPrice.Text = row.Cells[5].Value.ToString();
+                f.txtQty.Text = row.Cells[6].Value.ToString();
+                f.txtDiscount.Text = row.Cells[7].Value.ToString();
+                f.txtTotal.Text = row.Cells[8].Value.ToString();
+                f.txtCancelled.Text = _user;
+                f.ShowDialog();
             }
         }
 
-        private void OpenCancelDetails(int rowIndex)
-        {
-            var row = dataGridView1.Rows[rowIndex];
-            frmCancelDetails f = new frmCancelDetails(this);
-
-            f.txtID.Text = row.Cells[1].Value.ToString();
-            f.txtTransno.Text = row.Cells[2].Value.ToString();
-            f.txtPcode.Text = row.Cells[3].Value.ToString();
-            f.txtDesc.Text = row.Cells[4].Value.ToString();
-            f.txtPrice.Text = row.Cells[5].Value.ToString();
-            f.txtQty.Text = row.Cells[6].Value.ToString();
-            f.txtDiscount.Text = row.Cells[7].Value.ToString();
-            f.txtTotal.Text = row.Cells[8].Value.ToString();
-            f.txtCancelled.Text = suser;
-            f.ShowDialog();
-        }
-
-        private void btnSave_Click(object sender, EventArgs e)
-        {
-            frmReportSold frm = new frmReportSold(this);
-            frm.LoadReport();
-            frm.ShowDialog();
-        }
-
         private void pictureBox2_Click(object sender, EventArgs e) => this.Dispose();
-
-        private void cbCashier_KeyPress(object sender, KeyPressEventArgs e) => e.Handled = true;
 
         private void panel1_MouseDown(object sender, MouseEventArgs e)
         {
@@ -218,25 +242,15 @@ namespace PosSystem
             }
         }
 
-        #endregion
-
-        #region Helper Methods
+        private void dateTimePicker1_ValueChanged(object sender, EventArgs e) => _ = LoadSoldItemsAsync();
+        private void dateTimePicker2_ValueChanged(object sender, EventArgs e) => _ = LoadSoldItemsAsync();
+        private void cbCashier_SelectedIndexChanged(object sender, EventArgs e) => _ = LoadSoldItemsAsync();
+        private void panel1_Paint(object sender, PaintEventArgs e) { }
+        private void lblTotal1_Click(object sender, EventArgs e) { }
 
         private void HandleError(string context, Exception ex)
         {
             MessageBox.Show($"{context}: {ex.Message}", _appTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
-
-        #endregion
-
-        #region Designer Compatibility Stubs
-
-        private void dateTimePicker1_ValueChanged(object sender, EventArgs e) => FilterCriteria_Changed(sender, e);
-        private void dateTimePicker2_ValueChanged(object sender, EventArgs e) => FilterCriteria_Changed(sender, e);
-        private void cbCashier_SelectedIndexChanged(object sender, EventArgs e) => FilterCriteria_Changed(sender, e);
-        private void panel1_Paint(object sender, PaintEventArgs e) { }
-        private void lblTotal1_Click(object sender, EventArgs e) { }
-
-        #endregion
     }
 }
